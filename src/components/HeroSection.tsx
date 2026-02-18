@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import heroVideo from "@/assets/hero-video.mp4";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const stats = [
@@ -12,11 +13,21 @@ const tags = ["AI", "Machine Learning", "3D Visualisation", "Python", "Web Dev"]
 const HeroSection = () => {
   return (
     <section id="hero" className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Background image */}
+      {/* Video Background */}
       <div className="absolute inset-0">
-        <img src={heroBg} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-background/70" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster={heroBg}
+          className="w-full h-full object-cover"
+        >
+          <source src={heroVideo} type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-background/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
       </div>
 
       <div className="relative container mx-auto px-6 pt-24 pb-16">
@@ -30,7 +41,7 @@ const HeroSection = () => {
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="px-3 py-1 rounded-full text-xs font-medium border border-primary/40 text-primary bg-primary/10"
+                className="px-3 py-1 rounded-full text-xs font-medium border border-primary/40 text-primary bg-primary/10 backdrop-blur-sm"
               >
                 {tag}
               </span>
@@ -72,7 +83,7 @@ const HeroSection = () => {
             <a
               href="#contact"
               onClick={(e) => { e.preventDefault(); document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="border border-border text-foreground px-8 py-3.5 rounded-lg font-semibold text-base hover:bg-secondary transition"
+              className="border border-foreground/20 text-foreground px-8 py-3.5 rounded-lg font-semibold text-base hover:bg-secondary/50 backdrop-blur-sm transition"
             >
               {"\u053f\u0561\u057a\u057e\u0565\u0584 \u0574\u0565\u0566 \u0570\u0565\u057f"}
             </a>
