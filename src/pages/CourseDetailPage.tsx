@@ -48,13 +48,12 @@ const CourseDetailPage = () => {
             {course.level}
           </span>
         </div>
-        <a
-          href="#contact"
-          onClick={(e) => { e.preventDefault(); window.location.href = "/#contact"; }}
+        <Link
+          to={`/register?course=${course.id}`}
           className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-semibold text-base hover:brightness-110 transition glow-gold"
         >
-          {"\u057d\u056f\u057d\u0565\u056c"}
-        </a>
+          {"Գրանցվել"}
+        </Link>
       </VideoHero>
 
       {/* Highlight Cards - ACA style */}
@@ -223,13 +222,13 @@ const CourseDetailPage = () => {
 
                 {/* CTA */}
                 <div className="space-y-3">
-                  <a
-                    href="#contact"
-                    onClick={(e) => { e.preventDefault(); window.location.href = "/#contact"; }}
+                  <Link
+                    to={`/register?course=${course.id}`}
                     className="block w-full bg-primary text-primary-foreground py-3.5 rounded-full font-semibold text-center hover:brightness-110 transition glow-gold"
                   >
-                    {"\u0533\u0580\u0561\u0576\u0581\u057e\u0565\u056c"}
-                  </a>
+                    {"Գրանցվել"}
+                  </Link>
+                  
                   <Link
                     to="/courses"
                     className="block w-full border border-border text-foreground py-3 rounded-full font-semibold text-center hover:bg-secondary transition"

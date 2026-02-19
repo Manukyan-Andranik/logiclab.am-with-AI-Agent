@@ -20,7 +20,7 @@ const Navbar = () => {
   const navLinks = [
     { label: "\u0533\u056c\u056d\u0561\u057e\u0578\u0580", to: "/", isRoute: true },
     { label: "\u0534\u0561\u057d\u0568\u0576\u0569\u0561\u0581\u0576\u0565\u0580", to: "/courses", isRoute: true },
-    { label: "\u0544\u0565\u0580 \u0574\u0561\u057d\u056b\u0576", section: "#about" },
+    { label: "\u0544\u0565\u0580 \u0574\u0561\u057d\u056b\u0576", to: "/about", isRoute: true },
     { label: "\u053f\u0561\u057a", section: "#contact" },
   ];
 
@@ -53,10 +53,10 @@ const Navbar = () => {
             )
           )}
           <Link
-            to="/courses"
+            to="/register"
             className="bg-primary text-primary-foreground px-5 py-2 rounded-lg text-sm font-semibold hover:brightness-110 transition"
           >
-            {"\u0534\u056b\u057f\u0565\u056c \u0564\u0561\u057d\u0568\u0576\u0569\u0561\u0581\u0576\u0565\u0580\u0568"}
+            {"Գրանցվել"}
           </Link>
         </div>
 

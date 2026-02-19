@@ -55,6 +55,19 @@ export default {
           DEFAULT: "hsl(var(--gold))",
           dim: "hsl(var(--gold-dim))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        linkedin: "hsl(var(--linkedin))",
         "dark-surface": {
           DEFAULT: "hsl(var(--dark-surface))",
           hover: "hsl(var(--dark-surface-hover))",
