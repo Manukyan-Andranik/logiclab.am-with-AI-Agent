@@ -23,9 +23,9 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
         >
           <source src={videoSrc} type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-background/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/40" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-foreground/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/30 to-foreground/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-transparent to-transparent" />
       </div>
 
       <div className="relative container mx-auto px-6 pt-24 pb-16">
@@ -33,15 +33,15 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6"
+          className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-card"
         >
           {titleHighlight ? (
             <>
               <span className="text-gradient-gold">{titleHighlight}</span>{" "}
-              <span className="text-foreground">{title}</span>
+              <span className="text-card">{title}</span>
             </>
           ) : (
-            <span className="text-foreground">{title}</span>
+            <span className="text-card">{title}</span>
           )}
         </motion.h1>
 
@@ -50,7 +50,7 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mb-8"
+            className="text-lg sm:text-xl text-card/80 max-w-2xl mb-8"
           >
             {subtitle}
           </motion.p>
