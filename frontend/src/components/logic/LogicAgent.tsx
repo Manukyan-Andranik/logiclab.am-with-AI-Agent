@@ -52,37 +52,41 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
 
       {/* Main Sidebar Agent */}
       <div
-        className={`fixed top-0 left-0 z-[90] h-screen transition-[var(--transition)] flex flex-col bg-[var(--black)] border-r border-[var(--gray-dark)] shadow-[20px_0_50px_rgba(0,0,0,0.5)] ${isOpen ? 'w-full md:w-[420px] translate-x-0' : '-translate-x-full'
-          }`}
+        className={`fixed top-0 left-0 h-screen transition-[var(--transition)] flex flex-col bg-[var(--black)] border-r border-[var(--gray-dark)] shadow-[20px_0_50px_rgba(0,0,0,0.5)] ${
+          isOpen 
+            ? 'w-full md:w-[420px] translate-x-0 z-[150]' 
+            : '-translate-x-full z-[90]'
+        }`}
       >
         {/* Header */}
-        <div className="p-8 border-b border-[var(--gray-dark)] bg-[var(--gray-dark)] flex items-center justify-between">
+        <div className="p-8 border-b border-[var(--gray-dark)] bg-[var(--gray-dark)] flex items-center justify-between gap-4">
           <div className="flex items-center gap-5">
 
             <button
               onClick={() => setIsOpen(true)}
-              className=" w-20 h-20 bg-[var(--primary-alt)] text-[var(--black)] rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,215,0,0.4)] border-4 border-[var(--black)] hover:scale-110 active:scale-95 transition-[var(--transition)]"
+              className=" w-14 h-14 md:w-16 md:h-16 bg-[var(--primary-alt)] text-[var(--black)] rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,215,0,0.4)] border-4 border-[var(--black)] hover:scale-110 active:scale-95 transition-[var(--transition)] shrink-0"
               aria-label="Activate Logic AI"
             >
-              <Bot size={40} />
-              <span className="absolute -top-1 -right-1 flex h-6 w-6">
+              <Bot size={32} />
+              <span className="absolute -top-1 -right-1 flex h-5 w-5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--success)] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-6 w-6 bg-[var(--success)]"></span>
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-[var(--success)]"></span>
               </span>
             </button>
 
 
-            <div>
-              <h3 className="text-xl font-black text-[var(--white)] tracking-tighter">LOGIC AGENT</h3>
+            <div className="shrink-0">
+              <h3 className="text-lg font-black text-[var(--white)] tracking-tighter">LOGIC AGENT</h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse"></span>
-                <p className="text-[10px] text-[var(--gray-light)] opacity-60 font-mono uppercase tracking-[0.2em]">Neural Link Active</p>
+                <p className="text-[9px] text-[var(--gray-light)] opacity-60 font-mono uppercase tracking-[0.2em]">Neural Link</p>
               </div>
             </div>
           </div>
+
           <button
             onClick={() => setIsOpen(false)}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--gray-light)] hover:bg-[var(--black)] hover:text-[var(--primary)] transition-[var(--transition)]"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-[var(--gray-light)] hover:bg-[var(--black)] hover:text-[var(--primary)] transition-[var(--transition)] shrink-0"
             aria-label="Minimize Logic"
           >
             <X size={24} />

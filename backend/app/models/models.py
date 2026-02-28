@@ -89,6 +89,7 @@ class Instructor(Base):
 class Course(Base):
     __tablename__ = "courses"
     id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(255), unique=True, index=True)
     title = Column(JSON, nullable=False)  # {en, ru, hy}
     description = Column(JSON, nullable=False)  # {en, ru, hy}
     curriculum_url = Column(String(500))

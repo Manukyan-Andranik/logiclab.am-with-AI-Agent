@@ -27,6 +27,7 @@ export type Chapter = {
 
 export type Course = {
   id: number;
+  slug?: string;
   title: LocalizedText;
   description: LocalizedText;
   curriculum_url?: string;

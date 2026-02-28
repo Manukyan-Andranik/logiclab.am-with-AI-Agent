@@ -41,24 +41,22 @@ const Footer: React.FC = () => {
           <div className="space-y-6">
             <h4 className="text-xl font-bold text-[var(--primary-alt)] border-l-4 border-[var(--primary)] pl-4">NAV MODE</h4>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={() => selectMode('modern')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
-                  mode === 'modern' 
-                    ? 'bg-[var(--primary)] text-[var(--black)] border-[var(--primary)]' 
-                    : 'bg-transparent text-[var(--white)] border-[var(--gray-dark)] hover:border-[var(--primary)]'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${mode === 'modern'
+                    ? 'bg-[var(--primary)] text-[var(--white)] border-[var(--primary)] shadow-[0_0_20px_rgba(255,215,0,0.2)]'
+                    : 'bg-transparent text-[var(--gray-light)] opacity-50 border-[var(--gray-dark)] hover:border-[var(--primary)] hover:opacity-100'
+                  }`}
               >
                 <Bot size={18} />
                 Modern AI
               </button>
-              <button 
+              <button
                 onClick={() => selectMode('traditional')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
-                  mode === 'traditional' 
-                    ? 'bg-[var(--primary)] text-[var(--black)] border-[var(--primary)]' 
-                    : 'bg-transparent text-[var(--white)] border-[var(--gray-dark)] hover:border-[var(--primary)]'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${mode === 'traditional'
+                    ? 'bg-[var(--primary)] text-[var(--white)] border-[var(--primary)] shadow-[0_0_20px_rgba(255,215,0,0.2)]'
+                    : 'bg-transparent text-[var(--gray-light)] opacity-50 border-[var(--gray-dark)] hover:border-[var(--primary)] hover:opacity-100'
+                  }`}
               >
                 <Layout size={18} />
                 Traditional

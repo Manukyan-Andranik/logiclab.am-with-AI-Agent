@@ -1,19 +1,21 @@
 import React from 'react';
 import Container from './Container';
 import { ChevronRight, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { useState, useEffect } from "react";
 
 const roles = [
-  { lines: ['ML', 'ENGINEER'] },
-  { lines: ['ՊՐՈՖԵՍԻՈՆԱԼ', 'ԼՈւՍԱՆԿԱՐԻՉ'] },
-  { lines: ['3D', 'ԴԻԶԱՅՆԵՐ'] },
-  { lines: ['WEB', 'DEVELOPER'] },
+  { id: 'ml', lines: ['ML', 'ENGINEER'] },
+  { id: 'photography', lines: ['ՊՐՈՖԵՍԻՈՆԱԼ', 'ԼՈւՍԱՆԿԱՐԻՉ'] },
+  { id: '3dsmax', lines: ['3D', 'ԴԻԶԱՅՆԵՐ'] },
+  { id: 'web', lines: ['WEB', 'DEVELOPER'] },
 ];
 
 function AnimatedRole() {
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -30,8 +32,9 @@ function AnimatedRole() {
 
   return (
     <h1
-      className="text-[var(--white)] text-5xl md:text-6xl lg:text-8xl font-black leading-[0.85] tracking-tighter uppercase transition-all duration-400"
-      style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px' }}
+      onClick={() => navigate(`/courses/${role.id}`)}
+      className="text-[var(--white)] text-5xl md:text-6xl lg:text-8xl font-black leading-[0.85] tracking-tighter uppercase transition-all duration-400 cursor-pointer hover:scale-[1.02] active:scale-95"
+      style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >
       {role.lines.map((line, i) =>
         i === role.lines.length - 1 ? (

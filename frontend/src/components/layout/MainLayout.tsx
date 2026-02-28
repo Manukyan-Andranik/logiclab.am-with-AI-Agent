@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import LogicAgent from '../logic/LogicAgent';
 import Footer from './Footer';
 import TraditionalNavbar from './TraditionalNavbar';
 import WelcomePage from './WelcomePage';
+import ScrollToTop from './ScrollToTop';
+import ScrollToTopButton from './ScrollToTopButton';
 import { useNavigationMode } from '../../hooks/useNavigationMode';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,7 +20,9 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--black)] transition-[var(--transition)] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-[var(--black)] transition-[var(--transition)] overflow-x-hidden relative">
+      <ScrollToTop />
+      
       <AnimatePresence mode="wait">
         {mode === 'modern' ? (
           <motion.div
@@ -72,6 +76,9 @@ const MainLayout: React.FC = () => {
       >
         <Footer />
       </div>
+
+      {/* Global Floating Elements */}
+      <ScrollToTopButton />
     </div>
   );
 };

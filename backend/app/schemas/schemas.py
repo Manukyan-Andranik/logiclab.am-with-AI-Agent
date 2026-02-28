@@ -154,6 +154,7 @@ class InstructorResponse(InstructorBase):
 
 # Course Schemas
 class CourseBase(BaseModel):
+    slug: Optional[str] = None
     title: MultilingualText
     description: MultilingualText
     curriculum_url: Optional[str] = None
@@ -171,6 +172,7 @@ class CourseCreate(CourseBase):
     is_active: Optional[bool] = True
 
 class CourseUpdate(BaseModel):
+    slug: Optional[str] = None
     title: Optional[MultilingualText] = None
     description: Optional[MultilingualText] = None
     curriculum_url: Optional[str] = None
@@ -187,6 +189,7 @@ class CourseUpdate(BaseModel):
 
 class CourseResponse(BaseModel):
     id: int
+    slug: Optional[str] = None
     title: Dict[str, str]
     description: Dict[str, str]
     curriculum_url: Optional[str]

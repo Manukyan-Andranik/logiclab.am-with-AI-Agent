@@ -1,7 +1,6 @@
-# app/api/endpoints/courses.py
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional
+from typing import List, Optional, Union
 from ...core.database import get_db
 from ...models.models import Course, CourseInstructor, Instructor, Chapter, Lesson
 from ...schemas.schemas import (
@@ -140,17 +139,21 @@ async def delete_chapter(
 
 # ==================== COURSES ====================
 
-@router.get("/{course_id}/curriculum")
+@router.get("/{course_id_or_slug}/curriculum")
 async def get_course_curriculum(
-    course_id: int,
+    course_id_or_slug: str,
     db: Session = Depends(get_db)
 ):
     """Get complete course curriculum (chapters with lessons)"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    if course_id_or_slug.isdigit():
+        course = db.query(Course).filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = db.query(Course).filter(Course.slug == course_id_or_slug).first()
+        
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     
-    chapters = db.query(Chapter).filter(Chapter.course_id == course_id).order_by(Chapter.order_index).all()
+    chapters = db.query(Chapter).filter(Chapter.course_id == course.id).order_by(Chapter.order_index).all()
     
     curriculum = []
     for chapter in chapters:
@@ -161,7 +164,7 @@ async def get_course_curriculum(
         })
     
     return {
-        "course_id": course_id,
+        "course_id": course.id,
         "course_title": course.title,
         "curriculum": curriculum
     }
@@ -197,15 +200,20 @@ async def create_chapter(
     db.refresh(new_chapter)
     return new_chapter
 
-@router.get("/{course_id}", response_model=CourseResponse)
+@router.get("/{course_id_or_slug}", response_model=CourseResponse)
 async def get_course(
-    course_id: int,
+    course_id_or_slug: str,
     db: Session = Depends(get_db)
 ):
-    """Get single course by ID"""
-    course = db.query(Course).options(
+    """Get single course by ID or slug"""
+    query = db.query(Course).options(
         joinedload(Course.instructors).joinedload(Instructor.user)
-    ).filter(Course.id == course_id).first()
+    )
+    
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
     
     if not course:
         raise HTTPException(
@@ -214,6 +222,22 @@ async def get_course(
         )
     
     return course
+
+@router.get("/", response_model=List[CourseResponse])
+async def get_courses(
+    skip: int = 0,
+    limit: int = 100,
+    is_active: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all courses (public endpoint)"""
+    query = db.query(Course).options(joinedload(Course.instructors).joinedload(Instructor.user))
+    
+    if is_active is not None:
+        query = query.filter(Course.is_active == is_active)
+    
+    courses = query.offset(skip).limit(limit).all()
+    return courses
 
 @router.put("/{course_id}", response_model=CourseResponse)
 async def update_course(
@@ -280,19 +304,3 @@ async def toggle_course_active(
     db.commit()
     db.refresh(course)
     return course
-
-@router.get("/", response_model=List[CourseResponse])
-async def get_courses(
-    skip: int = 0,
-    limit: int = 100,
-    is_active: Optional[bool] = None,
-    db: Session = Depends(get_db)
-):
-    """Get all courses (public endpoint)"""
-    query = db.query(Course).options(joinedload(Course.instructors).joinedload(Instructor.user))
-    
-    if is_active is not None:
-        query = query.filter(Course.is_active == is_active)
-    
-    courses = query.offset(skip).limit(limit).all()
-    return courses

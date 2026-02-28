@@ -11,12 +11,12 @@ export const getCourses = async (is_active?: boolean): Promise<Course[]> => {
   });
 };
 
-export const getCourse = async (id: number): Promise<Course> => {
-  return apiClient<Course>(`/courses/${id}`);
+export const getCourse = async (idOrSlug: number | string): Promise<Course> => {
+  return apiClient<Course>(`/courses/${idOrSlug}`);
 };
 
-export const getCourseCurriculum = async (id: number): Promise<any> => {
-  return apiClient(`/courses/${id}/curriculum`);
+export const getCourseCurriculum = async (idOrSlug: number | string): Promise<any> => {
+  return apiClient(`/courses/${idOrSlug}/curriculum`);
 };
 
 export const createCourse = async (data: Partial<Course>): Promise<Course> => {

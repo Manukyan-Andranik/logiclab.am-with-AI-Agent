@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
+import { NavigationProvider } from "./components/layout/NavigationProvider";
 import Index from "./pages/Index";
 import CoursesPage from "./pages/CoursesPage";
 import CourseDetailPage from "./pages/CourseDetailPage";
@@ -31,34 +32,36 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* Public Routes with AI-driven Navigation Layout */}
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/courses" element={<CoursesPage />} />
-            <Route path="/courses/:id" element={<CourseDetailPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
+      <NavigationProvider>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            {/* Public Routes with AI-driven Navigation Layout */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/courses" element={<CoursesPage />} />
+              <Route path="/courses/:id" element={<CourseDetailPage />} />
+              <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+            </Route>
 
-          <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="registrations" element={<AdminRegistrations />} />
-            <Route path="courses" element={<AdminCourses />} />
-            <Route path="students" element={<AdminStudents />} />
-            <Route path="instructors" element={<AdminInstructors />} />
-            <Route path="messages" element={<AdminMessages />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="registrations" element={<AdminRegistrations />} />
+              <Route path="courses" element={<AdminCourses />} />
+              <Route path="students" element={<AdminStudents />} />
+              <Route path="instructors" element={<AdminInstructors />} />
+              <Route path="messages" element={<AdminMessages />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </NavigationProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

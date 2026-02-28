@@ -1,21 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useNavigationContext } from '../components/layout/NavigationProvider';
 
-export type NavigationMode = 'modern' | 'traditional';
+export type { NavigationMode } from '../components/layout/NavigationProvider';
 
 export const useNavigationMode = () => {
-  const [mode, setMode] = useState<NavigationMode | null>(() => {
-    return localStorage.getItem('navigation_mode') as NavigationMode | null;
-  });
-
-  const selectMode = (newMode: NavigationMode) => {
-    localStorage.setItem('navigation_mode', newMode);
-    setMode(newMode);
-  };
-
-  const resetMode = () => {
-    localStorage.removeItem('navigation_mode');
-    setMode(null);
-  };
-
-  return { mode, selectMode, resetMode };
+  return useNavigationContext();
 };
