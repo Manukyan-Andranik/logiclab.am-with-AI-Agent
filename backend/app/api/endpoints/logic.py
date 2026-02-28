@@ -22,7 +22,7 @@ class ChatRequest(BaseModel):
     history: List[ChatMessage]
 
 
-class NexusResponse(BaseModel):
+class LogciAgentResponse(BaseModel):
     text: str
     intent: Optional[str] = None
     course_id: Optional[str] = None
@@ -31,7 +31,7 @@ class NexusResponse(BaseModel):
 
 
 # --- AI Agent Logic ---
-SYSTEM_PROMPT = """You are NEXUS, the AI navigation agent for LogicLab — a futuristic educational platform offering courses in Machine Learning, Artificial Intelligence, and Web Development.
+SYSTEM_PROMPT = """You are Logic Agent, the AI navigation agent for LogicLab — a futuristic educational platform offering courses in Machine Learning, Artificial Intelligence, and Web Development.
 
 Your role: Understand what the user wants, extract structured info, and route them to the right content.
 
@@ -40,9 +40,9 @@ Available intents:
 - courses
 - course_detail
 - about
-- instructors
+- instructors # section on a home page 
+- projects # section on a home page
 - contact
-- faq
 - learning_path
 
 Available course IDs: 1 (ai-fundamentals), 2 (ml-engineering), 3 (deep-learning), 4 (python-basics), 5 (web-ai), 6 (math-ml)
@@ -67,14 +67,14 @@ JSON structure:
 """
 
 
-@router.post("/chat", response_model=NexusResponse)
+@router.post("/chat", response_model=LogciAgentResponse)
 async def logic_chat(request: ChatRequest):
 
     openai_key = os.getenv("OPENAI_API_KEY")
 
     if not openai_key:
-        return NexusResponse(
-            text="Welcome to LogicLab. I am NEXUS. How can I help you today?",
+        return LogciAgentResponse(
+            text="Welcome to LogicLab. I am Logic Agent. How can I help you today?",
             intent="home"
         )
 
@@ -124,7 +124,7 @@ async def logic_chat(request: ChatRequest):
                 r"<JSON>.*?</JSON>", "", full_text, flags=re.DOTALL
             ).strip()
 
-            return NexusResponse(
+            return LogciAgentResponse(
                 text=clean_text,
                 intent=parsed_json.get("intent"),
                 course_id=parsed_json.get("course_id"),
