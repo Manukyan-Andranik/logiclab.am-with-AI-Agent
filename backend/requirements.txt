@@ -1,0 +1,241 @@
+# requirements.txt
+# FastAPI and Server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.1
+
+# Validation
+pydantic==2.5.0
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# Email
+aiosmtplib==3.0.1
+
+# Utilities
+python-dotenv==1.0.0
+python-dateutil==2.8.2
+
+# Testing (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+jose==1.0.0
+
+# -----------------------------------
+# .env.example
+# -----------------------------------
+# Copy this file to .env and fill in your values
+
+# # Application
+# APP_NAME=LogicLab Platform
+# APP_VERSION=1.0.0
+# DEBUG=True
+
+# # Database
+# DATABASE_URL=postgresql://username:password@localhost:5432/logiclab_db
+
+# # Security
+# SECRET_KEY=your-super-secret-key-change-this-in-production
+# ALGORITHM=HS256
+# ACCESS_TOKEN_EXPIRE_MINUTES=30
+# REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# # CORS (Frontend URLs)
+# BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173"]
+
+# # Email Configuration (SMTP)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@gmail.com
+# SMTP_PASSWORD=your-app-password
+# SMTP_FROM_EMAIL=noreply@logiclab.am
+# SMTP_FROM_NAME=LogicLab
+
+# # File Upload
+# UPLOAD_DIR=uploads
+# MAX_UPLOAD_SIZE=10485760
+# ALLOWED_EXTENSIONS=[".pdf", ".jpg", ".jpeg", ".png", ".gif", ".mp4", ".zip"]
+
+# # Frontend URL
+# FRONTEND_URL=http://localhost:3000
+
+# # -----------------------------------
+# # alembic.ini
+# # -----------------------------------
+# # A generic, single database configuration.
+
+# [alembic]
+# # path to migration scripts
+# script_location = alembic
+
+# # template used to generate migration files
+# # file_template = %%(rev)s_%%(slug)s
+
+# # sys.path path, will be prepended to sys.path if present.
+# # defaults to the current working directory.
+# prepend_sys_path = .
+
+# # timezone to use when rendering the date within the migration file
+# # as well as the filename.
+# # If specified, requires the python-dateutil library that can be
+# # installed by adding `alembic[tz]` to the pip requirements
+# # string value is passed to dateutil.tz.gettz()
+# # leave blank for localtime
+# # timezone =
+
+# # max length of characters to apply to the
+# # "slug" field
+# # truncate_slug_length = 40
+
+# # set to 'true' to run the environment during
+# # the 'revision' command, regardless of autogenerate
+# # revision_environment = false
+
+# # set to 'true' to allow .pyc and .pyo files without
+# # a source .py file to be detected as revisions in the
+# # versions/ directory
+# # sourceless = false
+
+# # version location specification; This defaults
+# # to alembic/versions.  When using multiple version
+# # directories, initial revisions must be specified with --version-path.
+# # The path separator used here should be the separator specified by "version_path_separator" below.
+# # version_locations = %(here)s/bar:%(here)s/bat:alembic/versions
+
+# # version path separator; As mentioned above, this is the character used to split
+# # version_locations. The default within new alembic.ini files is "os", which uses os.pathsep.
+# # If this key is omitted entirely, it falls back to the legacy behavior of splitting on spaces and/or commas.
+# # Valid values for version_path_separator are:
+# #
+# # version_path_separator = :
+# # version_path_separator = ;
+# # version_path_separator = space
+# version_path_separator = os  # Use os.pathsep. Default configuration used for new projects.
+
+# # the output encoding used when revision files
+# # are written from script.py.mako
+# # output_encoding = utf-8
+
+# sqlalchemy.url = postgresql://username:password@localhost:5432/logiclab_db
+
+
+# [post_write_hooks]
+# # post_write_hooks defines scripts or Python functions that are run
+# # on newly generated revision scripts.  See the documentation for further
+# # detail and examples
+
+# # format using "black" - use the console_scripts runner, against the "black" entrypoint
+# # hooks = black
+# # black.type = console_scripts
+# # black.entrypoint = black
+# # black.options = -l 79 REVISION_SCRIPT_FILENAME
+
+# # Logging configuration
+# [loggers]
+# keys = root,sqlalchemy,alembic
+
+# [handlers]
+# keys = console
+
+# [formatters]
+# keys = generic
+
+# [logger_root]
+# level = WARN
+# handlers = console
+# qualname =
+
+# [logger_sqlalchemy]
+# level = WARN
+# handlers =
+# qualname = sqlalchemy.engine
+
+# [logger_alembic]
+# level = INFO
+# handlers =
+# qualname = alembic
+
+# [handler_console]
+# class = StreamHandler
+# args = (sys.stderr,)
+# level = NOTSET
+# formatter = generic
+
+# [formatter_generic]
+# format = %(levelname)-5.5s [%(name)s] %(message)s
+# datefmt = %H:%M:%S
+
+# # -----------------------------------
+# # alembic/env.py
+# # -----------------------------------
+# from logging.config import fileConfig
+# from sqlalchemy import engine_from_config
+# from sqlalchemy import pool
+# from alembic import context
+# import os
+# import sys
+
+# # Add parent directory to path
+# sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# # Import your models
+# from app.models import Base
+# from app.core.config import settings
+
+# # this is the Alembic Config object
+# config = context.config
+
+# # Set sqlalchemy.url from environment
+# config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+
+# # Interpret the config file for Python logging.
+# if config.config_file_name is not None:
+#     fileConfig(config.config_file_name)
+
+# # add your model's MetaData object here for 'autogenerate' support
+# target_metadata = Base.metadata
+
+# def run_migrations_offline() -> None:
+#     """Run migrations in 'offline' mode."""
+#     url = config.get_main_option("sqlalchemy.url")
+#     context.configure(
+#         url=url,
+#         target_metadata=target_metadata,
+#         literal_binds=True,
+#         dialect_opts={"paramstyle": "named"},
+#     )
+
+#     with context.begin_transaction():
+#         context.run_migrations()
+
+# def run_migrations_online() -> None:
+#     """Run migrations in 'online' mode."""
+#     connectable = engine_from_config(
+#         config.get_section(config.config_ini_section, {}),
+#         prefix="sqlalchemy.",
+#         poolclass=pool.NullPool,
+#     )
+
+#     with connectable.connect() as connection:
+#         context.configure(
+#             connection=connection, target_metadata=target_metadata
+#         )
+
+#         with context.begin_transaction():
+#             context.run_migrations()
+
+# if context.is_offline_mode():
+#     run_migrations_offline()
+# else:
+#     run_migrations_online()

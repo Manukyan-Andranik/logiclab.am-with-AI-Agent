@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 13%; /* #222 */
+    --foreground: 0 0% 100%; /* #fff */
+
+    --card: 0 0% 20%; /* #333 */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 13%; /* #222 */
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 48 100% 50%; /* #FFD700 */
+    --primary-foreground: 0 0% 13%; /* #222 */
+
+    --secondary: 0 0% 20%; /* #333 */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 20%; /* #333 */
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 48 100% 50%; /* #FFD700 */
+    --accent-foreground: 0 0% 13%;
+
+    --destructive: 0 84% 60%; /* #dc3545 roughly */
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 145 63% 42%; /* #28a745 */
+    --success-foreground: 0 0% 98%;
+
+    --border: 0 0% 20%; /* #333 */
+    --input: 0 0% 20%; /* #333 */
+    --ring: 48 100% 50%; /* #FFD700 */
+
+    --radius: 0.75rem;
+
+    --gold: 48 100% 50%; /* #FFD700 */
+    --gold-alt: 45 100% 50%; /* #FFC000 */
+    --gray-dark: 0 0% 20%; /* #333 */
+    --black-solid: 0 0% 13%; /* #222 */
+    
+    --dark-surface: 0 0% 13%; /* #222 */
+    --dark-surface-hover: 0 0% 20%; /* #333 */
+  }
+
+  .dark {
+    --background: 0 0% 13%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 20%;
+    --primary: 48 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: #222222; /* Mandatory #222 */
+    color: #ffffff; /* Mandatory #fff */
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gold {
+    color: #FFD700;
+  }
+
+  .bg-gold {
+    background-color: #FFD700;
+  }
+
+  .bg-gray-dark {
+    background-color: #333333;
+  }
+
+  .bg-black-solid {
+    background-color: #222222;
+  }
+
+  .glow-gold {
+    box-shadow: 4px 4px 0px 0px #FFD700;
+  }
+
+  .glass-card {
+    background-color: #333333; /* Priority #333 */
+    border: 1px solid #222222; /* Priority #222 */
+    box-shadow: none;
+  }
+}

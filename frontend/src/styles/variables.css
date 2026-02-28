@@ -1,0 +1,101 @@
+:root {
+  /* Brand Colors - MANDATORY SOLID COLORS ONLY */
+  --primary: #FFD700;
+  --primary-alt: #FFC000;
+  --white: #ffffff;
+  --gray-dark: #333333;
+  --gray-light: #f4f4f4;
+  --black: #222222;
+  --success: #28a745;
+  --danger: #dc3545;
+  --blue: #0077B5;
+  --teal: #17a2b8;
+  --warning: #ffc107;
+
+  /* Neutrals derived from palette */
+  --text-main: var(--white);
+  --text-dark: var(--black);
+  --text-gray: var(--gray-light);
+  --bg-main: var(--black);
+  --bg-alt: var(--gray-dark);
+
+  /* Helper for contrast on primary/gold backgrounds */
+  --on-primary: var(--black);
+  --on-primary-alt: var(--black);
+
+  /* Transition - MANDATORY */
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  /* Spacing & Layout */
+  --container-max-width: 1200px;
+  --section-padding: 100px 0;
+  --section-padding-mobile: 60px 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  transition: var(--transition);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gray-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Container utility matching Tilda */
+.t-container {
+  max-width: var(--container-max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}

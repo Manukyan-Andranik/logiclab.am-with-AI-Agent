@@ -1,0 +1,432 @@
+You are a Senior Full Stack Software Architect, UI/UX Expert, and AI Product Designer.
+
+Your task is to refactor, fix, redesign, and enhance my Education Company Website project while preserving existing backend functionality.
+
+The final system must implement AI-driven navigation using a conversational agent instead of a traditional navigation menu.
+
+Project Stack
+
+Backend
+
+Python
+
+FastAPI
+
+Frontend
+
+React
+
+TypeScript
+
+HTML
+
+CSS
+
+JavaScript
+
+You must read all pages inside the frontend/ folder.
+
+Important Design Concept
+
+The final website must NOT use a traditional navigation bar or menu.
+
+Instead, navigation must be controlled by an AI Navigation Agent (LOGIC) that receives prompts from the user and redirects them to the appropriate page.
+
+Users interact with the website through a chat interface.
+
+Example user prompts:
+
+"I want to learn machine learning"
+
+"Show me your AI courses"
+
+"Who are your instructors?"
+
+"How can I contact you?"
+
+The AI agent determines the intent and navigates to the correct page.
+
+LOGIC Navigation Agent
+
+The frontend includes a LogicAgent component which must remain the primary navigation system.
+
+The agent communicates with:
+
+POST /api/logic/chat
+
+Request format
+
+{
+  message: string,
+  history: Message[]
+}
+
+Response format
+
+{
+  text: string,
+  intent: string,
+  course_id?: number
+}
+
+Possible intents:
+
+courses
+course_detail
+about
+contact
+home
+
+Navigation behavior:
+
+courses → /courses
+
+course_detail → /courses/{id}
+
+about → /about
+
+contact → scroll to contact section
+
+home → /
+
+The existing LogicAgent React component must remain functional and may be improved but not broken.
+
+Navigation Rules (CRITICAL)
+
+The final website must NOT contain:
+
+Navbar menus
+
+Dropdown navigation
+
+Sidebar navigation
+
+Traditional links for main navigation
+
+All navigation must happen via:
+
+LOGIC AI Agent
+
+However:
+
+Allowed elements:
+
+Footer links
+
+CTA buttons inside sections
+
+Internal anchor scrolling
+
+But primary navigation must remain conversational.
+
+Frontend Layout Migration
+
+You must apply the layout structure from the HTML templates located in
+
+downloaded_html/
+
+Specifically the ml.html page.
+
+Use the template's:
+
+Header structure
+
+Footer
+
+Layout grids
+
+Sections
+
+Spacing
+
+Typography
+
+Layout containers
+
+But:
+
+DO NOT modify the content already inside frontend/ pages.
+
+Instead:
+
+Adapt the content to fit the new layout system.
+
+Color System (MANDATORY)
+
+Use ONLY these solid colors:
+
+#FFD700
+#333
+#FFC000
+#222
+#fff
+#f4f4f4
+#28a745
+#dc3545
+#0077B5
+#17a2b8
+#ffc107
+
+Transition:
+
+all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)
+
+Strict rules:
+
+DO NOT add new colors
+
+DO NOT use gradients
+
+ONLY solid colors
+
+All colors must come from :root CSS variables.
+
+Backend Requirements
+
+Backend must remain compatible with existing logic.
+
+Rules:
+
+Do NOT break existing API endpoints
+
+Maintain current data models
+
+Follow FastAPI best practices
+
+Improve folder structure only if necessary
+
+Add validation where missing
+
+Improve error handling
+
+Optimize performance if possible
+
+The /api/logic/chat endpoint must remain the AI navigation controller.
+
+Frontend Requirements
+
+You must refactor the frontend with the following goals.
+
+1. Layout System
+
+Apply consistent layout using the template structure:
+
+hero sections
+
+grid layouts
+
+section spacing
+
+container width
+
+responsive behavior
+
+2. React Architecture
+
+Refactor into a scalable structure:
+
+Example structure:
+
+frontend/
+  components/
+    layout/
+      Footer.tsx
+      Section.tsx
+      Container.tsx
+
+    logic/
+      LogicAgent.tsx
+
+    ui/
+      Button.tsx
+      Card.tsx
+      Input.tsx
+      Loader.tsx
+
+  pages/
+    Home.tsx
+    Courses.tsx
+    CourseDetail.tsx
+    About.tsx
+
+  hooks/
+    useLogic.ts
+
+  services/
+    logicApi.ts
+
+  styles/
+    variables.css
+3. Logic Integration
+
+The LogicAgent must:
+
+always be accessible
+
+control page navigation
+
+store conversation history
+
+support loading states
+
+handle API errors gracefully
+
+Improve:
+
+UX of conversation
+
+typing indicators
+
+scroll behavior
+
+accessibility
+
+4. UX Improvements
+
+The website must feel like a modern AI-first education platform.
+
+Improve:
+
+spacing
+
+typography hierarchy
+
+accessibility
+
+mobile-first design
+
+readability
+
+section structure
+
+loading states
+
+error states
+
+form validation
+
+5. Responsiveness
+
+The entire website must be:
+
+mobile first
+
+responsive
+
+optimized for tablet and desktop
+
+Breakpoints should follow a modern responsive grid system.
+
+Code Quality Requirements
+
+Follow professional engineering standards.
+
+Must include:
+
+reusable React components
+
+proper TypeScript typing
+
+separation of concerns
+
+no duplicated logic
+
+optimized rendering
+
+maintainable architecture
+
+UI Animation Rules
+
+Use only:
+
+--transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)
+
+Allowed animations:
+
+hover transitions
+
+button feedback
+
+smooth scrolling
+
+subtle micro-interactions
+
+Do NOT add heavy animations.
+
+SEO Requirements
+
+Ensure:
+
+semantic HTML
+
+proper heading hierarchy
+
+alt attributes
+
+meta tags
+
+accessible markup
+
+Output Requirements
+
+Your output must include:
+
+1. Updated folder structure
+
+Show if any changes were made.
+
+2. Modified files
+
+Show the modified files with explanations.
+
+3. Key code snippets
+
+Provide important code sections including:
+
+LogicAgent improvements
+
+Layout components
+
+React routing changes
+
+API service layer
+
+4. Architecture explanation
+
+Explain:
+
+AI navigation architecture
+
+how LogicAgent controls routing
+
+component structure
+
+data flow
+
+5. UI/UX improvements
+
+Explain the improvements made for:
+
+usability
+
+readability
+
+responsiveness
+
+accessibility
+
+Final Goal
+
+Transform the current project into a production-ready AI-first education platform where:
+
+navigation is controlled by an AI conversational agent
+
+the website uses modern UI/UX
+
+layouts follow the downloaded HTML template
+
+the backend remains fully compatible
+
+the system is clean, scalable, and maintainable
+
+✅ The result should feel like a modern AI-native education website, where the conversation interface replaces traditional navigation.
