@@ -10,7 +10,7 @@ const ContactSection = () => {
   const { toast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: (data: any) => 
+    mutationFn: (data: any) =>
       apiClient("/contact-messages/contact", {
         method: "POST",
         body: JSON.stringify(data),
@@ -121,36 +121,43 @@ const ContactSection = () => {
             <h3 className="font-display text-xl font-semibold text-foreground mb-2">
               {"Ուղարկեք հաղորդագրություն"}
             </h3>
+
+            {/* Name */}
             <div>
               <input
                 type="text"
                 placeholder={"Անուն"}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300"
                 required
               />
             </div>
+
+            {/* Email */}
             <div>
               <input
                 type="email"
                 placeholder={"Email"}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300"
                 required
               />
             </div>
+
+            {/* Message */}
             <div>
               <textarea
                 placeholder={"Հաղորդագրություն"}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 rows={4}
-                className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none transition-all duration-300"
                 required
               />
             </div>
+
             <button
               type="submit"
               className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:brightness-110 transition flex items-center justify-center gap-2"

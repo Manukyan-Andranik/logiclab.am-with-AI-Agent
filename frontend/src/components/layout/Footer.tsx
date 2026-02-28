@@ -1,8 +1,11 @@
 import React from 'react';
 import Container from './Container';
-import { Facebook, Instagram, Twitter, Linkedin, Github } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Linkedin, Github, Settings, Bot, Layout } from 'lucide-react';
+import { useNavigationMode } from '../../hooks/useNavigationMode';
 
 const Footer: React.FC = () => {
+  const { mode, selectMode } = useNavigationMode();
+
   return (
     <footer className="bg-[var(--black)] border-t border-[var(--gray-dark)] pt-[100px] pb-[60px]">
       <Container>
@@ -36,21 +39,35 @@ const Footer: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-xl font-bold text-[var(--primary-alt)] border-l-4 border-[var(--primary)] pl-4">ԿԱՊ ՄԵԶ ՀԵՏ</h4>
-            <ul className="space-y-4 text-[var(--gray-light)] opacity-70 font-semibold">
-              <li>info@logiclab.am</li>
-              <li>+374 (99) 00-00-00</li>
-              <li>Երևան, Հայաստան</li>
-              <li className="pt-4">
-                <button className="bg-[var(--primary)] text-[var(--black)] px-6 py-3 rounded-xl font-black hover:scale-105 active:scale-95 transition-[var(--transition)]">
-                  ՀԵՏԱԴԱՐՁ ԿԱՊ
-                </button>
-              </li>
-            </ul>
+            <h4 className="text-xl font-bold text-[var(--primary-alt)] border-l-4 border-[var(--primary)] pl-4">NAV MODE</h4>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => selectMode('modern')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
+                  mode === 'modern' 
+                    ? 'bg-[var(--primary)] text-[var(--black)] border-[var(--primary)]' 
+                    : 'bg-transparent text-[var(--white)] border-[var(--gray-dark)] hover:border-[var(--primary)]'
+                }`}
+              >
+                <Bot size={18} />
+                Modern AI
+              </button>
+              <button 
+                onClick={() => selectMode('traditional')}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
+                  mode === 'traditional' 
+                    ? 'bg-[var(--primary)] text-[var(--black)] border-[var(--primary)]' 
+                    : 'bg-transparent text-[var(--white)] border-[var(--gray-dark)] hover:border-[var(--primary)]'
+                }`}
+              >
+                <Layout size={18} />
+                Traditional
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="pt-10 border-t border-[var(--gray-dark)] flex flex-col md:row items-center justify-between gap-6 opacity-40">
+        <div className="pt-10 border-t border-[var(--gray-dark)] flex flex-col md:flex-row items-center justify-between gap-6 opacity-40">
           <p className="text-xs font-mono tracking-widest uppercase">
             © 2026 LOGIC LAB ACADEMY. ALL RIGHTS RESERVED.
           </p>

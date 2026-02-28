@@ -176,11 +176,10 @@ const RegisterPage = () => {
                 className="w-full bg-[var(--gray-dark)] border border-[var(--gray-dark)] rounded-lg px-4 py-3 text-[var(--white)] placeholder:text-[var(--gray-light)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-all resize-none"
               />
             </div>
-
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="w-full bg-[var(--primary)] text-[var(--black)] py-3.5 rounded-lg font-semibold hover:brightness-110 transition flex items-center justify-center gap-2 glow-gold disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:brightness-110 transition flex items-center justify-center gap-2"
             >
               {mutation.isPending ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--black)]"></div>
