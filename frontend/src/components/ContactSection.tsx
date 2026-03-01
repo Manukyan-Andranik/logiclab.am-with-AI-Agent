@@ -2,25 +2,21 @@ import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiClient } from "@/api/client";
+import { contactApi, ContactFormData } from "@/api/contact";
 import { useToast } from "@/hooks/use-toast";
 
 const ContactSection = () => {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState<ContactFormData>({ name: "", email: "", phone: "", message: "" });
   const { toast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: (data: any) =>
-      apiClient("/contact-messages/contact", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    mutationFn: (data: ContactFormData) => contactApi.submitForm(data),
     onSuccess: () => {
       toast({
         title: "Հաջողություն",
         description: "Ձեր հաղորդագրությունը ուղարկվեց!",
       });
-      setForm({ name: "", email: "", message: "" });
+      setForm({ name: "", email: "", phone: "", message: "" });
     },
     onError: (error: any) => {
       toast({
@@ -58,9 +54,6 @@ const ContactSection = () => {
             viewport={{ once: true }}
             className="space-y-6"
           >
-            <h3 className="font-display text-2xl font-semibold text-foreground mb-6">
-              {"Կապ մեզ հետ"}
-            </h3>
 
             <a href="mailto:info@logiclab.am" className="flex items-center gap-4 text-muted-foreground hover:text-foreground transition-colors group">
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -146,6 +139,17 @@ const ContactSection = () => {
               />
             </div>
 
+            {/* Phone */}
+            <div>
+              <input
+                type="tel"
+                placeholder={"Հեռախոսահամար (ըստ ցանկության)"}
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300"
+              />
+            </div>
+
             {/* Message */}
             <div>
               <textarea
@@ -160,10 +164,15 @@ const ContactSection = () => {
 
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:brightness-110 transition flex items-center justify-center gap-2"
+              disabled={mutation.isPending}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
             >
-              <Send className="w-4 h-4" />
-              {"Ուղարկել"}
+              {mutation.isPending ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              {mutation.isPending ? "Ուղարկվում է..." : "Ուղարկել"}
             </button>
           </motion.form>
         </div>

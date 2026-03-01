@@ -82,8 +82,7 @@ async def register(
     # Create student profile
     new_student = Student(
         user_id=new_user.id,
-        course_id=registration.course_id,
-        is_active=False
+        course_id=registration.course_id
     )
     db.add(new_student)
     db.commit()
