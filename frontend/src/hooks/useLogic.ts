@@ -36,7 +36,7 @@ export const useNexus = () => {
     }
   }, [messages, navigate]);
 
-  const handleIntent = (intent: string, courseId?: number) => {
+  const handleIntent = (intent: string, courseId?: string | number) => {
     // Artificial delay for UX feel
     setTimeout(() => {
       switch (intent) {
@@ -48,6 +48,33 @@ export const useNexus = () => {
           break;
         case 'about':
           navigate('/about');
+          break;
+        case 'register':
+          navigate('/register');
+          break;
+        case 'instructors':
+          const instructorsSection = document.getElementById('instructors');
+          if (instructorsSection) {
+            instructorsSection.scrollIntoView({ behavior: 'smooth' });
+          } else {
+             navigate('/#instructors');
+          }
+          break;
+        case 'projects':
+          const projectsSection = document.getElementById('projects');
+          if (projectsSection) {
+            projectsSection.scrollIntoView({ behavior: 'smooth' });
+          } else {
+             navigate('/#projects');
+          }
+          break;
+        case 'success':
+          const successSection = document.getElementById('success');
+          if (successSection) {
+            successSection.scrollIntoView({ behavior: 'smooth' });
+          } else {
+             navigate('/#success');
+          }
           break;
         case 'contact':
           const contactSection = document.getElementById('contact');

@@ -77,7 +77,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-[var(--primary)]/10 blur-[80px] rounded-full group-hover:bg-[var(--primary)]/20 transition-all duration-500" />
 
             <div className="relative z-10 flex flex-col h-full">
-              <div className="w-20 h-20 rounded-2xl bg-[var(--primary)] text-[var(--black)] flex items-center justify-center mb-8 shadow-[0_0_40px_rgba(255,215,0,0.3)] group-hover:scale-110 transition-transform duration-500">
+              <div className="w-20 h-20 rounded-2xl bg-[var(--primary)] text-[var(--primary-alt)] flex items-center justify-center mb-8 shadow-[0_0_40px_rgba(255,215,0,0.3)] group-hover:scale-110 transition-transform duration-500">
                 <Bot size={40} />
               </div>
 
@@ -113,7 +113,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-[var(--white)]/5 blur-[80px] rounded-full group-hover:bg-[var(--primary)]/10 transition-all duration-500" />
 
             <div className="relative z-10 flex flex-col h-full">
-              <div className="w-20 h-20 rounded-2xl bg-[var(--gray-dark)] text-[var(--white)] flex items-center justify-center mb-8 border border-[var(--white)]/5 group-hover:bg-[var(--primary)] group-hover:text-[var(--black)] group-hover:border-transparent transition-all duration-500">
+              <div className="w-20 h-20 rounded-2xl bg-[var(--gray-dark)] text-[var(--primary-alt)] flex items-center justify-center mb-8 border border-[var(--white)]/5 group-hover:bg-[var(--primary)] group-hover:text-[var(--primary-alt)] group-hover:border-transparent transition-all duration-500">
                 <Navigation size={40} />
               </div>
 

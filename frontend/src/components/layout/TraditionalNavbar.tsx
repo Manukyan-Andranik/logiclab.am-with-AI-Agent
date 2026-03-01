@@ -44,8 +44,8 @@ const TraditionalNavbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Գլխավոր', path: '/' },
-    { name: 'Դասընթացներ', path: '/#courses' },
-    { name: 'Մեր Մասին', path: '/#about' },
+    { name: 'Դասընթացներ', path: '/courses' },
+    { name: 'Մեր Մասին', path: '/about' },
     { name: 'Նախագծեր', path: '/#projects' },
     { name: 'Դասախոսներ', path: '/#instructors' },
     { name: 'Կապ', path: '/#contact' },

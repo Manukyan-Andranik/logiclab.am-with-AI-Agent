@@ -239,6 +239,50 @@ async def get_courses(
     courses = query.offset(skip).limit(limit).all()
     return courses
 
+@router.post("/", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
+async def create_course(
+    course_data: CourseCreate,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Create new course (Admin only)"""
+    # Check if slug exists
+    if course_data.slug:
+        existing = db.query(Course).filter(Course.slug == course_data.slug).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Course with this slug already exists"
+            )
+    
+    new_course = Course(
+        slug=course_data.slug,
+        title=_multilingual_to_dict(course_data.title),
+        description=_multilingual_to_dict(course_data.description),
+        curriculum_url=course_data.curriculum_url,
+        curriculum=course_data.curriculum or {},
+        icon_url=course_data.icon_url,
+        duration_months=course_data.duration_months,
+        start_date=course_data.start_date,
+        schedule=course_data.schedule or {},
+        monthly_payment=course_data.monthly_payment,
+        total_payment=course_data.total_payment,
+        is_active=course_data.is_active if course_data.is_active is not None else True
+    )
+    db.add(new_course)
+    db.commit()
+    db.refresh(new_course)
+    
+    if course_data.instructor_ids:
+        for instructor_id in course_data.instructor_ids:
+            instructor = db.query(Instructor).filter(Instructor.id == instructor_id).first()
+            if instructor:
+                db.add(CourseInstructor(course_id=new_course.id, instructor_id=instructor_id))
+        db.commit()
+        db.refresh(new_course)
+        
+    return new_course
+
 @router.put("/{course_id}", response_model=CourseResponse)
 async def update_course(
     course_id: int,

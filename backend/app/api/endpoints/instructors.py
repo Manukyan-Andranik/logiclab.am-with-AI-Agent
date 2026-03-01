@@ -39,7 +39,7 @@ async def get_instructor(
         joinedload(Instructor.user)
     ).filter(Instructor.id == instructor_id).first()
     
-    if not instructor:
+    if not instructor or not instructor.user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instructor not found"

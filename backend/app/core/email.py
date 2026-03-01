@@ -1,7 +1,8 @@
 # app/core/email.py
-import smtplib
+import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
 from typing import List, Optional
 from .config import settings
 import logging
@@ -16,7 +17,7 @@ class EmailService:
         self.smtp_password = settings.SMTP_PASSWORD
         self.from_email = settings.SMTP_FROM_EMAIL
         self.from_name = settings.SMTP_FROM_NAME
-    
+
     async def send_email(
         self,
         to_email: str,
@@ -24,42 +25,57 @@ class EmailService:
         body: str,
         html: bool = False
     ) -> bool:
-        """Send an email"""
+        """Send an email asynchronously using aiosmtplib"""
         try:
             msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
+            msg["Subject"] = Header(subject, "utf-8")
             msg["From"] = f"{self.from_name} <{self.from_email}>"
             msg["To"] = to_email
             
             if html:
-                part = MIMEText(body, "html")
+                part = MIMEText(body, "html", "utf-8")
             else:
-                part = MIMEText(body, "plain")
+                part = MIMEText(body, "plain", "utf-8")
             
             msg.attach(part)
             
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.send_message(msg)
+            # Determine if we should use SSL or STARTTLS
+            use_tls = self.smtp_port == 465
+            start_tls = self.smtp_port == 587
+            
+            logger.info(f"Attempting to send email to {to_email} via {self.smtp_host}:{self.smtp_port} (User: {self.smtp_user})")
+            
+            await aiosmtplib.send(
+                msg,
+                hostname=self.smtp_host,
+                port=self.smtp_port,
+                username=self.smtp_user,
+                password=self.smtp_password,
+                use_tls=use_tls,
+                start_tls=start_tls,
+                timeout=10
+            )
             
             logger.info(f"Email sent successfully to {to_email}")
             return True
+        except aiosmtplib.SMTPAuthenticationError as e:
+            logger.error(f"SMTP Authentication failed for {self.smtp_user} at {self.smtp_host}: {str(e)}. Please check your SMTP_PASSWORD (if using Gmail, use an App Password).")
+            return False
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}")
             return False
     
     async def send_registration_received(self, to_email: str, student_name: str, course_name: str):
         """Send registration received email"""
-        subject = "Registration Received - LogicLab"
+        subject = "Գրանցումը ստացված է - LogicLab"
         body = f"""
         <html>
-            <body>
-                <h2>Thank you for your registration, {student_name}!</h2>
-                <p>We have received your registration for <strong>{course_name}</strong>.</p>
-                <p>Our team will review your application and get back to you shortly.</p>
+            <body style="font-family: sans-serif;">
+                <h2>Շնորհակալություն գրանցման համար, {student_name}!</h2>
+                <p>Մենք ստացել ենք ձեր գրանցման հայտը <strong>{course_name}</strong> դասընթացի համար:</p>
+                <p>Մեր թիմը կուսումնասիրի ձեր հայտը և կկապվի ձեզ հետ մոտ ժամանակներս:</p>
                 <br>
-                <p>Best regards,<br>LogicLab Team</p>
+                <p>Հարգանքներով,<br>LogicLab թիմ</p>
             </body>
         </html>
         """
@@ -74,20 +90,20 @@ class EmailService:
         temp_password: str
     ):
         """Send registration confirmed email with login credentials"""
-        subject = "Registration Confirmed - Welcome to LogicLab!"
+        subject = "Գրանցումը հաստատված է - Բարի գալուստ LogicLab!"
         body = f"""
         <html>
-            <body>
-                <h2>Congratulations, {student_name}!</h2>
-                <p>Your registration for <strong>{course_name}</strong> has been confirmed!</p>
+            <body style="font-family: sans-serif;">
+                <h2>Շնորհավորում ենք, {student_name}!</h2>
+                <p>Ձեր գրանցումը <strong>{course_name}</strong> դասընթացի համար հաստատված է:</p>
                 <br>
-                <h3>Your Login Credentials:</h3>
+                <h3>Ձեր մուտքանունն ու գաղտնաբառը:</h3>
                 <p><strong>Email:</strong> {login_email}</p>
-                <p><strong>Temporary Password:</strong> {temp_password}</p>
-                <p>Please login at: <a href="{settings.FRONTEND_URL}/student/login">{settings.FRONTEND_URL}/student/login</a></p>
-                <p><em>We recommend changing your password after first login.</em></p>
+                <p><strong>Ժամանակավոր գաղտնաբառ:</strong> {temp_password}</p>
+                <p>Խնդրում ենք մուտք գործել այստեղ: <a href="{settings.FRONTEND_URL}/student/login">{settings.FRONTEND_URL}/student/login</a></p>
+                <p><em>Խորհուրդ ենք տալիս փոխել գաղտնաբառը առաջին մուտքից հետո:</em></p>
                 <br>
-                <p>Best regards,<br>LogicLab Team</p>
+                <p>Հարգանքներով,<br>LogicLab թիմ</p>
             </body>
         </html>
         """
@@ -95,17 +111,16 @@ class EmailService:
     
     async def send_registration_rejected(self, to_email: str, student_name: str, course_name: str):
         """Send registration rejected email"""
-        subject = "Registration Status Update - LogicLab"
+        subject = "Տեղեկատվություն գրանցման կարգավիճակի վերաբերյալ - LogicLab"
         body = f"""
         <html>
-            <body>
-                <h2>Dear {student_name},</h2>
-                <p>Thank you for your interest in <strong>{course_name}</strong>.</p>
-                <p>Unfortunately, we are unable to accept your registration at this time.</p>
-                <p>This could be due to the course being full or other requirements not being met.</p>
-                <p>Please feel free to contact us for more information or to explore other courses.</p>
+            <body style="font-family: sans-serif;">
+                <h2>Հարգելի {student_name},</h2>
+                <p>Շնորհակալություն <strong>{course_name}</strong> դասընթացի հանդեպ հետաքրքրություն ցուցաբերելու համար:</p>
+                <p>Ցավոք, այս պահին մենք չենք կարող հաստատել ձեր գրանցումը:</p>
+                <p>Սա կարող է պայմանավորված լինել խմբերի լրացված լինելու կամ այլ պատճառներով:</p>
                 <br>
-                <p>Best regards,<br>LogicLab Team</p>
+                <p>Հարգանքներով,<br>LogicLab թիմ</p>
             </body>
         </html>
         """
@@ -113,16 +128,16 @@ class EmailService:
     
     async def send_course_completed(self, to_email: str, student_name: str, course_name: str):
         """Send course completion email"""
-        subject = "Congratulations! Course Completed - LogicLab"
+        subject = "Շնորհավորում ենք: Դասընթացն ավարտված է - LogicLab"
         body = f"""
         <html>
-            <body>
-                <h2>Congratulations, {student_name}! 🎉</h2>
-                <p>You have successfully completed <strong>{course_name}</strong>!</p>
-                <p>We are proud of your achievement and dedication.</p>
-                <p>Your certificate will be available in your student portal soon.</p>
+            <body style="font-family: sans-serif;">
+                <h2>Շնորհավորում ենք, {student_name}! 🎉</h2>
+                <p>Դուք հաջողությամբ ավարտեցիք <strong>{course_name}</strong> դասընթացը:</p>
+                <p>Մենք հպարտ ենք ձեր ձեռքբերումներով:</p>
+                <p>Ձեր սերտիֆիկատը շուտով հասանելի կլինի ձեր անձնական էջում:</p>
                 <br>
-                <p>Best regards,<br>LogicLab Team</p>
+                <p>Հարգանքներով,<br>LogicLab թիմ</p>
             </body>
         </html>
         """
@@ -136,19 +151,19 @@ class EmailService:
         course_name: str
     ):
         """Send material (chapter) access granted email"""
-        subject = f"New Material Available - {course_name}"
+        subject = f"Նոր նյութեր են հասանելի - {course_name}"
         body = f"""
         <html>
-            <body>
-                <h2>Hello {student_name},</h2>
-                <p>New course material has been made available to you!</p>
-                <p><strong>Chapter:</strong> {chapter_title}</p>
-                <p><strong>Course:</strong> {course_name}</p>
-                <p>Login to your student portal to access the materials: 
+            <body style="font-family: sans-serif;">
+                <h2>Ողջույն {student_name},</h2>
+                <p>Դասընթացի նոր նյութերը արդեն հասանելի են ձեզ համար:</p>
+                <p><strong>Բաժին:</strong> {chapter_title}</p>
+                <p><strong>Դասընթաց:</strong> {course_name}</p>
+                <p>Մուտք գործեք ձեր էջ՝ նյութերին ծանոթանալու համար: 
                    <a href="{settings.FRONTEND_URL}/student/materials">{settings.FRONTEND_URL}/student/materials</a>
                 </p>
                 <br>
-                <p>Happy learning!<br>LogicLab Team</p>
+                <p>Մաղթում ենք հաջող ուսումնառություն:<br>LogicLab թիմ</p>
             </body>
         </html>
         """
@@ -156,17 +171,17 @@ class EmailService:
 
     async def send_password_reset_email(self, to_email: str, username: str, reset_link: str):
         """Send password reset email"""
-        subject = "Password Reset Request - LogicLab"
+        subject = "Գաղտնաբառի վերականգնման հարցում - LogicLab"
         body = f"""
         <html>
-            <body>
-                <h2>Hello {username},</h2>
-                <p>You have requested a password reset for your LogicLab account.</p>
-                <p>Please click on the link below to reset your password:</p>
-                <p><a href="{reset_link}">Reset Password</a></p>
-                <p>If you did not request a password reset, please ignore this email.</p>
+            <body style="font-family: sans-serif;">
+                <h2>Ողջույն {username},</h2>
+                <p>Դուք հարցում եք ուղարկել LogicLab-ի ձեր հաշվի գաղտնաբառը վերականգնելու համար:</p>
+                <p>Խնդրում ենք սեղմել ստորև նշված հղմանը՝ գաղտնաբառը փոխելու համար:</p>
+                <p><a href="{reset_link}">Վերականգնել գաղտնաբառը</a></p>
+                <p>Եթե դուք չեք կատարել այս հարցումը, պարզապես անտեսեք այս հաղորդագրությունը:</p>
                 <br>
-                <p>Best regards,<br>LogicLab Team</p>
+                <p>Հարգանքներով,<br>LogicLab թիմ</p>
             </body>
         </html>
         """

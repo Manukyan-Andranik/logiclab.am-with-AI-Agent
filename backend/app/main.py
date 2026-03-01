@@ -5,9 +5,9 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 import os
 
+from .models.models import Base
 from .core.config import settings
 from .core.database import engine, get_db
-from .models.models import Base
 from .api.deps import get_current_admin
 
 # Import routers
