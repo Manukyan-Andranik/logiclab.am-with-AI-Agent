@@ -3,7 +3,7 @@ import {
   Send, Bot, X, Terminal, ChevronRight, ChevronDown,
   Sparkles, MessageCircle, Users, FolderOpen, Phone, HelpCircle,
 } from 'lucide-react';
-import { useNexus } from '../../hooks/useLogic';
+import { useLogic } from '../../hooks/useLogic';
 
 interface LogicAgentProps {
   isOpen: boolean;
@@ -22,7 +22,7 @@ const QUICK_CHIPS = ['Գին', 'Ժամանակացույց', 'Հավաստագի
 const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
   const [input, setInput] = useState('');
   const [showFAQ, setShowFAQ] = useState(true);
-  const { messages, isLoading, sendMessage } = useNexus();
+  const { messages, isLoading, sendMessage } = useLogic();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

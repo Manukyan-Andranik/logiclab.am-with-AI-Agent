@@ -164,7 +164,7 @@ app.include_router( # New router include
 app.include_router(
     logic.router,
     prefix="/api/logic",
-    tags=["Nexus AI Agent"]
+    tags=["Logic AI Agent"]
 )
 
 app.include_router(

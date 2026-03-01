@@ -26,7 +26,7 @@ export const logicApi = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to communicate with Nexus');
+      throw new Error('Failed to communicate with Logic');
     }
 
     return response.json();

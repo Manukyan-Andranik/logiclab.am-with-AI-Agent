@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logicApi, Message } from '../services/logicApi';
 
-export const useNexus = () => {
+export const useLogic = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
