@@ -19,7 +19,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const logicApi = {
   chat: async (message: string, history: Message[]): Promise<ChatResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/logic/chat`, {
+    const response = await fetch(`${API_BASE_URL}/logic/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, history }),
