@@ -189,7 +189,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
               <h3 className="text-sm font-black text-[var(--white)] tracking-tighter leading-none">LOGIC AGENT</h3>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
-                <p className="text-[9px] text-[var(--gray-light)] opacity-55 font-mono uppercase tracking-[0.2em]">Online · Neural Link v4</p>
+                <p className="text-[9px] text-[var(--gray-light)] opacity-55 font-mono uppercase tracking-[0.2em]">v1</p>
               </div>
             </div>
           </div>
@@ -329,7 +329,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
           <div className="flex items-center justify-center gap-2 mt-3.5">
             <Terminal size={10} className="text-[var(--primary-alt)] opacity-40" />
             <p className="text-[9px] text-[var(--gray-light)] opacity-25 font-black uppercase tracking-[0.25em]">
-              LogicLab OS v4.0.2
+              LogicLab v1
             </p>
           </div>
         </div>

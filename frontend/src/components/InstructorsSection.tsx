@@ -19,17 +19,14 @@ const InstructorsSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-16"
         >
           <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-widest mb-2 block">
             Logic Lab
           </span>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter leading-tight">
-            Մեր <span className="text-[var(--primary)]">դասախոսները</span>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter">
+            Մեր <span className="text-[var(--primary-alt)]">Դասախոսները</span>
           </h2>
-          <p className="text-[var(--gray-light)] opacity-60 max-w-2xl mx-auto text-lg leading-relaxed">
-            Մեր լաբորատորիան առաջարկում է դասընթացավարի փորձառություն
-          </p>
         </motion.div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">

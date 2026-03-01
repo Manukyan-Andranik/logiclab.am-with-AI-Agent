@@ -1,37 +1,37 @@
 import { motion } from "framer-motion";
-import { GraduationCap, Users, Award, Lightbulb, TrendingUp, Clock } from "lucide-react";
+import { BrainCircuit, Box, Camera, Rocket } from "lucide-react";
 
 const features = [
   {
-    icon: GraduationCap,
-    title: "Գրացագույն Դասախոսներ",
-    desc: "Դեռ դասընթացավարների միջոցով են միջազգային գրացագույնները։",
+    icon: BrainCircuit, // Or Lightbulb
+    title: "Արհեստական Բանականություն",
+    desc: "Սովորեք Python և Machine Learning՝ ստեղծելով ալգորիթմներ, որոնք «մտածում են»:",
   },
   {
-    icon: Users,
-    title: "Թիմ Ընդլայնում",
-    desc: "Մեր թիմն իրողանցն անհատների միջոցով։",
+    icon: Box, // Or Layers
+    title: "3D Մոդելավորում",
+    desc: "3dsMax-ի և դիզայնի հիմունքների միջոցով սովորեք կառուցել թվային աշխարհներ:",
   },
   {
-    icon: Award,
-    title: "Մեկնաբանություն",
-    desc: "Մեր մեկնաբանությունը դասընթացավարի միջոցով։",
+    icon: Camera,
+    title: "Պրոֆեսիոնալ Լուսանկարչություն",
+    desc: "Տիրապետեք էքսպոզիցիայի արվեստին և Photoshop-ին՝ պատմելով պատմություններ լուսանկարով:",
   },
   {
-    icon: Lightbulb,
-    title: "Գիտնականների Պրոֆեսիոնալներ",
-    desc: "Մեր գիտնականների պրոֆեսիոնալներ։",
+    icon: Rocket,
+    title: "Մրցունակ Ապագա",
+    desc: "Մեր դասընթացները նախատեսված են դպրոցականների և սկսնակների համար, ովքեր ձգտում են առաջնորդության:",
   },
 ];
 
-const stats = [
-  { icon: TrendingUp, value: "95%", label: "Գիրք Կնաբատին" },
-  { icon: Users, value: "500+", label: "Մեկնաբաններ" },
-  { icon: Clock, value: "8+", label: "Դասընթացներ" },
-  { icon: Award, value: "80%+", label: "Բարձրաթն Ակադեմիկ Ակտիվ" },
-];
+// const stats = [
+//   { icon: TrendingUp, value: "95%", label: "Գիրք Կնաբատին" },
+//   { icon: Users, value: "500+", label: "Մեկնաբաններ" },
+//   { icon: Clock, value: "8+", label: "Դասընթացներ" },
+//   { icon: Award, value: "80%+", label: "Բարձրաթն Ակադեմիկ Ակտիվ" },
+// ];
 
-const aboutText = "Logic Lab-ը ծրագրային լուծումների կենտրոն է, որտեղ մենք զարգացնում ենք հետազոտական եւ թեստային գործիքներ, օգտագործելով AI, Machine Learning, վիրտուալ եւ 3D մոդելավորման տեխնոլոգիաներ։";
+const aboutText = "«Logic Lab»-ը կրթական և տեխնոլոգիական լուծումների կենտրոն է, որտեղ միահյուսվում են տրամաբանությունն ու ստեղծագործությունը։ Մենք մասնագիտացած ենք Արհեստական Բանականության, 3D մոդելավորման և թվային արվեստի ոլորտներում՝ օգնելով սկսնակներին և պատանիներին կառուցել մրցունակ ապագա։";
 const locationText = "Վանաձոր, Հայաստան";
 
 const AboutSection = () => {
@@ -39,7 +39,7 @@ const AboutSection = () => {
     <section id="about" className="py-24">
       <div className="container mx-auto px-6">
         {/* Stats Bar - ACA style */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -59,7 +59,7 @@ const AboutSection = () => {
               <div className="text-sm text-[var(--gray-light)] opacity-60 font-bold uppercase tracking-widest">{stat.label}</div>
             </motion.div>
           ))}
-        </motion.div>
+        </motion.div> */}
 
         {/* Why Choose Us */}
         <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -97,7 +97,7 @@ const AboutSection = () => {
                 transition={{ delay: i * 0.1 }}
                 className="glass-card rounded-2xl p-5 border-2 border-[var(--gray-dark)] hover:border-[var(--primary-alt)] transition-all"
               >
-                <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center mb-3 text-[var(--black)]">
+                <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center mb-3 text-[var(--primary-alt)]">
                   <f.icon className="w-5 h-5" />
                 </div>
                 <h3 className="font-display font-black text-xs mb-1 text-[var(--white)] uppercase tracking-tighter">{f.title}</h3>

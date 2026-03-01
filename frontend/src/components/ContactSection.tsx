@@ -33,9 +33,22 @@ const ContactSection = () => {
   };
 
   return (
-    <section id="contact" className="py-24 bg-dark-surface">
+    <section id="contact" className="py-24">
       <div className="container mx-auto px-6">
+
         <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-16"
+        >
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter">
+            Կապվեք <span className="text-[var(--primary-alt)]">մեզ հետ</span>
+          </h2>
+        </motion.div>
+
+
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -44,7 +57,7 @@ const ContactSection = () => {
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
             {"Կապվեք "}<span className="text-gold">{"մեզ հետ"}</span>
           </h2>
-        </motion.div>
+        </motion.div> */}
 
         <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
           {/* Contact Info */}
