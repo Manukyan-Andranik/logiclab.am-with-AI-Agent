@@ -131,18 +131,16 @@ async def logic_chat(request: ChatRequest):
             parsed_json = {}
 
             if json_match:
+                json_str = json_match.group(1).strip()
                 try:
-                    parsed_json = json.loads(json_match.group(1).strip())
+                    parsed_json = json.loads(json_str)
                 except json.JSONDecodeError:
-                    # Fallback to general JSON find
-                    match = re.search(r"\{.*\}", full_text, re.DOTALL)
-                    if match:
-                        try: parsed_json = json.loads(match.group(0))
-                        except: pass
+                    pass
 
-            clean_text = re.sub(r"<JSON>.*?</JSON>", "", full_text, flags=re.DOTALL).strip()
-            clean_text = re.sub(r"\{.*\}", "", clean_text, flags=re.DOTALL).strip()
-
+            clean_text = full_text
+            if json_match:
+                clean_text = full_text.replace(json_match.group(0), "").strip()
+                
             intent = parsed_json.get("intent")
             print(f"[AI] Intent: {intent}")
 
