@@ -39,7 +39,7 @@ const Footer: React.FC = () => {
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-xl font-bold text-[var(--primary-alt)] border-l-4 border-[var(--primary)] pl-4">NAV MODE</h4>
+            <h4 className="text-xl font-bold text-[var(--primary-alt)] border-l-4 border-[var(--primary)] pl-4">ՆԱՎԻԳԱՑԻԱՅԻ ՌԵԺԻՄ</h4>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => selectMode('modern')}
@@ -49,7 +49,7 @@ const Footer: React.FC = () => {
                   }`}
               >
                 <Bot size={18} />
-                Modern AI
+                Logic AI
               </button>
               <button
                 onClick={() => selectMode('traditional')}
@@ -59,7 +59,7 @@ const Footer: React.FC = () => {
                   }`}
               >
                 <Layout size={18} />
-                Traditional
+                Ավանդական
               </button>
             </div>
           </div>
