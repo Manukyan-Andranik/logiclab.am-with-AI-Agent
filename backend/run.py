@@ -17,7 +17,7 @@ def create_wsgi_app(asgi_app):
                 "method": environ["REQUEST_METHOD"], 
                 "scheme": environ.get("wsgi.url_scheme", "http"),
                 "path": environ.get("PATH_INFO", "/"), 
-                "query_string": environ.get("QUERY_STRING", "").encode(),
+                "query_string": environ.get("QUERY_STRING", "").encode("utf-8"),
                 "headers": _build_headers(environ),
                 "server": (environ.get("SERVER_NAME", "localhost"), int(environ.get("SERVER_PORT", 80))),
             }
@@ -76,8 +76,10 @@ def create_wsgi_app(asgi_app):
 def _build_headers(environ):
     headers = []
     for key, value in environ.items():
-        if key.startswith("HTTP_"): headers.append((key[5:].replace("_", "-").lower().encode(), value.encode()))
-        elif key in ("CONTENT_TYPE", "CONTENT_LENGTH"): headers.append((key.replace("_", "-").lower().encode(), value.encode()))
+        if key.startswith("HTTP_"): 
+            headers.append((key[5:].replace("_", "-").lower().encode("utf-8"), value.encode("utf-8")))
+        elif key in ("CONTENT_TYPE", "CONTENT_LENGTH"): 
+            headers.append((key.replace("_", "-").lower().encode("utf-8"), value.encode("utf-8")))
     return headers
 
 def _get_status_phrase(code):

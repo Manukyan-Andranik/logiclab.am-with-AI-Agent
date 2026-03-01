@@ -52,7 +52,7 @@ class RegisterRequest(BaseModel):
     last_name: str
     email: EmailStr
     phone: Optional[str] = None
-    password: str
+    password: Optional[str] = None
     course_id: Optional[int] = None
     message: Optional[str] = None
 

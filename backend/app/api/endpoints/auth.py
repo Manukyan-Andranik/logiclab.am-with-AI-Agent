@@ -64,8 +64,11 @@ async def register(
             detail="Email already registered"
         )
     
+    # Use provided password or generate a secure random one
+    password = registration.password or secrets.token_urlsafe(12)
+    hashed_password = get_password_hash(password)
+    
     # Create user account (inactive until admin confirms)
-    hashed_password = get_password_hash(registration.password)
     new_user = UserPersonal(
         first_name=registration.first_name,
         last_name=registration.last_name,

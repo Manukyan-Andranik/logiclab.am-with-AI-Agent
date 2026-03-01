@@ -124,7 +124,6 @@ async def logic_chat(request: ChatRequest):
 
             data = response.json()
             full_text = data["choices"][0]["message"]["content"]
-            print(f"[AI] Raw: {full_text}")
 
             # --- Extract JSON block ---
             json_match = re.search(r"<JSON>(.*?)</JSON>", full_text, re.DOTALL)
