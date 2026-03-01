@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { logicApi, Message } from '../services/logicApi';
 
 export const useNexus = () => {
@@ -7,6 +7,67 @@ export const useNexus = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleIntent = useCallback((intent: string, courseId?: string | number) => {
+    console.log(`[AI Navigation] Intent: ${intent}, ID: ${courseId}`);
+    
+    // We use a small timeout to allow React to finish processing the state update
+    // from the chat message before starting the navigation transition.
+    setTimeout(() => {
+      switch (intent) {
+        case 'courses':
+          navigate('/courses');
+          break;
+        case 'course_detail':
+          if (courseId) {
+            navigate(`/courses/${courseId}`);
+          } else {
+            navigate('/courses');
+          }
+          break;
+        case 'about':
+          navigate('/about');
+          break;
+        case 'register':
+          navigate('/register');
+          break;
+        case 'instructors':
+          if (location.pathname === '/') {
+            document.getElementById('instructors')?.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            navigate('/#instructors');
+          }
+          break;
+        case 'projects':
+          if (location.pathname === '/') {
+            document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            navigate('/#projects');
+          }
+          break;
+        case 'success':
+          if (location.pathname === '/') {
+            document.getElementById('success')?.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            navigate('/#success');
+          }
+          break;
+        case 'contact':
+          if (location.pathname === '/') {
+            document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            navigate('/#contact');
+          }
+          break;
+        case 'home':
+          navigate('/');
+          break;
+        default:
+          break;
+      }
+    }, 400);
+  }, [navigate, location.pathname]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
@@ -25,6 +86,7 @@ export const useNexus = () => {
         handleIntent(response.intent, response.course_id);
       }
     } catch (err) {
+      console.error('Logic API Error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       const errorMessage: Message = { 
         role: 'assistant', 
@@ -34,64 +96,7 @@ export const useNexus = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, navigate]);
-
-  const handleIntent = (intent: string, courseId?: string | number) => {
-    // Artificial delay for UX feel
-    setTimeout(() => {
-      switch (intent) {
-        case 'courses':
-          navigate('/courses');
-          break;
-        case 'course_detail':
-          if (courseId) navigate(`/courses/${courseId}`);
-          break;
-        case 'about':
-          navigate('/about');
-          break;
-        case 'register':
-          navigate('/register');
-          break;
-        case 'instructors':
-          const instructorsSection = document.getElementById('instructors');
-          if (instructorsSection) {
-            instructorsSection.scrollIntoView({ behavior: 'smooth' });
-          } else {
-             navigate('/#instructors');
-          }
-          break;
-        case 'projects':
-          const projectsSection = document.getElementById('projects');
-          if (projectsSection) {
-            projectsSection.scrollIntoView({ behavior: 'smooth' });
-          } else {
-             navigate('/#projects');
-          }
-          break;
-        case 'success':
-          const successSection = document.getElementById('success');
-          if (successSection) {
-            successSection.scrollIntoView({ behavior: 'smooth' });
-          } else {
-             navigate('/#success');
-          }
-          break;
-        case 'contact':
-          const contactSection = document.getElementById('contact');
-          if (contactSection) {
-            contactSection.scrollIntoView({ behavior: 'smooth' });
-          } else {
-             navigate('/#contact');
-          }
-          break;
-        case 'home':
-          navigate('/');
-          break;
-        default:
-          break;
-      }
-    }, 800);
-  };
+  }, [messages, handleIntent]);
 
   return {
     messages,

@@ -61,35 +61,25 @@ SYSTEM_PROMPT = """You are Logic Agent, the AI guide for LogicLab. Your mission 
 - register: Go to Registration page ('/register').
 - learning_path: Provide personalized course recommendations.
 
-### COURSE IDs:
-- ai: AI Tools (ԱԲ Գործիքներ)
-- ml: Machine Learning Basics (Մեքենայական Ուսուցման Հիմունքներ)
-- ml-advanced: Advanced Machine Learning (Խորացված Մեքենայական Ուսուցում)
-- python: Python Programming
-- web: Web Development (WEB ծրագրավորում)
-- math: Mathematics for AI/ML
-- 3dsmax: 3D Modeling (3D մոդելավորում, դիզայն)
-- data-viz: Data Visualization
-- photography: Photography (Լւոսանկարչություն)
+### COURSE IDs (Use these exactly for course_detail intent):
+- ai, ml, ml-advanced, web, 3dsmax, photography
+
+### for all courses:
+- locate "all" section on the courses page.
+
+### MANDATORY JSON FORMAT:
+You MUST ALWAYS end your response with a JSON block wrapped in <JSON> tags.
+Example:
+<JSON>
+{
+  "intent": "register",
+  "course_id": null
+}
+</JSON>
 
 ### GUIDELINES:
-- Language: Respond in Armenian or English, matching the user's tone and language.
-- Context: If a user asks "Who are the teachers?", use intent 'instructors'. If they ask "Show me what students made", use 'projects'.
-- JSON: ALWAYS conclude with a <JSON>...</JSON> block.
-
-JSON Structure:
-{
-  "intent": "intent_string",
-  "course_id": "optional_course_id",
-  "extracted": {
-    "age": null,
-    "interest": "string",
-    "level": "beginner|intermediate|advanced",
-    "background": "string"
-  },
-  "learning_path": ["id1", "id2"],
-  "message": "internal_label"
-}
+- Language: Armenian or English.
+- Context: If they want to sign up or enroll, ALWAYS use 'register' intent.
 """
 
 
@@ -121,7 +111,7 @@ async def logic_chat(request: ChatRequest):
                 json={
                     "model": "gpt-4o-mini",
                     "messages": messages,
-                    "temperature": 0.7,
+                    "temperature": 0.3, # Lower temperature for more consistent JSON
                     "max_tokens": 800,
                 },
             )
@@ -133,8 +123,8 @@ async def logic_chat(request: ChatRequest):
                 )
 
             data = response.json()
-
             full_text = data["choices"][0]["message"]["content"]
+            print(f"[AI] Raw: {full_text}")
 
             # --- Extract JSON block ---
             json_match = re.search(r"<JSON>(.*?)</JSON>", full_text, re.DOTALL)
@@ -144,19 +134,26 @@ async def logic_chat(request: ChatRequest):
                 try:
                     parsed_json = json.loads(json_match.group(1).strip())
                 except json.JSONDecodeError:
-                    pass
+                    # Fallback to general JSON find
+                    match = re.search(r"\{.*\}", full_text, re.DOTALL)
+                    if match:
+                        try: parsed_json = json.loads(match.group(0))
+                        except: pass
 
-            clean_text = re.sub(
-                r"<JSON>.*?</JSON>", "", full_text, flags=re.DOTALL
-            ).strip()
+            clean_text = re.sub(r"<JSON>.*?</JSON>", "", full_text, flags=re.DOTALL).strip()
+            clean_text = re.sub(r"\{.*\}", "", clean_text, flags=re.DOTALL).strip()
+
+            intent = parsed_json.get("intent")
+            print(f"[AI] Intent: {intent}")
 
             return LogciAgentResponse(
                 text=clean_text,
-                intent=parsed_json.get("intent"),
+                intent=intent,
                 course_id=parsed_json.get("course_id"),
                 learning_path=parsed_json.get("learning_path"),
                 extracted=parsed_json.get("extracted"),
             )
 
         except Exception as e:
+            print(f"[AI] Error: {e}")
             raise HTTPException(status_code=500, detail=str(e))

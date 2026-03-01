@@ -44,7 +44,7 @@ const CoursesPage = () => {
       />
 
       {/* Courses Section */}
-      <section className="py-24 bg-[var(--gray-dark)]">
+      <section id="all" className="py-24 bg-[var(--gray-dark)]">
         <div className="container mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -60,6 +60,7 @@
   }
 
   body {
+    @apply text-foreground;
     background-color: #222222; /* Mandatory #222 */
     color: #ffffff; /* Mandatory #fff */
     font-family: 'Inter', sans-serif;
