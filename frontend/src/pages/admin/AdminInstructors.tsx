@@ -57,7 +57,7 @@ const AdminInstructors = () => {
         profile_image: data.profile_image,
         ...(data.password ? { password: data.password } : {}),
       };
-      return editingInstructor 
+      return editingInstructor
         ? updateInstructor(editingInstructor.id, payload as any)
         : createInstructor(payload as any);
     },
@@ -102,7 +102,7 @@ const AdminInstructors = () => {
       bio: instructor.bio || "",
       skills: instructor.skills?.join(", ") || "",
       proficiency: instructor.proficiency?.join(", ") || "",
-      is_active: instructor.is_active, 
+      is_active: instructor.is_active,
       profile_image: instructor.user.profile_image || "",
     });
     setIsOpen(true);
@@ -114,16 +114,16 @@ const AdminInstructors = () => {
     <div className="space-y-8 text-[var(--black)]">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold">Instructors</h1>
-          <p className="text-[var(--gray-dark)] opacity-70">Manage course instructors and their profiles.</p>
+          <h1 className="text-3xl font-bold text-[var(--white)]">Instructors</h1>
+          <p className="text-[var(--gray-light)]">Manage course instructors and their profiles.</p>
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-[var(--primary)] text-[var(--black)] hover:bg-[var(--primary)]/90">
+            <Button className="gap-2 bg-[var(--primary-alt)] text-[var(--white)] hover:bg-[var(--primary-dark)]/90">
               <Plus size={18} />
               Add Instructor
             </Button>
@@ -136,49 +136,49 @@ const AdminInstructors = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">First Name</Label>
-                  <Input id="first_name" value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} />
+                  <Input id="first_name" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="last_name">Last Name</Label>
-                  <Input id="last_name" value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} />
+                  <Input id="last_name" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
               </div>
 
               {!editingInstructor && (
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+                  <Input id="password" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
                 </div>
               )}
 
               <div className="space-y-2">
                 <Label htmlFor="profile_image">Profile Image URL</Label>
-                <Input id="profile_image" value={formData.profile_image} onChange={e => setFormData({...formData, profile_image: e.target.value})} />
+                <Input id="profile_image" value={formData.profile_image} onChange={e => setFormData({ ...formData, profile_image: e.target.value })} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="skills">Skills (comma separated)</Label>
-                  <Input id="skills" value={formData.skills} onChange={e => setFormData({...formData, skills: e.target.value})} placeholder="Python, ML, AI" />
+                  <Input id="skills" value={formData.skills} onChange={e => setFormData({ ...formData, skills: e.target.value })} placeholder="Python, ML, AI" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="proficiency">Proficiency (comma separated)</Label>
-                  <Input id="proficiency" value={formData.proficiency} onChange={e => setFormData({...formData, proficiency: e.target.value})} placeholder="TensorFlow, PyTorch" />
+                  <Input id="proficiency" value={formData.proficiency} onChange={e => setFormData({ ...formData, proficiency: e.target.value })} placeholder="TensorFlow, PyTorch" />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" className="min-h-[100px]" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
+                <Textarea id="bio" className="min-h-[100px]" value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} />
               </div>
 
               <div className="flex items-center space-x-2">
-                <Switch id="active" checked={formData.is_active} onCheckedChange={checked => setFormData({...formData, is_active: checked})} />
+                <Switch id="active" checked={formData.is_active} onCheckedChange={checked => setFormData({ ...formData, is_active: checked })} />
                 <Label htmlFor="active">Is Active</Label>
               </div>
             </div>
@@ -229,19 +229,43 @@ const AdminInstructors = () => {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="ghost" className="h-8 w-8 text-[var(--black)]" onClick={() => handleEdit(instructor)}>
+
+                    {/* Edit Button */}
+                    <button
+                      onClick={() => handleEdit(instructor)}
+                      className=" h-8 w-8 flex items-center justify-center
+                                  rounded-md
+                                  bg-[var(--teal)]/10
+                                  text-[var(--teal)]
+                                  transition-all duration-200
+                                  hover:bg-[var(--teal)]
+                                  hover:text-[var(--white)]
+                                  active:scale-95
+                                ">
                       <Edit2 size={14} />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="h-8 w-8 text-[var(--danger)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10"
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
                       onClick={() => {
-                        if (confirm("Are you sure?")) deleteMutation.mutate(instructor.id);
+                        if (confirm("Are you sure?")) {
+                          deleteMutation.mutate(instructor.id);
+                        }
                       }}
+                      className="
+        h-8 w-8 flex items-center justify-center
+        rounded-md
+        bg-[var(--danger)]/10
+        text-[var(--danger)]
+        transition-all duration-200
+        hover:bg-[var(--danger)]
+        hover:text-[var(--white)]
+        active:scale-95
+      "
                     >
                       <Trash2 size={14} />
-                    </Button>
+                    </button>
+
                   </div>
                 </td>
               </tr>
