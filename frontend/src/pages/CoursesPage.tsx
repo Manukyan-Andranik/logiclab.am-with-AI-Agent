@@ -1,6 +1,18 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Clock, Signal, Brain, Code, BarChart3, Globe, Calculator, Box, Camera, Database, LucideIcon } from "lucide-react";
+import { 
+  ArrowRight, 
+  Brain, 
+  Code, 
+  BarChart3, 
+  Globe, 
+  Calculator, 
+  Box, 
+  Camera, 
+  Database, 
+  LucideIcon,
+  Sparkles
+} from "lucide-react";
 import VideoHero from "@/components/VideoHero";
 import coursesVideo from "@/assets/courses-hero-video.mp4";
 import { useQuery } from "@tanstack/react-query";
@@ -26,40 +38,63 @@ const CoursesPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--black)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[var(--primary)]"></div>
+      <div className="min-h-screen bg-[var(--black)] flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-[var(--primary)]"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--primary)] font-display font-bold text-xs">
+            LOGIC
+          </div>
+        </div>
       </div>
     );
   }
 
-  const courses = coursesData?.filter((c) => c.category === "course") || [];
+  const courses = coursesData; //?.filter((c) => c.category === "course") || [];
 
   return (
-    <div className="min-h-screen bg-[var(--black)]">
+    <div className="min-h-screen bg-[var(--black)] selection:bg-[var(--primary)] selection:text-[var(--black)]">
       <VideoHero
         videoSrc={coursesVideo}
-        titleHighlight={"Մեր"}
-        title={"դասընթացները"}
-        subtitle={"Ընտրեք ձեզ համապատասխան դասընթացը և համար սկսեք ձեր կարիերան"}
+        titleHighlight={"ԿԵՐՏԻ՛Ր"}
+        title={"ՔՈ ԱՊԱԳԱՆ"}
+        subtitle={"Տիրապետիր ամենապահանջված հմտություններին և դարձիր գլոբալ շուկայի մրցունակ մասնագետ Logic Lab-ի հետ:"}
       />
 
       {/* Courses Section */}
-      <section id="all" className="py-24 bg-[var(--gray-dark)]">
-        <div className="container mx-auto px-6">
+      <section id="all" className="py-24 relative overflow-hidden">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--primary)] opacity-[0.03] blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[var(--primary-alt)] opacity-[0.03] blur-[120px] rounded-full" />
+
+        <div className="container mx-auto px-6 relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="mb-16"
+            className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-6"
           >
-            <span className="text-[var(--primary-alt)] font-display font-black text-sm uppercase tracking-widest mb-3 block">Logic Lab</span>
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-black text-[var(--white)] uppercase tracking-tighter">
-              {"ՊԱՀԱՆՋՎԱԾ ԴԱՍԸՆԹԱՑՆԵՐ"}
-            </h2>
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-[var(--primary-alt)]" />
+                <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-[0.3em]">
+                  Մասնագիտացումներ
+                </span>
+              </div>
+              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--white)] uppercase tracking-tighter leading-none">
+                ՊԱՀԱՆՋՎԱԾ <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--white)] to-[var(--gray-light)]">
+                  ՈՒՂՂՈՒԹՅՈՒՆՆԵՐ
+                </span>
+              </h2>
+            </div>
+            
+            <p className="text-[var(--gray-light)] font-medium max-w-xs border-l-2 border-[var(--primary)] pl-6 py-2 opacity-80">
+              Մենք ստեղծում ենք միջավայր, որտեղ տեսությունը վերածվում է իրական փորձի:
+            </p>
           </motion.div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {coursesData.map((course, i) => {
+            {courses.map((course, i) => {
               const Icon = iconMap[course.icon_url || "brain"] || Brain;
               return (
                 <motion.div

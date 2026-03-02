@@ -21,9 +21,9 @@ const InstructorsSection = () => {
           viewport={{ once: true }}
           className="mb-16"
         >
-          <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-widest mb-2 block">
+          {/* <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-widest mb-2 block">
             Logic Lab
-          </span>
+          </span> */}
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter">
             Մեր <span className="text-[var(--primary-alt)]">Դասախոսները</span>
           </h2>

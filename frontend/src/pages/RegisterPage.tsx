@@ -67,7 +67,7 @@ const RegisterPage = () => {
           <div className="w-20 h-20 rounded-full bg-[var(--success)]/10 flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-[var(--success)]" />
           </div>
-          <h2 className="font-display text-3xl font-bold text-[var(--white)] mb-4">
+          <h2 className="font-display text-3xl font-bold text-[var(--success)] mb-4">
             Շնորհակալություն!
           </h2>
           <p className="text-[var(--gray-light)] opacity-70 mb-8">

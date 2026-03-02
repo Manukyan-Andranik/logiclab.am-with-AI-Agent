@@ -1,17 +1,16 @@
 # app/main.py
-from fastapi import FastAPI, Depends, HTTPException, status
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session, joinedload
+from fastapi.responses import JSONResponse
 import os
 
 from .models.models import Base
 from .core.config import settings
-from .core.database import engine, get_db
-from .api.deps import get_current_admin
+from .core.database import engine
 
 # Import routers
-
 from .api.endpoints import (
     auth,
     courses,
@@ -31,23 +30,31 @@ from .api.endpoints import (
 from .api.routers import admin
 
 
-# delete all tables and recreate them (for development purposes)
-# Base.metadata.drop_all(bind=engine)
+# ---------------------------------------------------
+# DATABASE INITIALIZATION (Development Only)
+# ---------------------------------------------------
 
-
-# Create database tables
+# ⚠️ In production, use Alembic instead of create_all
 Base.metadata.create_all(bind=engine)
 
-# Initialize FastAPI app
+
+# ---------------------------------------------------
+# FASTAPI INITIALIZATION
+# ---------------------------------------------------
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Educational platform API for LogicLab",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    root_path="/api",  
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
-# CORS middleware
+# ---------------------------------------------------
+# CORS CONFIGURATION
+# ---------------------------------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -56,14 +63,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create upload directory if it doesn't exist
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-# Mount static files
+# ---------------------------------------------------
+# STATIC FILES
+# ---------------------------------------------------
+
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
-# Health check endpoint
-@app.get("/health")
+
+# ---------------------------------------------------
+# BASIC ROUTES
+# ---------------------------------------------------
+
+@app.get("/health", tags=["System"])
 async def health_check():
     return {
         "status": "healthy",
@@ -71,128 +84,65 @@ async def health_check():
         "version": settings.APP_VERSION
     }
 
-# Root endpoint
-@app.get("/")
+
+@app.get("/", tags=["System"])
 async def root():
     return {
         "message": "Welcome to LogicLab API",
-        "docs": "/api/docs",
+        "documentation": "/docs",
+        "openapi_schema": "/openapi.json",
         "version": settings.APP_VERSION
     }
 
 
+# ---------------------------------------------------
+# ROUTERS
+# ---------------------------------------------------
 
-# Include routers
-app.include_router(
-    auth.router,
-    prefix="/api/auth",
-    tags=["Authentication"]
-)
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+app.include_router(courses.router, prefix="/courses", tags=["Courses"])
+app.include_router(instructors.router, prefix="/instructors", tags=["Instructors"])
+app.include_router(students.router, prefix="/students", tags=["Students"])
+app.include_router(registrations.router, prefix="/registrations", tags=["Registrations"])
+app.include_router(materials.router, prefix="/materials", tags=["Materials"])
+app.include_router(projects.router, prefix="/projects", tags=["Projects"])
+app.include_router(success_stories.router, prefix="/success-stories", tags=["Success Stories"])
+app.include_router(visits.router, tags=["Visits"])
+app.include_router(contact_messages.router, prefix="/contact-messages", tags=["Contact Messages"])
+app.include_router(certificates.router, prefix="/certificates", tags=["Certificates"])
+app.include_router(enrollments.router, prefix="/enrollments", tags=["Enrollments"])
+app.include_router(uploads.router, tags=["Uploads"])  # router already defines its prefix
+app.include_router(logic.router, prefix="/logic", tags=["Logic AI Agent"])
+app.include_router(admin.router, tags=["Admin"])  # router already defines its prefix
 
-app.include_router(
-    courses.router,
-    prefix="/api/courses",
-    tags=["Courses"]
-)
 
-app.include_router(
-    instructors.router,
-    prefix="/api/instructors",
-    tags=["Instructors"]
-)
-
-app.include_router(
-    students.router,
-    prefix="/api/students",
-    tags=["Students"]
-)
-
-app.include_router(
-    registrations.router,
-    prefix="/api/registrations",
-    tags=["Registrations"]
-)
-
-app.include_router(
-    materials.router,
-    prefix="/api/materials",
-    tags=["Materials"]
-)
-
-app.include_router(
-    projects.router,
-    prefix="/api/projects",
-    tags=["Projects"]
-)
-
-app.include_router(
-    success_stories.router,
-    prefix="/api/success-stories",
-    tags=["Success Stories"]
-)
-
-app.include_router(
-    visits.router,
-    prefix="/api",
-    tags=["Visits"]
-)
-
-app.include_router(
-    contact_messages.router,
-    prefix="/api/contact-messages",
-    tags=["Contact Messages"]
-)
-
-app.include_router(
-    certificates.router,
-    prefix="/api/certificates",
-    tags=["Certificates"]
-)
-
-app.include_router( # New router include
-    enrollments.router,
-    prefix="/api/enrollments",
-    tags=["Enrollments"]
-)
-
-app.include_router( # New router include
-    uploads.router,
-    prefix="/api", # The upload router already has a /upload prefix
-    tags=["Uploads"]
-)
-
-app.include_router(
-    logic.router,
-    prefix="/api/logic",
-    tags=["Logic AI Agent"]
-)
-
-app.include_router(
-    admin.router,
-    prefix="/api", # The admin router already has a /admin prefix
-    tags=["Admin"]
-)
-
-# Exception handlers
-from fastapi.responses import JSONResponse
+# ---------------------------------------------------
+# EXCEPTION HANDLERS
+# ---------------------------------------------------
 
 @app.exception_handler(404)
-async def not_found_handler(request, exc):
+async def not_found_handler(request: Request, exc):
     return JSONResponse(
         status_code=404,
         content={"detail": "Resource not found"}
     )
 
+
 @app.exception_handler(500)
-async def internal_error_handler(request, exc):
+async def internal_error_handler(request: Request, exc):
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
     )
 
 
+# ---------------------------------------------------
+# LOCAL DEVELOPMENT ENTRYPOINT
+# ---------------------------------------------------
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

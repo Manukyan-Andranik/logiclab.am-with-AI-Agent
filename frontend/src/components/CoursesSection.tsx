@@ -42,15 +42,10 @@ const CoursesSection = () => {
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="mb-16"
-      >
-        <span className="text-[var(--primary)] font-mono font-bold text-xs uppercase tracking-[0.3em] mb-4 block">Logic Lab — Educational Programs</span>
+        className="mb-16">
         <h2 className="text-4xl sm:text-6xl font-black mb-6 text-[var(--white)] tracking-tighter uppercase">
           ԻՆՉՈՎ ԵՆՔ ՄԵՆՔ <span className="text-[var(--primary-alt)]">ԶԲԱՂՎՈՒՄ</span>
         </h2>
-        <p className="text-[var(--gray-light)] opacity-60 max-w-2xl text-lg leading-relaxed font-medium">
-          Մեր դասընթացները անցկացնում են ոլորտի առաջատար փորձագետները։ Ստացեք գիտելիքներ, որոնք անհրաժեշտ են ժամանակակից շուկայում։
-        </p>
       </motion.div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">

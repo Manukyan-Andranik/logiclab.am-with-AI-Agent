@@ -72,7 +72,7 @@ const AboutSection = () => {
               Ինչո՞ւ ընտրել հենց
             </span>
             <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 text-[var(--white)] uppercase tracking-tighter leading-tight">
-              Logic <span className="text-[var(--primary)]">Lab</span>?
+              Logic <span className="text-[var(--primary)]">Lab-ը</span>?
             </h2>
             <p className="text-[var(--gray-light)] text-lg mb-4 leading-relaxed opacity-90">
               {aboutText}
