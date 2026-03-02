@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
+import {
   getCourses, deleteCourse, createCourse, updateCourse, getCourseCurriculum,
   createChapter, updateChapter, deleteChapter,
   createLesson, updateLesson, deleteLesson
@@ -98,7 +98,7 @@ const AdminCourses = () => {
         icon_url: data.icon_url,
         instructor_ids: data.instructor_ids,
       };
-      return editingCourse 
+      return editingCourse
         ? updateCourse(editingCourse.id, payload as any)
         : createCourse(payload as any);
     },
@@ -215,7 +215,7 @@ const AdminCourses = () => {
 
   const handleAddChapter = () => {
     setEditingChapter(null);
-    setChapterFormData({ title: "",  order_index: (curriculumData?.curriculum.length || 0) + 1 });
+    setChapterFormData({ title: "", order_index: (curriculumData?.curriculum.length || 0) + 1 });
     setIsChapterOpen(true);
   };
 
@@ -247,13 +247,13 @@ const AdminCourses = () => {
           <h1 className="text-3xl font-bold">Courses</h1>
           <p className="text-muted-foreground">Manage your educational programs.</p>
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button variant="primary" className="gap-2 bg-[var(--primary)]/10 text-[var(--white)] hover:bg-[var(--primary)]/20 text">
               <Plus size={18} />
               Add Course
             </Button>
@@ -262,31 +262,31 @@ const AdminCourses = () => {
             <DialogHeader>
               <DialogTitle>{editingCourse ? "Edit Course" : "Add New Course"}</DialogTitle>
             </DialogHeader>
-            
+
             <Tabs defaultValue="hy" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="hy">Armenian (HY)</TabsTrigger>
                 <TabsTrigger value="en">English (EN)</TabsTrigger>
                 <TabsTrigger value="ru">Russian (RU)</TabsTrigger>
               </TabsList>
-              
+
               {(['hy', 'en', 'ru'] as const).map((lang) => (
                 <TabsContent key={lang} value={lang} className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor={`title_${lang}`}>Title ({lang.toUpperCase()})</Label>
-                    <Input 
-                      id={`title_${lang}`} 
-                      value={formData[`title_${lang}` as keyof typeof formData] as string} 
-                      onChange={e => setFormData({...formData, [`title_${lang}`]: e.target.value})} 
+                    <Input
+                      id={`title_${lang}`}
+                      value={formData[`title_${lang}` as keyof typeof formData] as string}
+                      onChange={e => setFormData({ ...formData, [`title_${lang}`]: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`description_${lang}`}>Description ({lang.toUpperCase()})</Label>
-                    <Textarea 
-                      id={`description_${lang}`} 
+                    <Textarea
+                      id={`description_${lang}`}
                       className="min-h-[150px]"
-                      value={formData[`description_${lang}` as keyof typeof formData] as string} 
-                      onChange={e => setFormData({...formData, [`description_${lang}`]: e.target.value})} 
+                      value={formData[`description_${lang}` as keyof typeof formData] as string}
+                      onChange={e => setFormData({ ...formData, [`description_${lang}`]: e.target.value })}
                     />
                   </div>
                 </TabsContent>
@@ -297,22 +297,22 @@ const AdminCourses = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="duration">Duration (months)</Label>
-                  <Input id="duration" type="number" value={formData.duration_months} onChange={e => setFormData({...formData, duration_months: parseInt(e.target.value)})} />
+                  <Input id="duration" type="number" value={formData.duration_months} onChange={e => setFormData({ ...formData, duration_months: parseInt(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="payment">Monthly Payment (AMD)</Label>
-                  <Input id="payment" type="number" value={formData.monthly_payment} onChange={e => setFormData({...formData, monthly_payment: parseInt(e.target.value)})} />
+                  <Input id="payment" type="number" value={formData.monthly_payment} onChange={e => setFormData({ ...formData, monthly_payment: parseInt(e.target.value) })} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <select 
-                    id="category" 
+                  <select
+                    id="category"
                     className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md text-sm"
                     value={formData.category}
-                    onChange={e => setFormData({...formData, category: e.target.value as any})}
+                    onChange={e => setFormData({ ...formData, category: e.target.value as any })}
                   >
                     <option value="course">Course</option>
                     <option value="profession">Profession</option>
@@ -320,13 +320,13 @@ const AdminCourses = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="level">Level</Label>
-                  <Input id="level" value={formData.level} onChange={e => setFormData({...formData, level: e.target.value})} />
+                  <Input id="level" value={formData.level} onChange={e => setFormData({ ...formData, level: e.target.value })} />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="icon_url">Icon URL</Label>
-                <Input id="icon_url" value={formData.icon_url} onChange={e => setFormData({...formData, icon_url: e.target.value})} />
+                <Input id="icon_url" value={formData.icon_url} onChange={e => setFormData({ ...formData, icon_url: e.target.value })} />
               </div>
 
               <div className="space-y-3">
@@ -336,12 +336,12 @@ const AdminCourses = () => {
                 <div className="grid grid-cols-2 gap-3 p-4 rounded-xl border border-border bg-secondary/10 max-h-[200px] overflow-y-auto">
                   {instructors?.map((instructor) => (
                     <div key={instructor.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`inst-${instructor.id}`} 
+                      <Checkbox
+                        id={`inst-${instructor.id}`}
                         checked={formData.instructor_ids.includes(instructor.id)}
                         onCheckedChange={() => toggleInstructor(instructor.id)}
                       />
-                      <label 
+                      <label
                         htmlFor={`inst-${instructor.id}`}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
@@ -353,7 +353,7 @@ const AdminCourses = () => {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Switch id="active" checked={formData.is_active} onCheckedChange={checked => setFormData({...formData, is_active: checked})} />
+                <Switch id="active" checked={formData.is_active} onCheckedChange={checked => setFormData({ ...formData, is_active: checked })} />
                 <Label htmlFor="active">Is Active</Label>
               </div>
             </div>
@@ -372,7 +372,7 @@ const AdminCourses = () => {
             <DialogHeader>
               <DialogTitle>Manage Curriculum: {curriculumCourse ? getLocalizedContent(curriculumCourse.title) : ""}</DialogTitle>
             </DialogHeader>
-            
+
             {isCurriculumLoading ? (
               <div className="py-10 text-center text-muted-foreground">Loading curriculum...</div>
             ) : (
@@ -399,39 +399,39 @@ const AdminCourses = () => {
                       </AccordionTrigger>
                       <AccordionContent className="pb-4">
                         <div className="pl-9 space-y-4">
-                          <div className="flex justify-between items-center text-xs text-[var(--gray-dark)] opacity-70 mb-2">
+                          <div className="flex justify-between items-center text-xs mb-2">
                             <span>{item.lessons.length} Lessons</span>
                             <div className="flex gap-2">
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--black)]" onClick={() => handleEditChapter(item.chapter)}>
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--teal)]" onClick={() => handleEditChapter(item.chapter)}>
                                 <Edit2 size={12} />
                               </Button>
                               <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--danger)]" onClick={() => {
-                                if(confirm("Delete chapter and all its lessons?")) deleteChapterMutation.mutate(item.chapter.id);
+                                if (confirm("Delete chapter and all its lessons?")) deleteChapterMutation.mutate(item.chapter.id);
                               }}>
                                 <Trash2 size={12} />
                               </Button>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2 border-l-2 border-[var(--primary)]/20 pl-4">
                             {item.lessons?.map((lesson: any, li: number) => (
                               <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-[var(--white)] border border-[var(--gray-light)] group">
                                 <span className="text-sm text-[var(--black)]">{li + 1}. {lesson.title}</span>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--black)]" onClick={() => handleEditLesson(lesson)}>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--teal)]" onClick={() => handleEditLesson(lesson)}>
                                     <Edit2 size={12} />
                                   </Button>
                                   <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--danger)]" onClick={() => {
-                                    if(confirm("Delete this lesson?")) deleteLessonMutation.mutate(lesson.id);
+                                    if (confirm("Delete this lesson?")) deleteLessonMutation.mutate(lesson.id);
                                   }}>
                                     <Trash2 size={12} />
                                   </Button>
                                 </div>
                               </div>
                             ))}
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               className="w-full border-dashed border border-[var(--gray-dark)] text-xs gap-2 text-[var(--black)]"
                               onClick={() => handleAddLesson(item.chapter.id, item.lessons?.length || 0)}
                             >
@@ -460,11 +460,11 @@ const AdminCourses = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="chap-title">Chapter Title</Label>
-                <Input id="chap-title" value={chapterFormData.title} onChange={e => setChapterFormData({...chapterFormData, title: e.target.value})} />
+                <Input id="chap-title" value={chapterFormData.title} onChange={e => setChapterFormData({ ...chapterFormData, title: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="chap-order">Order Index</Label>
-                <Input id="chap-order" type="number" value={chapterFormData.order_index} onChange={e => setChapterFormData({...chapterFormData, order_index: parseInt(e.target.value)})} />
+                <Input id="chap-order" type="number" value={chapterFormData.order_index} onChange={e => setChapterFormData({ ...chapterFormData, order_index: parseInt(e.target.value) })} />
               </div>
             </div>
             <DialogFooter>
@@ -485,11 +485,11 @@ const AdminCourses = () => {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="lesson-title">Lesson Title</Label>
-                <Input id="lesson-title" value={lessonFormData.title} onChange={e => setLessonFormData({...lessonFormData, title: e.target.value})} />
+                <Input id="lesson-title" value={lessonFormData.title} onChange={e => setLessonFormData({ ...lessonFormData, title: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lesson-order">Order Index</Label>
-                <Input id="lesson-order" type="number" value={lessonFormData.order_index} onChange={e => setLessonFormData({...lessonFormData, order_index: parseInt(e.target.value)})} />
+                <Input id="lesson-order" type="number" value={lessonFormData.order_index} onChange={e => setLessonFormData({ ...lessonFormData, order_index: parseInt(e.target.value) })} />
               </div>
             </div>
             <DialogFooter>
@@ -507,23 +507,19 @@ const AdminCourses = () => {
           <div key={course.id} className="bg-background rounded-xl border border-border overflow-hidden shadow-sm hover:border-primary/40 transition-all group">
             <div className="aspect-video bg-secondary/50 relative">
               <div className="absolute inset-0 flex items-center justify-center text-primary/20">
-                 {course.icon_url ? (
-                   <img src={course.icon_url} alt={getLocalizedContent(course.title)} className="w-1/2 h-auto max-w-full" />
-                 ) : (
-                   <Globe size={64} />
-                 )}
+                {course.icon_url ? (
+                  <img src={course.icon_url} alt={getLocalizedContent(course.title)} className="w-1/2 h-auto max-w-full" />
+                ) : (
+                  <Globe size={64} />
+                )}
               </div>
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => handleEdit(course)}>
+              <div className="absolute top-4 right-4 flex gap-2 transition-opacity">
+                
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[var(--teal)]" onClick={() => handleEdit(course)}>
                   <Edit2 size={14} />
                 </Button>
-                <Button 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => {
-                    if (confirm("Are you sure?")) deleteMutation.mutate(course.id);
-                  }}
-                >
+                
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[var(--danger)]" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
                   <Trash2 size={14} />
                 </Button>
               </div>
@@ -540,15 +536,15 @@ const AdminCourses = () => {
               <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                 {getLocalizedContent(course.description)}
               </p>
-              
+
               <div className="flex items-center justify-between text-xs font-medium mb-4">
                 <span className="text-foreground">{course.duration_months} months</span>
                 <span className="text-primary">{course.monthly_payment.toLocaleString()} AMD</span>
               </div>
 
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full gap-2 text-xs"
                 onClick={() => handleManageCurriculum(course)}
               >
