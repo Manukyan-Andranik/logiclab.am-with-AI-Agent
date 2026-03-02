@@ -2,7 +2,7 @@ import sys
 import os
 from sqlalchemy.orm import Session
 # Add the temporary directory to the python path to import the DataManager
-sys.path.append(os.path.abspath('/Users/andranikmanukyan/.gemini/tmp/39fe54bd0ec68b4e262c8b343c95771924bfd31c599e7f6e7c5264db8bdca07c'))
+# sys.path.append(os.path.abspath('/Users/andranikmanukyan/.gemini/tmp/39fe54bd0ec68b4e262c8b343c95771924bfd31c599e7f6e7c5264db8bdca07c'))
 
 from data_manager import DataManager
 from app.core.database import get_db, engine
