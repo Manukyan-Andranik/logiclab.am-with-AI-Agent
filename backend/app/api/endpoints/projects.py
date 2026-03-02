@@ -1,13 +1,29 @@
 # app/api/endpoints/projects.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ...core.database import get_db
 from ...models.models import Project, Course, Student
 from ...schemas.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 from ..deps import get_current_admin
+from ...core.cloudinary import upload_image
+from ...core.config import settings
 
 router = APIRouter()
+
+@router.post("/upload-image", response_model=dict)
+async def upload_project_image(
+    file: UploadFile = File(...),
+    current_admin = Depends(get_current_admin)
+):
+    """Upload an image to Cloudinary (Admin only)"""
+    url = upload_image(file.file, folder="projects")
+    if not url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload image"
+        )
+    return {"url": url}
 
 @router.get("/", response_model=List[ProjectResponse])
 async def get_projects(
@@ -16,6 +32,7 @@ async def get_projects(
     course_id: Optional[int] = None,
     is_published: Optional[bool] = None,
     is_featured: Optional[bool] = None,
+    is_admin: Optional[bool] = False,
     db: Session = Depends(get_db)
 ):
     """Get all projects (public endpoint shows only published)"""
@@ -23,9 +40,11 @@ async def get_projects(
         joinedload(Project.student).joinedload(Student.user),
         joinedload(Project.course)
     )
+    if is_admin:
+        all_projects = query.all()
+        return all_projects
     
     # For public access, only show published projects
-    # Admin can see all by passing is_published=None explicitly
     if is_published is not False:  # Default to showing only published
         query = query.filter(Project.is_published == True)
     
@@ -40,6 +59,11 @@ async def get_projects(
         Project.created_at.desc()
     ).offset(skip).limit(limit).all()
     
+    # Apply default image fallbacks
+    for project in projects:
+        if not project.image_urls:
+            project.image_urls = [settings.DEFAULT_PROJECT_IMAGE]
+            
     return projects
 
 @router.get("/featured", response_model=List[ProjectResponse])
@@ -56,6 +80,11 @@ async def get_featured_projects(
         Project.is_featured == True
     ).order_by(Project.created_at.desc()).limit(limit).all()
     
+    # Apply default image fallbacks
+    for project in projects:
+        if not project.image_urls:
+            project.image_urls = [settings.DEFAULT_PROJECT_IMAGE]
+            
     return projects
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -75,14 +104,10 @@ async def get_project(
             detail="Project not found"
         )
     
-    # If not published, only admin can view
-    if not project.is_published:
-        # This would need admin check, but for now return 404
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
-        )
-    
+    # Apply default image fallbacks
+    if not project.image_urls:
+        project.image_urls = [settings.DEFAULT_PROJECT_IMAGE]
+        
     return project
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)

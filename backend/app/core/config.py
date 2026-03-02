@@ -1,7 +1,10 @@
 # app/core/config.py
+import os
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from typing import Optional
+import dotenv
+dotenv.load_dotenv()
 
 class Settings(BaseSettings):
     # App
@@ -19,15 +22,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # CORS
-    BACKEND_CORS_ORIGINS: list = [
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://logiclab-am-with-ai-agent.onrender.com"
-    ]
+    BACKEND_CORS_ORIGINS: list = ["https://logiclab.am/", "https://logiclab-am-with-ai-agent.onrender.com/", "http://localhost:8080"]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -54,6 +49,16 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: set = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".mp4", ".zip"}
     
+    # Default Images
+    DEFAULT_PROFILE_IMAGE: str = "https://res.cloudinary.com/dujmbcltl/image/upload/v1744535080/default_photo_adby1l.png"
+    DEFAULT_COURSE_ICON: str = "https://res.cloudinary.com/demo/image/upload/v1622550000/sample.jpg"
+    DEFAULT_PROJECT_IMAGE: str = "https://res.cloudinary.com/demo/image/upload/v1622550000/sample.jpg"
+
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME: str = "dujmbcltl"
+    CLOUDINARY_API_KEY: str = "486986232445545"
+    CLOUDINARY_API_SECRET: str = "QxZqJ3GJQ8X8NEdoS3qr6Zltilw"
+
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:3000"
     
@@ -63,5 +68,3 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings()
-
-

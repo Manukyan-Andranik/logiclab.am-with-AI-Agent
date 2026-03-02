@@ -112,10 +112,7 @@ const ProjectDetailPage = () => {
 
   const links = project.links as { demo?: string; github?: string; colab?: string } | null;
 
-  const projectImages = [
-    "https://blog.cloudxlab.com/wp-content/uploads/2019/05/Project-Management-ML-Project-1-1024x607.png",
-    "https://media.licdn.com/dms/image/v2/C5612AQH_cUDL8r2jFA/article-cover_image-shrink_600_2000/article-cover_image-shrink_600_2000/0/1611741963559?e=2147483647&v=beta&t=b9B5unAwxsaXTZ-KkoR1pkIvRVlBBhjrwS70C3SjNrY"
-  ];
+  const projectImages = project.image_urls
 
   return (
     <div className="min-h-screen bg-[var(--black)] text-[var(--white)]">
