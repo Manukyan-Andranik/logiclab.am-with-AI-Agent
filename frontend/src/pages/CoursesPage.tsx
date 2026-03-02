@@ -14,7 +14,6 @@ import {
   Sparkles
 } from "lucide-react";
 import VideoHero from "@/components/VideoHero";
-import coursesVideo from "@/assets/courses-hero-video.mp4";
 import { useQuery } from "@tanstack/react-query";
 import { getCourses } from "@/api/courses";
 import { getLocalizedContent } from "@/lib/localization";
@@ -29,6 +28,8 @@ const iconMap: Record<string, LucideIcon> = {
   camera: Camera,
   database: Database,
 };
+
+const coursesVideo = "https://res.cloudinary.com/dujmbcltl/video/upload/v1772482244/hero-video_mqafze.mp4"
 
 const CoursesPage = () => {
   const { data: coursesData, isLoading } = useQuery({

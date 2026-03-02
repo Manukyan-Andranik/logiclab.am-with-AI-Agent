@@ -33,6 +33,7 @@ export type Course = {
   curriculum_url?: string;
   curriculum?: Record<string, string[]>;
   icon_url?: string;
+  hero_video_url?: string;
   duration_months: number;
   start_date?: string;
   schedule?: Record<string, string>;

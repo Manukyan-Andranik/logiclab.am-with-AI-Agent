@@ -80,7 +80,7 @@ const CourseDetailPage = () => {
     <div className="min-h-screen bg-[var(--black)]">
 
       <VideoHero
-        videoSrc={detailVideo}
+        videoSrc={course.hero_video_url}
         title={getLocalizedContent(course.title)}>
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--black)] border-2 border-[var(--primary-alt)] text-[var(--primary-alt)] text-sm font-black uppercase tracking-widest">

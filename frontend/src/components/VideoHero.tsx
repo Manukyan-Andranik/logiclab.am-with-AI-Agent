@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { getMediaUrl } from "@/api/client";
 
 interface VideoHeroProps {
   videoSrc: string;
@@ -10,18 +11,22 @@ interface VideoHeroProps {
 }
 
 const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, children }: VideoHeroProps) => {
+  const fullVideoSrc = getMediaUrl(videoSrc);
+  const fullPosterSrc = getMediaUrl(posterSrc);
+
   return (
     <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-[var(--black)]">
       <div className="absolute inset-0">
         <video
+          key={fullVideoSrc}
           autoPlay
           muted
           loop
           playsInline
-          poster={posterSrc}
+          poster={fullPosterSrc}
           className="w-full h-full object-cover opacity-50"
         >
-          <source src={videoSrc} type="video/mp4" />
+          <source src={fullVideoSrc} type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-[var(--black)] opacity-40" />
       </div>

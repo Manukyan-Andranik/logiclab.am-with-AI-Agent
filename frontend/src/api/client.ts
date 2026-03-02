@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 type FetchOptions = RequestInit & {
   params?: Record<string, any>;
@@ -46,4 +46,22 @@ export const apiClient = async <T>(endpoint: string, options: FetchOptions = {})
   }
 
   return response.json() as Promise<T>;
+};
+
+export const uploadFile = async (file: File): Promise<{ url: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  return apiClient<{ url: string }>('/upload', {
+    method: 'POST',
+    body: formData,
+  });
+};
+
+export const getMediaUrl = (path?: string) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  // backend base url is without /api for static files usually
+  const backendBase = BASE_URL.replace('/api', '');
+  return `${backendBase}${path}`;
 };

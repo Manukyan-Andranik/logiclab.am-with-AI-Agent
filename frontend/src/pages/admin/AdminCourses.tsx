@@ -5,12 +5,13 @@ import {
   createLesson, updateLesson, deleteLesson
 } from "@/api/courses";
 import { getInstructors } from "@/api/instructors";
+import { uploadFile, getMediaUrl } from "@/api/client";
 import { getLocalizedContent } from "@/lib/localization";
 import { useToast } from "@/hooks/use-toast";
 // import { Button } from "@/components/ui/button";
 import Button from "@/components/ui/Button";
-import { Plus, Edit2, Trash2, Globe, Users, BookOpen, ChevronDown, ChevronUp, FileText } from "lucide-react";
-import { useState } from "react";
+import { Plus, Edit2, Trash2, Globe, Users, BookOpen, ChevronDown, ChevronUp, FileText, Video, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,10 @@ const AdminCourses = () => {
   const [isCurriculumOpen, setIsCurriculumOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [curriculumCourse, setCurriculumCourse] = useState<Course | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [iconUploading, setIconUploading] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
 
   // Chapter & Lesson state
   const [isChapterDialogOpen, setIsChapterOpen] = useState(false);
@@ -56,6 +61,7 @@ const AdminCourses = () => {
     category: "course" as "course" | "profession",
     level: "Սկսնակ",
     icon_url: "",
+    hero_video_url: "",
     instructor_ids: [] as number[],
   });
 
@@ -96,6 +102,7 @@ const AdminCourses = () => {
         category: data.category,
         level: data.level,
         icon_url: data.icon_url,
+        hero_video_url: data.hero_video_url,
         instructor_ids: data.instructor_ids,
       };
       return editingCourse
@@ -109,6 +116,38 @@ const AdminCourses = () => {
       resetForm();
     },
   });
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setVideoUploading(true);
+    try {
+      const { url } = await uploadFile(file);
+      setFormData(prev => ({ ...prev, hero_video_url: url }));
+      toast({ title: "Success", description: "Video uploaded successfully." });
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIconUploading(true);
+    try {
+      const { url } = await uploadFile(file);
+      setFormData(prev => ({ ...prev, icon_url: url }));
+      toast({ title: "Success", description: "Icon uploaded successfully." });
+    } catch (error: any) {
+      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIconUploading(false);
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteCourse(id),
@@ -174,6 +213,7 @@ const AdminCourses = () => {
       category: "course",
       level: "Սկսնակ",
       icon_url: "",
+      hero_video_url: "",
       instructor_ids: [],
     });
     setEditingCourse(null);
@@ -194,6 +234,7 @@ const AdminCourses = () => {
       category: course.category || "course",
       level: course.level || "Սկսնակ",
       icon_url: course.icon_url || "",
+      hero_video_url: course.hero_video_url || "",
       instructor_ids: course.instructors?.map(i => i.id) || [],
     });
     setIsOpen(true);
@@ -326,7 +367,73 @@ const AdminCourses = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="icon_url">Icon URL</Label>
-                <Input id="icon_url" value={formData.icon_url} onChange={e => setFormData({ ...formData, icon_url: e.target.value })} />
+                <div className="flex gap-2">
+                  <Input
+                    id="icon_url"
+                    placeholder="Icon URL or upload"
+                    value={formData.icon_url}
+                    onChange={e => setFormData({ ...formData, icon_url: e.target.value })}
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={iconInputRef}
+                    onChange={handleIconUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => iconInputRef.current?.click()}
+                    disabled={iconUploading}
+                  >
+                    {iconUploading ? <Loader2 className="animate-spin" size={18} /> : <ImageIcon size={18} />}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hero_video_url">Hero Video</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="hero_video_url"
+                    placeholder="Video URL or upload"
+                    value={formData.hero_video_url}
+                    onChange={e => setFormData({ ...formData, hero_video_url: e.target.value })}
+                  />
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    ref={videoInputRef}
+                    onChange={handleVideoUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={videoUploading}
+                  >
+                    {videoUploading ? <Loader2 className="animate-spin" size={18} /> : <Video size={18} />}
+                  </Button>
+                  {formData.hero_video_url && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => setFormData({ ...formData, hero_video_url: "" })}
+                    >
+                      <X size={18} />
+                    </Button>
+                  )}
+                </div>
+                {formData.hero_video_url && (
+                  <p className="text-[10px] text-muted-foreground break-all mt-1">
+                    Current: {formData.hero_video_url}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -359,7 +466,7 @@ const AdminCourses = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button onClick={() => saveMutation.mutate(formData)} disabled={saveMutation.isPending}>
+              <Button onClick={() => saveMutation.mutate(formData)} disabled={saveMutation.isPending || videoUploading || iconUploading}>
                 {saveMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
@@ -508,7 +615,7 @@ const AdminCourses = () => {
             <div className="aspect-video bg-secondary/50 relative">
               <div className="absolute inset-0 flex items-center justify-center text-primary/20">
                 {course.icon_url ? (
-                  <img src={course.icon_url} alt={getLocalizedContent(course.title)} className="w-1/2 h-auto max-w-full" />
+                  <img src={getMediaUrl(course.icon_url)} alt={getLocalizedContent(course.title)} className="w-1/2 h-auto max-w-full" />
                 ) : (
                   <Globe size={64} />
                 )}

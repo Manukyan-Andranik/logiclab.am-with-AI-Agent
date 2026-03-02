@@ -34,6 +34,9 @@ from .api.routers import admin
 # DATABASE INITIALIZATION (Development Only)
 # ---------------------------------------------------
 
+# DELETE ALL TABLES
+# Base.metadata.drop_all(bind=engine)i
+
 # ⚠️ In production, use Alembic instead of create_all
 Base.metadata.create_all(bind=engine)
 

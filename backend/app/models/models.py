@@ -96,6 +96,7 @@ class Course(Base):
     # curiculum is a dict, keys is a string values is a string
     curriculum = Column(JSON, default={})
     icon_url = Column(String(500))
+    hero_video_url = Column(String(500))
     duration_months = Column(Integer)
     start_date = Column(DateTime)
     schedule = Column(JSON)  # {monday: "8:00 AM - 8:00 PM", ...}

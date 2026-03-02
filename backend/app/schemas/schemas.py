@@ -160,6 +160,7 @@ class CourseBase(BaseModel):
     curriculum_url: Optional[str] = None
     curriculum: Optional[Dict[str, List[str]]] = {}
     icon_url: Optional[str] = None
+    hero_video_url: Optional[str] = None
     duration_months: Optional[int] = None
     start_date: Optional[datetime] = None
     schedule: Optional[Dict[str, str]] = None
@@ -179,6 +180,7 @@ class CourseUpdate(BaseModel):
     curriculum: Optional[Dict[str, List[str]]] = {}
 
     icon_url: Optional[str] = None
+    hero_video_url: Optional[str] = None
     duration_months: Optional[int] = None
     start_date: Optional[datetime] = None
     schedule: Optional[Dict[str, str]] = None
@@ -193,6 +195,7 @@ class CourseResponse(BaseModel):
     title: Dict[str, str]
     description: Dict[str, str]
     curriculum_url: Optional[str]
+    hero_video_url: Optional[str]
     curriculum: Optional[Dict[str, List[str]]]
 
     icon_url: Optional[str]

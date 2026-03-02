@@ -262,6 +262,7 @@ async def create_course(
         curriculum_url=course_data.curriculum_url,
         curriculum=course_data.curriculum or {},
         icon_url=course_data.icon_url,
+        hero_video_url=course_data.hero_video_url,
         duration_months=course_data.duration_months,
         start_date=course_data.start_date,
         schedule=course_data.schedule or {},
