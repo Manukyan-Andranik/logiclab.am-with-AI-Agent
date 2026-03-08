@@ -33,7 +33,7 @@ function AnimatedRole() {
   return (
     <h1
       onClick={() => navigate(`/courses/${role.id}`)}
-      className="text-[var(--white)] text-5xl md:text-6xl lg:text-8xl font-black leading-[0.85] tracking-tighter uppercase transition-all duration-400 cursor-pointer hover:scale-[1.02] active:scale-95"
+      className="text-[var(--white)] text-5xl md:text-6xl lg:text-8xl font-black leading-[0.85] tracking-tighter uppercase transition-all duration-400 cursor-pointer hover:scale-[1.02] active:scale-95 pl-8"
       style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >
       {role.lines.map((line, i) =>
@@ -59,13 +59,12 @@ const Hero: React.FC = () => {
       {/* Container with the grid feel */}
       <Container className="relative z-10 py-20">
         <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
-          <div className="space-y-4">
-            <span className="inline-block bg-[var(--black)] text-[var(--white)] px-6 py-2 rounded-lg font-black text-xl uppercase tracking-widest animate-bounce shadow-xl">
-              ԱՐԻ՜ ԴԱՌՆԱԼՈւ
-            </span>
 
-            <AnimatedRole />
-          </div>
+
+          <span className="inline-block text-[var(--white)] font-black text-xl uppercase tracking-widest animate-bounce">
+            ԱՐԻ՜ ԴԱՌՆԱԼՈւ
+          </span>
+          <AnimatedRole />
 
           <p className="text-[var(--white)] text-xl md:text-2xl font-bold max-w-1xl leading-snug opacity-95 border-l-8 border-[var(--black)] pl-8">
             Ստեղծիր ապագան այսօր։ Միացիր LogicLab-ին և տիրապետիր աշխարհի ամենապահանջված մասնագիտություններին
@@ -74,9 +73,9 @@ const Hero: React.FC = () => {
           <div className=" flex-col sm:row gap-6">
             <button
               onClick={() => (window.location.href = "/register")}
-              className="bg-[var(--black)] text-[var(--white)] px-10 py-4 rounded-2xl font-black text-1xl hover:bg-[var(--gray-dark)] hover:scale-105 active:scale-95 transition-[var(--transition)] flex items-center justify-center gap-4 group shadow-2xl"
+              className="text-[var(--white)] pl-0 pr-10 py-4 rounded-2xl font-black text-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-[var(--transition)] flex items-center justify-center gap-4 group"
             >
-              ԳՐԱՆՑՎԵԼ ՀԻՄԱ
+              Գրանցվել հիմա
               <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </button>
           </div>

@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     
     # File Upload
     UPLOAD_DIR: str = "uploads"
-    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
+    MAX_UPLOAD_SIZE: int = 25 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: set = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".mp4", ".zip"}
     
     # Default Images

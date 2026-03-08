@@ -84,23 +84,23 @@ const RegisterPage = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[var(--black)]">
-      <VideoHero
-        videoSrc={coursesVideo}
-        titleHighlight={"Գրանցվել"}
-        title={"դասընթացին"}
-        subtitle={"Լրացրեք ձևը և մենք կկապվենք ձեզ հետ"}
-      />
+return (
+  <div className="min-h-screen bg-[var(--black)]">
+    <VideoHero
+      videoSrc={coursesVideo}
+      titleHighlight={"Գրանցվել"}
+      title={"դասընթացին"}
+      subtitle={"Լրացրեք ձևը և մենք կկապվենք ձեզ հետ"}
+    />
 
-      <section className="py-16">
-        <div className="container mx-auto px-6 max-w-3xl">
-          <motion.form
-            onSubmit={handleSubmit}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card rounded-2xl p-8 sm:p-10 space-y-6 bg-[var(--black)] border border-[var(--gray-dark)]"
-          >
+    <section className="py-16 flex justify-center">
+      <div className="container mx-auto px-6 max-w-3xl">
+        <motion.form
+          onSubmit={handleSubmit}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card rounded-2xl p-8 sm:p-10 space-y-6 bg-[var(--black)] border border-[var(--gray-dark)]"
+        >
             <h2 className="font-display text-2xl font-bold text-[var(--white)] mb-2">
               Գրանցման ձև
             </h2>

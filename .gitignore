@@ -63,6 +63,8 @@ frontend/src/assets/3d.mp4
 frontend/src/assets/photo.mp4
 frontend/src/assets/photo2.mp4
 test.db
+backend/ai_agent/
+backend/app/api/endpoints/models/logic_agent_1
 
 __pycache__/
 *.pyc

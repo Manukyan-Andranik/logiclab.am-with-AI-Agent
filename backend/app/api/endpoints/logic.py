@@ -1,15 +1,182 @@
-from fastapi import APIRouter, HTTPException
+import re
+import os
+import json
+import dotenv
+from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-import httpx
-import json
-import os
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel, LoraConfig, get_peft_model, TaskType
+
+from deep_translator import GoogleTranslator as TRANSLATOR
+
+
+
+torch.set_num_threads(1)
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+
+
+def load_model_and_tokenizer(model_name=None, mode="eval", BASE_MODEL_NAME="gpt2", DEVICE=None):
+
+    if DEVICE is None:
+        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Case 1: None or invalid path -> create empty LoRA GPT-2
+    if model_name is None or not os.path.exists(model_name):
+        print("No valid model found. Creating empty LoRA GPT-2 model...")
+
+        # Load tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME)
+        tokenizer.pad_token = tokenizer.eos_token
+
+        # Load base GPT-2
+        base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL_NAME)
+        base_model.config.use_cache = False
+        base_model.to(DEVICE)
+
+        # Create empty LoRA
+        lora_config = LoraConfig(
+            r=64,
+            lora_alpha=128,
+            lora_dropout=0.5,
+            bias="none",
+            task_type=TaskType.SEQ_2_SEQ_LM,
+            target_modules=["c_attn", "c_proj"],
+        )
+        model = get_peft_model(base_model, lora_config)
+        model.print_trainable_parameters()
+        if mode == "train":
+            model.train()
+        else:
+            model.eval()
+        return model, tokenizer
+
+    # Case 2: Load existing LoRA adapter
+    print(f"Loading LoRA model from: {model_name}")
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+    base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL_NAME)
+    base_model.config.use_cache = False
+
+    # is_trainable=True ensures LoRA weights are attached for training
+    is_trainable = mode == "train"
+    model = PeftModel.from_pretrained(base_model, model_name, is_trainable=is_trainable)
+
+    model.to(DEVICE)
+    if mode == "train":
+        model.train()
+    else:
+        model.eval()
+
+    return model, tokenizer
+
+# Use absolute path relative to this file
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "models", "logic_agent_1")
+AGENT, TOKENIXER = load_model_and_tokenizer(model_name=MODEL_DIR, mode="eval")
+
 import re
-import dotenv
+
+def format_answer(decoded: str) -> str:
+    """
+    Extract the assistant completion and return a clean answer block.
+    """
+
+    # 1️⃣ Try to extract after "Assistant: completion:"
+    match = re.search(
+        r"Assistant\s*:\s*completion\s*:?\s*(.*)",
+        decoded,
+        re.IGNORECASE | re.DOTALL
+    )
+
+    if match:
+        answer = match.group(1).strip()
+    else:
+        # 2️⃣ Fallback: Extract answer after "Answer:"
+        match = re.search(r"Answer:\s*(.*)", decoded, re.IGNORECASE | re.DOTALL)
+
+        if match:
+            answer = match.group(1).strip()
+        else:
+            answer = decoded.strip()
+
+    # 3️⃣ Stop if model starts another section
+    for stop_token in ["</JSON>"]:
+        if stop_token in answer:
+            answer = answer.split(stop_token)[0].strip()
+
+    return answer + "\n</JSON>"
+
+def generate_answer(
+    model=AGENT,
+    tokenizer=TOKENIXER,
+    question: str="",
+    language: str="hy",
+    context: str="",
+    max_new_tokens: int = 128,
+    temperature: float = 0.1,
+):
+    """
+    Generate answer for a given question using fine-tuned GPT-2 LoRA model
+    """
+
+    model.eval()
+
+    # Use the prompt format the model was trained on
+    translated_question = TRANSLATOR(source='auto', target='en').translate(question)
+    
+    prompt = f"Prompt: {translated_question}\nAssistant: completion:"
+
+    inputs = tokenizer(prompt, return_tensors="pt")
+    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=True,
+            temperature=temperature,
+            top_p=0.9,
+            top_k=50,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
+
+    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
+
+    answer = format_answer(decoded)
+    # result = TRANSLATOR.translate(answer, dest=language)
+    parsed_json = {}
+    if answer:
+        json_match = re.search(r"<JSON>(.*?)</JSON>", answer, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1).strip()
+            try:
+                parsed_json = json.loads(json_str)
+            except json.JSONDecodeError:
+                pass
+            clean_text = answer.replace(json_match.group(0), "").strip()
+        else:
+            clean_text = answer
+    else:
+        clean_text = answer
+
+
+
+    translated_clean_answer = TRANSLATOR(source='auto', target=language).translate(clean_text)
+    
+    return translated_clean_answer, parsed_json
+
 
 dotenv.load_dotenv()
-
 router = APIRouter()
+
 
 # --- Schemas ---
 class ChatMessage(BaseModel):
@@ -22,7 +189,7 @@ class ChatRequest(BaseModel):
     history: List[ChatMessage]
 
 
-class LogciAgentResponse(BaseModel):
+class LogicAgentResponse(BaseModel):
     text: str
     intent: Optional[str] = None
     course_id: Optional[str] = None
@@ -34,7 +201,6 @@ class LogciAgentResponse(BaseModel):
 SYSTEM_PROMPT = """You are Logic Agent, the AI guide for LogicLab. Your mission is to provide seamless navigation and expert info about our platform's futuristic educational offerings.
 
 ### APPLICATION FUNCTIONAL STRUCTURE & ROUTING:
-
 1. LANDING PAGE (Route: '/')
    - Featured Courses (Section: '#courses')
    - About Preview (Section: '#about')
@@ -61,11 +227,8 @@ SYSTEM_PROMPT = """You are Logic Agent, the AI guide for LogicLab. Your mission 
 - register: Go to Registration page ('/register').
 - learning_path: Provide personalized course recommendations.
 
-### COURSE IDs (Use these exactly for course_detail intent):
+### COURSE IDs:
 - ai, ml, ml-advanced, web, 3dsmax, photography
-
-### for all courses:
-- locate "all" section on the courses page.
 
 ### MANDATORY JSON FORMAT:
 You MUST ALWAYS end your response with a JSON block wrapped in <JSON> tags.
@@ -78,79 +241,37 @@ Example:
 </JSON>
 
 ### GUIDELINES:
-- Language: Armenian or English.
+- Language: English.
 - Context: If they want to sign up or enroll, ALWAYS use 'register' intent.
 """
 
+def format_prompt(question, context):
+    prompt = (
+        "You are a friendly assistant. Use the context to answer the question clearly and concisely.\n"
+        f"Context: {context}\n"
+        f"Question: {question}\n"
+        "Answer:"
+    )
+    return prompt
 
-@router.post("/chat", response_model=LogciAgentResponse)
+@router.post("/chat", response_model=LogicAgentResponse)
 async def logic_chat(request: ChatRequest):
-
-    openai_key = os.getenv("OPENAI_API_KEY")
-
-    if not openai_key:
-        return LogciAgentResponse(
-            text="Welcome to LogicLab. I am Logic Agent. How can I help you today?",
-            intent="home"
-        )
-
-    messages = [
+    # Construct conversation
+    conversation = [
         {"role": "system", "content": SYSTEM_PROMPT},
         *[{"role": m.role, "content": m.content} for m in request.history],
         {"role": "user", "content": request.message},
     ]
+    clean_text, parsed_json = generate_answer(question=request.message, context="")
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        try:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {openai_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "gpt-4o-mini",
-                    "messages": messages,
-                    "temperature": 0.3, # Lower temperature for more consistent JSON
-                    "max_tokens": 800,
-                },
-            )
 
-            if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=response.text
-                )
+    intent = parsed_json.get("intent")
+    print(f"[AI] Intent: {intent}")
 
-            data = response.json()
-            full_text = data["choices"][0]["message"]["content"]
-
-            # --- Extract JSON block ---
-            json_match = re.search(r"<JSON>(.*?)</JSON>", full_text, re.DOTALL)
-            parsed_json = {}
-
-            if json_match:
-                json_str = json_match.group(1).strip()
-                try:
-                    parsed_json = json.loads(json_str)
-                except json.JSONDecodeError:
-                    pass
-
-            clean_text = full_text
-            if json_match:
-                clean_text = full_text.replace(json_match.group(0), "").strip()
-                
-            intent = parsed_json.get("intent")
-            print(f"[AI] Intent: {intent}")
-
-            return LogciAgentResponse(
-                text=clean_text,
-                intent=intent,
-                course_id=parsed_json.get("course_id"),
-                learning_path=parsed_json.get("learning_path"),
-                extracted=parsed_json.get("extracted"),
-            )
-
-        except Exception as e:
-            print(f"[AI] Error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+    return LogicAgentResponse(
+        text=clean_text,
+        intent=intent,
+        course_id=parsed_json.get("course_id"),
+        learning_path=parsed_json.get("learning_path"),
+        extracted=parsed_json.get("extracted"),
+    )

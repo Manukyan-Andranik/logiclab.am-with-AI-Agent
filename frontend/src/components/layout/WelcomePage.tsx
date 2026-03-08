@@ -1,281 +1,357 @@
+// WelcomePage.tsx — Modernized with tooltip, progress ring, and responsive enhancements
 import React, { useState, useEffect } from 'react';
 import {
-  Bot,
-  Navigation,
-  Sparkles,
-  ArrowRight,
-  Play,
-  HelpCircle,
-  Info,
+  Bot, Navigation, Sparkles, ArrowRight, Play,
+  HelpCircle, Info, Zap, MousePointer2,
 } from 'lucide-react';
-import { NavigationMode } from '../../hooks/useNavigationMode';
-import { motion } from 'framer-motion';
-import heroVideo from "../../assets/hero-video.mp4";
+import { motion, useReducedMotion, AnimatePresence, Variants } from 'framer-motion';
 import InteractiveGuide from './InteractiveGuide';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger
-} from '../ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
 
-interface WelcomePageProps {
-  onSelect: (mode: NavigationMode) => void;
+type NavigationMode = 'modern' | 'traditional';
+interface WelcomePageProps { onSelect: (mode: NavigationMode) => void; }
+
+// ─── Reusable Tooltip component ───────────────────────────────────────────────
+const Tooltip: React.FC<{ content: string; children: React.ReactNode }> = ({ content, children }) => (
+  <div className="relative group">
+    {children}
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 
+                    bg-[var(--gray-dark)] border border-white/10 text-white text-xs 
+                    rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 
+                    transition-opacity pointer-events-none z-50 shadow-2xl">
+      {content}
+    </div>
+  </div>
+);
+
+// ─── BackgroundCanvas ─────────────────────────────────────────────────────────
+const BackgroundCanvas: React.FC = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+    <motion.div
+      animate={{ scale: [1, 1.25, 1], opacity: [0.06, 0.1, 0.06] }}
+      transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute -top-[20%] -left-[10%] w-[55%] h-[55%] bg-[var(--primary)] blur-[180px] rounded-full"
+    />
+    <motion.div
+      animate={{ scale: [1, 1.15, 1], opacity: [0.03, 0.07, 0.03] }}
+      transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
+      className="absolute -bottom-[15%] -right-[10%] w-[45%] h-[45%] bg-[var(--primary)] blur-[140px] rounded-full"
+    />
+    <div
+      className="absolute inset-0 opacity-[0.025]"
+      style={{ backgroundImage: 'radial-gradient(var(--primary) 1px, transparent 1px)', backgroundSize: '36px 36px' }}
+    />
+  </div>
+);
+
+// ─── PlatformBadge ────────────────────────────────────────────────────────────
+const PlatformBadge: React.FC = () => (
+  <motion.div
+    initial={{ opacity: 0, y: -12 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, delay: 0.15 }}
+    className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[var(--gray-dark)]/60 backdrop-blur-md border border-[var(--primary)]/25 shadow-lg shadow-black/20"
+  >
+    <Sparkles className="w-3.5 h-3.5 text-[var(--primary)]" aria-hidden />
+    <span className="text-[10px] font-black text-[var(--primary)] uppercase tracking-[0.35em]">
+      Հաջորդ սերնդի հարթակ
+    </span>
+  </motion.div>
+);
+
+// ─── VideoModal ───────────────────────────────────────────────────────────────
+const VideoModal: React.FC<{ src: string; isOpen: boolean; onClose: () => void }> = ({ src, isOpen, onClose }) => (
+  <AnimatePresence>
+    {isOpen && (
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+          className="relative w-full max-w-4xl rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_120px_rgba(0,0,0,0.7)]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-4 px-6 py-4 bg-[var(--black)] border-b border-white/8">
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary)] text-[var(--black)] flex items-center justify-center">
+              <Bot size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-black text-white uppercase tracking-wide">AI Նավիգացիայի ուղեցույց</p>
+              <p className="text-[10px] text-white/40 font-medium">Logic Lab Academy · Logic AI v1</p>
+            </div>
+            <button onClick={onClose} aria-label="Փակել"
+              className="ml-auto px-4 py-1.5 rounded-lg bg-white/8 hover:bg-white/14 text-white/60 hover:text-white text-xs font-bold uppercase tracking-widest transition-all">
+              Փակել
+            </button>
+          </div>
+          <div className="aspect-video bg-black">
+            <video src={src} controls autoPlay loop muted className="w-full h-full object-cover" />
+          </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+// ─── FeaturePill ──────────────────────────────────────────────────────────────
+const FeaturePill: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
+  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/8 text-[11px] font-semibold text-white/50">
+    {icon}{label}
+  </span>
+);
+
+// ─── ModeCard ─────────────────────────────────────────────────────────────────
+interface ModeCardProps {
+  variant: 'ai' | 'traditional';
+  onSelect: () => void;
+  onWatchVideo?: () => void;
+  featured?: boolean;
 }
 
-const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
-  const [showFullGuide, setShowFullGuide] = useState(false);
-  const [hasSeenGuide, setHasSeenGuide] = useState(false);
+const ModeCard: React.FC<ModeCardProps> = ({ variant, onSelect, onWatchVideo, featured }) => {
+  const isAI = variant === 'ai';
 
-  useEffect(() => {
-    const seen = localStorage.getItem('has_seen_full_guide');
-    if (!seen) {
-      const timer = setTimeout(() => setShowFullGuide(true), 2000);
-      return () => clearTimeout(timer);
-    } else {
-      setHasSeenGuide(true);
-    }
-  }, []);
+  const cardContent = isAI
+    ? {
+        icon: <Bot size={36} strokeWidth={2.2} />,
+        badge: 'Բետա v1',
+        title: ['Ժամանակակից AI', 'Նավիգացիա'],
+        body: 'Հաղորդակցվեք հարթակի հետ բնական լեզվով։ Logic Agent-ը հասկանում է ձեր մտադրությունը և կատարում նավիգացիան ձեր փոխարեն՝ ակնթարթորեն։',
+        cta: 'Գործարկել AI ինտերֆեյս',
+      }
+    : {
+        icon: <Navigation size={36} strokeWidth={2.2} />,
+        badge: 'Դասական',
+        title: ['Դասական', 'Ինտերֆեյս'],
+        body: 'Ավանդական վեբ-փորձ կառուցվածքային ընտրացանկերով, ինտուիտիվ նավիգացիա և կազմակերպված բաժիններ ձեռքով հայտնաբերման համար։',
+        cta: 'Ստանդարտ տեսք',
+      };
 
   return (
-    <div className="min-h-screen bg-[var(--black)] flex items-center justify-center p-6 overflow-hidden relative selection:bg-[var(--primary)] selection:text-[var(--black)]">
-      
-      <InteractiveGuide isOpen={showFullGuide} onClose={() => setShowFullGuide(false)} />
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+      className="relative h-full"
+    >
+      {/* Featured badge */}
+      {featured && (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <span className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full bg-[var(--primary)] text-[var(--primary-alt)] text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-[var(--primary)]/30">
+            <Sparkles size={10} />Առաջադեմ
+          </span>
+        </div>
+      )}
 
-      {/* Background Animated Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.05, 0.08, 0.05] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[var(--primary)] blur-[150px] rounded-full"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.1, 1], opacity: [0.03, 0.06, 0.03] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[var(--primary)] blur-[120px] rounded-full"
-        />
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(var(--primary) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-      </div>
+      <button
+        onClick={onSelect}
+        aria-label={`Ընտրել ${isAI ? 'AI' : 'դասական'} ռեժիմ`}
+        className={`
+          group relative w-full h-full text-left rounded-[32px] overflow-hidden
+          transition-all duration-500 backdrop-blur-xl shadow-2xl
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]
+          focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--black)]
+          ${featured
+            ? 'bg-[var(--gray-dark)]/50 border-2 border-[var(--primary)]/30 hover:border-[var(--primary)]/70 hover:bg-gradient-to-br hover:from-[var(--primary)]/5 hover:to-transparent'
+            : 'bg-[#1a1a1a]/70 border-2 border-white/5 hover:border-white/20'}
+        `}
+      >
+        {/* Hover glow overlay */}
+        <div aria-hidden className={`
+          absolute inset-0 rounded-[30px] opacity-0 group-hover:opacity-100
+          transition-opacity duration-700 pointer-events-none
+          ${isAI ? 'bg-gradient-to-br from-[var(--primary)]/8 via-transparent to-transparent'
+                 : 'bg-gradient-to-br from-white/4 via-transparent to-transparent'}
+        `} />
 
-      <div className="max-w-6xl w-full relative z-10">
-        {/* Header Section */}
-        <header className="text-center mb-16 space-y-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-[var(--gray-dark)]/50 backdrop-blur-md border border-[var(--primary)]/30 mb-4 shadow-lg shadow-black/20"
-          >
-            <Sparkles className="w-4 h-4 text-[var(--primary)] animate-pulse" />
-            <span className="text-[11px] font-black text-[var(--primary)] uppercase tracking-[0.3em]">
-              Հաջորդ սերնդի հարթակ
-            </span>
-          </motion.div>
+        <div className="relative z-10 p-6 md:p-8 lg:p-10 flex flex-col gap-5 h-full">
 
-          <div className="flex justify-center mb-10">
-            <img
-              src="/logo.png"
-              alt="Logic Lab"
-              className="h-24 w-auto object-contain"
-            />
+          {/* Row 1 — Icon + badge/controls */}
+          <div className="flex items-start justify-between gap-4">
+            <div className={`
+              w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0
+              transition-all duration-500
+              ${isAI
+                ? 'bg-[var(--primary)] text-[var(--primary-alt)] shadow-[0_0_40px_rgba(255,215,0,0.35)] group-hover:shadow-[0_0_60px_rgba(255,215,0,0.5)] group-hover:scale-105'
+                : 'bg-[var(--gray-dark)] text-white border border-white/10 group-hover:bg-[var(--primary)] group-hover:text-[var(--white)] group-hover:border-transparent group-hover:shadow-[0_0_40px_rgba(255,215,0,0.3)]'}
+            `}>
+              {cardContent.icon}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/8 text-[9px] font-black text-white/30 uppercase tracking-widest">
+                {cardContent.badge}
+              </span>
+
+              {isAI && onWatchVideo && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onWatchVideo(); }}
+                  aria-label="Դիտել ուղեցույցի տեսանյութը"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/6 border border-white/8 hover:border-transparent text-white/50 hover:bg-[var(--primary)] hover:text-[var(--black)] text-[10px] font-black uppercase tracking-wider transition-all duration-300"
+                >
+                  <Play size={10} fill="currentColor" />Ուղեցույց
+                </button>
+              )}
+            </div>
           </div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-[var(--gray-light)]/70 max-w-2xl mx-auto text-lg md:text-xl font-medium"
-          >
-            Ընտրեք նավիգացիոն ռեժիմը՝ մեր խելացի էկոհամակարգի հետ փոխգործակցությունը սկսելու համար։
-          </motion.p>
-        </header>
+          {/* Row 2 — Title */}
+          <h2 className={`
+            text-2xl md:text-3xl font-black tracking-tight uppercase leading-tight
+            transition-colors duration-300
+            ${isAI ? 'text-white group-hover:text-[var(--primary)]' : 'text-white/90 group-hover:text-[var(--primary)]'}
+          `}>
+            {cardContent.title[0]}<br />{cardContent.title[1]}
+          </h2>
 
-        {/* Navigation Mode Cards */}
-        <div className="grid md:grid-cols-2 gap-10">
+          {/* Row 3 — Body */}
+          <p className="text-[var(--gray-light)]/55 text-sm md:text-[15px] leading-relaxed font-medium">
+            {cardContent.body}
+          </p>
 
-          {/* AI Mode Card */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.5, ease: "easeOut" }}
-          >
-            <button
-              onClick={() => onSelect('modern')}
-              className="group relative w-full flex flex-col md:flex-row p-12 rounded-[40px] bg-[var(--gray-dark)]/40 backdrop-blur-xl border-2 border-white/5 hover:border-[var(--primary)]/50 transition-all duration-700 text-left overflow-hidden shadow-2xl"
-            >
-              <div className="relative z-10 flex-1 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-10">
-                  <div className="w-20 h-20 rounded-[24px] bg-[var(--primary)] text-[var(--primary-alt)] flex items-center justify-center shadow-[0_0_50px_rgba(255,215,0,0.4)] group-hover:scale-110 transition-transform duration-700 ease-out">
-                    <Bot size={42} strokeWidth={2.5} />
-                  </div>
+          {/* Spacer — pushes CTA to bottom */}
+          <div className="flex-1" />
 
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-3 rounded-full bg-white/5 hover:bg-[var(--primary)] hover:text-[var(--black)] transition-all duration-300 group/btn"
-                      >
-                        <Play size={20} fill="currentColor" className="ml-0.5" />
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl bg-[var(--black)] border-[var(--gray-dark)] text-[var(--white)] p-0 overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                      <DialogHeader className="p-8 pb-4">
-                        <DialogTitle className="text-3xl font-black flex items-center gap-4 text-white uppercase tracking-tighter">
-                          <div className="w-10 h-10 rounded-xl bg-[var(--primary)] text-[var(--black)] flex items-center justify-center">
-                            <Bot size={24} />
-                          </div>
-                          AI ՆԱՎԻԳԱՑԻԱՅԻ ՈՒՂԵՑՈՒՅՑ
-                        </DialogTitle>
-                        <DialogDescription className="text-[var(--gray-light)] opacity-60 text-lg font-medium">
-                          Բացահայտեք, թե ինչպես է մեր խելացի գործակալը վերափոխում ձեր փորձը բնական լեզվով փոխգործակցության միջոցով։
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="aspect-video bg-black relative border-y border-white/5">
-                        <video
-                          src={heroVideo}
-                          controls
-                          autoPlay
-                          loop
-                          muted
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="p-6 bg-[var(--gray-dark)]/50 flex justify-between items-center">
-                        <p className="text-sm font-bold text-[var(--primary-alt)] uppercase tracking-widest">Logic Lab Academy • Neural Link v4</p>
-                        <button className="px-6 py-2 rounded-xl bg-white/5 text-white hover:bg-white/10 text-xs font-black uppercase tracking-widest transition-all">Փակել ուղեցույցը</button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+          {/* Divider */}
+          <div className="h-px bg-white/5" />
 
-                <h3 className="text-3xl font-black text-[var(--white)] mb-4 tracking-tight uppercase group-hover:text-[var(--primary)] transition-colors duration-300">
-                    Ժամանակակից AI <br /> Նավիգացիա
-                </h3>
+          {/* Row 5 — CTA: label left · arrow button right */}
+          <div className="flex items-center justify-between gap-4">
+            <span className={`
+              text-xs font-black uppercase tracking-[0.2em] leading-snug
+              transition-colors duration-300
+              ${isAI ? 'text-[var(--primary)]' : 'text-white/35 group-hover:text-[var(--primary)]'}
+            `}>
+              {cardContent.cta}
+            </span>
 
-                <p className="text-[var(--gray-light)]/60 mb-12 flex-grow text-lg leading-relaxed font-medium">
-                  Փոխազդեք հարթակի հետ բնական լեզվի միջոցով։ Մեր Logic Agent-ը հասկանում է ձեր մտադրությունը և նավիգացում էկոհամակարգում ձեր փոխարեն։
-                </p>
-
-                <div className="mt-auto flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-[var(--primary)] font-black uppercase tracking-[0.2em] text-sm group-hover:gap-6 transition-all duration-500">
-                    Գործարկել AI ինտերֆեյս
-                    <ArrowRight size={22} strokeWidth={3} />
-                  </div>
-                  <div className="px-3 py-1 rounded-md bg-white/5 text-[10px] font-black text-white/30 uppercase tracking-widest border border-white/5">
-                    Բետա v4.2
-                  </div>
-                </div>
-              </div>
-
-              {/* Side Section: AI Video */}
-              <div className="mt-6 md:mt-0 md:ml-8 md:flex-shrink-0 w-full md:w-64 h-40 relative rounded-xl overflow-hidden border border-white/10 shadow-lg">
-                <video
-                  src={heroVideo}
-                  controls
-                  autoPlay
-                  loop
-                  muted
-                  className="w-full h-full object-cover rounded-xl"
-                />
-              </div>
-            </button>
-          </motion.div>
-
-          {/* Traditional Mode Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-          >
-            <button
-              onClick={() => onSelect('traditional')}
-              className="group relative w-full flex flex-col md:flex-row p-12 rounded-[40px] bg-[#1a1a1a]/60 backdrop-blur-xl border-2 border-white/5 hover:border-[var(--primary)]/50 transition-all duration-700 text-left overflow-hidden shadow-2xl"
-            >
-              <div className="relative z-10 flex-1 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-10">
-                  <div className="w-20 h-20 rounded-[24px] bg-[var(--gray-dark)] text-[var(--white)] flex items-center justify-center border border-white/10 group-hover:bg-[var(--primary)] group-hover:text-[var(--black)] group-hover:border-transparent group-hover:shadow-[0_0_50px_rgba(255,215,0,0.3)] transition-all duration-700 ease-out">
-                    <Navigation size={42} strokeWidth={2.5} />
-                  </div>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="p-3 rounded-full bg-white/5 text-white/40 hover:text-white transition-colors">
-                          <Info size={20} />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-[var(--gray-dark)] border-white/10 text-white font-bold text-xs p-3 rounded-xl shadow-2xl">
-                        Կառուցվածքային բազմաէջ դասավորություն
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                <h3 className="text-3xl font-black text-[var(--white)] mb-4 tracking-tight uppercase group-hover:text-[var(--primary)] transition-colors duration-300">
-                  Դասական <br /> Ինտերֆեյս
-                </h3>
-
-                <p className="text-[var(--gray-light)]/60 mb-12 flex-grow text-lg leading-relaxed font-medium">
-                  Ավանդական վեբ փորձ կառուցվածքային ընտրացանկերով, ինտուիտիվ Նավիգացիա և ձեռքով հայտնաբերման կազմակերպված բաժիններով։
-                </p>
-
-                <div className="mt-auto flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-[var(--gray-light)] group-hover:text-[var(--primary)] font-black uppercase tracking-[0.2em] text-sm group-hover:gap-6 transition-all duration-500">
-                    Ստանդարտ տեսք
-                    <ArrowRight size={22} strokeWidth={3} />
-                  </div>
-                  <div className="px-3 py-1 rounded-md bg-white/5 text-[10px] font-black text-white/30 uppercase tracking-widest border border-white/5">
-                    Դասական
-                  </div>
-                </div>
-              </div>
-
-              {/* Side Section: Traditional Image/Icon */}
-              <div className="mt-6 md:mt-0 md:ml-8 md:flex-shrink-0 w-full md:w-40 h-40 flex items-center justify-center bg-[var(--gray-dark)]/20 rounded-xl border border-white/10 shadow-lg">
-                <Navigation size={48} strokeWidth={2.5} className="text-[var(--primary)]" />
-              </div>
-            </button>
-          </motion.div>
+            {/* Animated arrow */}
+            <div className={`
+              w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center
+              transition-all duration-300
+                'bg-[var(--primary)] text-white/35 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(255,215,0,0.5)] group-hover:text-[var(--white)]'
+            `}>
+              <ArrowRight
+                size={16}
+                strokeWidth={2.5}
+                className="transition-transform duration-300 group-hover:translate-x-1"
+              />
+            </div>
+          </div>
 
         </div>
+      </button>
+    </motion.div>
+  );
+};
+
+// ─── WelcomePage ──────────────────────────────────────────────────────────────
+const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
+  const [showGuide, setShowGuide]           = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [progress, setProgress]             = useState(0); // for help button ring
+  useReducedMotion();
+
+  // Auto‑open guide after 1.8s with progress animation
+  useEffect(() => {
+    if (localStorage.getItem('has_seen_full_guide')) return;
+    const startTime = Date.now();
+    const duration = 1800;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const p = Math.min(elapsed / duration, 1);
+      setProgress(p);
+      if (p >= 1) {
+        clearInterval(interval);
+        setShowGuide(true);
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Keyboard shortcut: '?' opens guide
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === '?') setShowGuide(true); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const containerVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.12 } },
+  };
+
+  const itemVariant: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: 'easeOut' as const } },
+  };
+
+  return (
+    <div className="min-h-screen bg-[var(--black)] flex items-center justify-center p-4 sm:p-6 md:p-10 overflow-hidden relative selection:bg-[var(--primary)] selection:text-[var(--black)]">
+      <BackgroundCanvas />
+      <InteractiveGuide isOpen={showGuide} onClose={() => setShowGuide(false)} />
+      <VideoModal src="/assets/hero-video.mp4" isOpen={showVideoModal} onClose={() => setShowVideoModal(false)} />
+
+      <motion.div className="max-w-5xl w-full relative z-10" variants={containerVariants} initial="hidden" animate="visible">
+
+        {/* Header */}
+        <motion.header variants={itemVariant} className="text-center mb-12 md:mb-16 space-y-5">
+          <PlatformBadge />
+          <div className="flex justify-center mt-5">
+            <img src="/logo.png" alt="Logic Lab" className="h-16 md:h-20 w-auto object-contain" />
+          </div>
+          <p className="text-[var(--gray-light)]/60 max-w-xl mx-auto text-sm md:text-base lg:text-lg font-medium leading-relaxed px-4">
+            Ընտրեք ձեր նախընտրած նավիգացիոն ռեժիմը՝ Logic Lab-ի հետ փոխգործակցությունը սկսելու համար։
+          </p>
+        </motion.header>
+
+        {/* Cards — items-stretch so both cards match height */}
+        <motion.div variants={itemVariant} className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 items-stretch">
+          <ModeCard variant="ai" featured onSelect={() => onSelect('modern')} onWatchVideo={() => setShowVideoModal(true)} />
+          <ModeCard variant="traditional" onSelect={() => onSelect('traditional')} />
+        </motion.div>
+
+        {/* Hint */}
+        <motion.p variants={itemVariant} className="text-center text-[11px] text-white/20 font-semibold mt-6 uppercase tracking-widest">
+          Ռեժիմը կարելի է փոխել ցանկացած ժամանակ կարգավորումներից
+        </motion.p>
 
         {/* Footer */}
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.5, delay: 1.2 }}
-          className="flex flex-col items-center mt-20 space-y-4"
-        >
-          <div className="flex items-center gap-6">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent to-white/10" />
-            <p className="text-[10px] text-[var(--gray-light)]/30 font-black uppercase tracking-[0.5em]">
-              Powered by LogicLab • Հարթակ v1.0.0
-            </p>
-            <div className="h-px w-12 bg-gradient-to-l from-transparent to-white/10" />
-          </div>
+        <motion.footer variants={itemVariant} className="flex items-center justify-center gap-4 mt-14">
+          <div className="h-px w-10 bg-gradient-to-r from-transparent to-white/8" />
+          <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.5em]">Powered by LogicLab · v1.0.0</p>
+          <div className="h-px w-10 bg-gradient-to-l from-transparent to-white/8" />
         </motion.footer>
 
-        {/* Floating Help Button */}
-        <div className="fixed bottom-8 right-8 z-[100]">
-          <button
-            onClick={() => setShowFullGuide(true)}
-            className="w-16 h-16 rounded-full bg-[var(--primary)] text-[var(--primary-alt)] flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all group"
-          >
-            <HelpCircle size={28} strokeWidth={3} />
-            <span className="absolute right-full mr-4 bg-[var(--gray-dark)] text-[var(--primary-alt)] text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              Օգնության կարիք կա՞
-            </span>
-          </button>
-        </div>
+      </motion.div>
 
+      {/* Floating help with progress ring */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100]">
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 2, type: 'spring', stiffness: 260, damping: 22 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={() => setShowGuide(true)}
+          aria-label="Բաց ուղեցույց"
+          className="group relative w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--primary)] text-[var(--primary-alt)] 
+                     flex items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,215,0,0.3)] 
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+          style={{
+            boxShadow: `0 4px 24px rgba(0,0,0,0.4), 0 0 0 ${progress * 4}px rgba(255,215,0,${progress * 0.3})`,
+          }}
+        >
+          <HelpCircle size={24} strokeWidth={2.5} />
+          <span aria-hidden className="absolute right-full mr-3 px-3 py-1.5 rounded-xl whitespace-nowrap 
+                                       bg-[var(--gray-dark)] border border-white/8 shadow-xl 
+                                       text-[10px] font-black text-white uppercase tracking-widest 
+                                       opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200">
+            Օգնություն · <kbd className="font-mono text-[var(--primary-alt)]"></kbd>
+          </span>
+          <span aria-hidden className="absolute inset-0 rounded-full border-2 border-[var(--black)] animate-ping opacity-60" />
+        </motion.button>
       </div>
     </div>
   );
