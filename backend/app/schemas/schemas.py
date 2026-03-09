@@ -158,6 +158,7 @@ class CourseBase(BaseModel):
     title: MultilingualText
     description: MultilingualText
     curriculum_url: Optional[str] = None
+    order_index: Optional[int] = 0
     curriculum: Optional[Dict[str, List[str]]] = {}
     icon_url: Optional[str] = None
     hero_video_url: Optional[str] = None
@@ -177,6 +178,7 @@ class CourseUpdate(BaseModel):
     title: Optional[MultilingualText] = None
     description: Optional[MultilingualText] = None
     curriculum_url: Optional[str] = None
+    order_index: Optional[int] = None
     curriculum: Optional[Dict[str, List[str]]] = {}
 
     icon_url: Optional[str] = None
@@ -195,6 +197,7 @@ class CourseResponse(BaseModel):
     title: Dict[str, str]
     description: Dict[str, str]
     curriculum_url: Optional[str]
+    order_index: Optional[int]
     hero_video_url: Optional[str]
     curriculum: Optional[Dict[str, List[str]]]
 

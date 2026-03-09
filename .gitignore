@@ -65,6 +65,7 @@ frontend/src/assets/photo2.mp4
 test.db
 backend/ai_agent/
 backend/app/api/endpoints/models/logic_agent_1
-
+backend/test_regex_fix.py
+venv_test/
 __pycache__/
 *.pyc

@@ -57,6 +57,7 @@ const AdminCourses = () => {
     description_ru: "",
     duration_months: 3,
     monthly_payment: 50000,
+    order_index: 0,
     is_active: true,
     category: "course" as "course" | "profession",
     level: "Սկսնակ",
@@ -98,6 +99,7 @@ const AdminCourses = () => {
         description: { hy: data.description_hy, en: data.description_en, ru: data.description_ru },
         duration_months: data.duration_months,
         monthly_payment: data.monthly_payment,
+        order_index: data.order_index,
         is_active: data.is_active,
         category: data.category,
         level: data.level,
@@ -209,6 +211,7 @@ const AdminCourses = () => {
       description_ru: "",
       duration_months: 3,
       monthly_payment: 50000,
+      order_index: 0,
       is_active: true,
       category: "course",
       level: "Սկսնակ",
@@ -230,6 +233,7 @@ const AdminCourses = () => {
       description_ru: course.description.ru || "",
       duration_months: course.duration_months,
       monthly_payment: course.monthly_payment,
+      order_index: course.order_index || 0,
       is_active: course.is_active,
       category: course.category || "course",
       level: course.level || "Սկսնակ",
@@ -278,6 +282,8 @@ const AdminCourses = () => {
     setLessonFormData({ title: lesson.title, order_index: lesson.order_index });
     setIsLessonOpen(true);
   };
+
+  const sortedCourses = courses ? [...courses].sort((a, b) => (a.order_index || 0) - (b.order_index || 0)) : [];
 
   if (isLoading) return <div className="animate-pulse grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"><div className="h-48 bg-secondary rounded-xl" /><div className="h-48 bg-secondary rounded-xl" /><div className="h-48 bg-secondary rounded-xl" /></div>;
 
@@ -335,7 +341,7 @@ const AdminCourses = () => {
             </Tabs>
 
             <div className="grid gap-6 py-4 border-t border-border mt-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="duration">Duration (months)</Label>
                   <Input id="duration" type="number" value={formData.duration_months} onChange={e => setFormData({ ...formData, duration_months: parseInt(e.target.value) })} />
@@ -343,6 +349,10 @@ const AdminCourses = () => {
                 <div className="space-y-2">
                   <Label htmlFor="payment">Monthly Payment (AMD)</Label>
                   <Input id="payment" type="number" value={formData.monthly_payment} onChange={e => setFormData({ ...formData, monthly_payment: parseInt(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="order_index">Order Index</Label>
+                  <Input id="order_index" type="number" value={formData.order_index} onChange={e => setFormData({ ...formData, order_index: parseInt(e.target.value) })} />
                 </div>
               </div>
 
@@ -610,7 +620,7 @@ const AdminCourses = () => {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses?.map((course) => (
+        {sortedCourses.map((course) => (
           <div key={course.id} className="bg-background rounded-xl border border-border overflow-hidden shadow-sm hover:border-primary/40 transition-all group">
             <div className="aspect-video bg-secondary/50 relative">
               <div className="absolute inset-0 flex items-center justify-center text-primary/20">
@@ -629,6 +639,9 @@ const AdminCourses = () => {
                 <Button size="icon" variant="secondary" className="h-8 w-8 bg-[var(--danger)]" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
                   <Trash2 size={14} />
                 </Button>
+              </div>
+              <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
+                Order: {course.order_index || 0}
               </div>
             </div>
             <div className="p-6">

@@ -93,6 +93,7 @@ class Course(Base):
     title = Column(JSON, nullable=False)  # {en, ru, hy}
     description = Column(JSON, nullable=False)  # {en, ru, hy}
     curriculum_url = Column(String(500))
+    order_index = Column(Integer, nullable=False, default=0, unique=True)
     # curiculum is a dict, keys is a string values is a string
     curriculum = Column(JSON, default={})
     icon_url = Column(String(500))

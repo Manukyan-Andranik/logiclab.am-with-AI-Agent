@@ -236,6 +236,8 @@ async def get_courses(
     if is_active is not None:
         query = query.filter(Course.is_active == is_active)
     
+    query = query.order_by(Course.order_index)
+    
     courses = query.offset(skip).limit(limit).all()
     return courses
 
@@ -260,6 +262,7 @@ async def create_course(
         title=_multilingual_to_dict(course_data.title),
         description=_multilingual_to_dict(course_data.description),
         curriculum_url=course_data.curriculum_url,
+        order_index=course_data.order_index,
         curriculum=course_data.curriculum or {},
         icon_url=course_data.icon_url,
         hero_video_url=course_data.hero_video_url,
@@ -302,6 +305,34 @@ async def update_course(
     raw = getattr(course_data, "model_dump", None) or getattr(course_data, "dict")
     update_data = raw(exclude_unset=True, exclude={'instructor_ids'})
     
+    # Handle order_index swap
+    if 'order_index' in update_data and update_data['order_index'] != course.order_index:
+        new_index = update_data['order_index']
+        old_index = course.order_index
+        
+        # Find if another course has the target index
+        other_course = db.query(Course).filter(Course.order_index == new_index).first()
+        if other_course:
+            # We need to swap. To avoid unique constraint violation, 
+            # we use a temporary very large index for one of them
+            temp_index = -1  # Assuming order_index is normally >= 0
+            
+            # Step 1: Move current course to temp
+            # Actually, just move the other course to temp, then current to new, then other to old
+            other_course.order_index = temp_index
+            db.flush() # Send to DB but don't commit yet
+            
+            # Now we can update current course (setattr will do it later, but let's be explicit for index)
+            course.order_index = new_index
+            db.flush()
+            
+            # Step 3: Move other course to old index
+            other_course.order_index = old_index
+            db.flush()
+            
+            # Remove from update_data so it doesn't get set again by the loop
+            del update_data['order_index']
+
     if 'title' in update_data and update_data['title'] is not None:
         update_data['title'] = _multilingual_to_dict(update_data['title'])
     if 'description' in update_data and update_data['description'] is not None:

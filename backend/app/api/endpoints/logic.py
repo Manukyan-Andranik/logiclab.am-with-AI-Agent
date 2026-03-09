@@ -2,6 +2,7 @@ import re
 import os
 import json
 import dotenv
+import ast
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -12,6 +13,9 @@ from peft import PeftModel, LoraConfig, get_peft_model, TaskType
 from deep_translator import GoogleTranslator as TRANSLATOR
 
 
+from gradio_client import Client
+
+agent_client = Client("LogicLabAcademy/Logic_Agnet")
 
 torch.set_num_threads(1)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -78,8 +82,8 @@ def load_model_and_tokenizer(model_name=None, mode="eval", BASE_MODEL_NAME="gpt2
     return model, tokenizer
 
 # Use absolute path relative to this file
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "models", "logic_agent_1")
-AGENT, TOKENIXER = load_model_and_tokenizer(model_name=MODEL_DIR, mode="eval")
+# MODEL_DIR = os.path.join(os.path.dirname(__file__), "models", "logic_agent_1")
+# AGENT, TOKENIXER = load_model_and_tokenizer(model_name=MODEL_DIR, mode="eval")
 
 import re
 
@@ -113,65 +117,41 @@ def format_answer(decoded: str) -> str:
 
     return answer + "\n</JSON>"
 
-def generate_answer(
-    model=AGENT,
-    tokenizer=TOKENIXER,
-    question: str="",
-    language: str="hy",
-    context: str="",
-    max_new_tokens: int = 128,
-    temperature: float = 0.1,
-):
-    """
-    Generate answer for a given question using fine-tuned GPT-2 LoRA model
-    """
-
-    model.eval()
-
-    # Use the prompt format the model was trained on
-    translated_question = TRANSLATOR(source='auto', target='en').translate(question)
-    
-    prompt = f"Prompt: {translated_question}\nAssistant: completion:"
-
-    inputs = tokenizer(prompt, return_tensors="pt")
-    inputs = {k: v.to(model.device) for k, v in inputs.items()}
-
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=True,
-            temperature=temperature,
-            top_p=0.9,
-            top_k=50,
-            pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.eos_token_id,
-        )
-
-    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-
-    answer = format_answer(decoded)
-    # result = TRANSLATOR.translate(answer, dest=language)
+def generate_answer_with_agent(question: str, context: str, client, max_new_tokens: int = 64, temperature: float = 0.3):
+    result = client.predict(
+	message=question,
+	system_message=context,
+	max_tokens=512,
+	temperature=0.7,
+	top_p=0.95,
+	api_name="/respond"
+    )
     parsed_json = {}
-    if answer:
-        json_match = re.search(r"<JSON>(.*?)</JSON>", answer, re.DOTALL)
+    if result:
+        json_match = re.search(r"<JSON>(.*?)</JSON>", result, re.DOTALL)
         if json_match:
             json_str = json_match.group(1).strip()
             try:
                 parsed_json = json.loads(json_str)
-            except json.JSONDecodeError:
-                pass
-            clean_text = answer.replace(json_match.group(0), "").strip()
+            except Exception as e:
+                print(f"JSON standard parsing failed: {e}")
+                try:
+                    # Fallback for cases where AI might use single quotes
+                    parsed_json = ast.literal_eval(json_str)
+                    if not isinstance(parsed_json, dict):
+                        parsed_json = {}
+                except Exception as e2:
+                    print(f"JSON literal_eval fallback failed: {e2}")
+                    parsed_json = {}
+            clean_text = result.replace(json_match.group(0), "").strip()
         else:
-            clean_text = answer
+            clean_text = result
     else:
-        clean_text = answer
+        clean_text = result
 
-
-
-    translated_clean_answer = TRANSLATOR(source='auto', target=language).translate(clean_text)
-    
+    translated_clean_answer = clean_text
     return translated_clean_answer, parsed_json
+
 
 
 dotenv.load_dotenv()
@@ -262,8 +242,7 @@ async def logic_chat(request: ChatRequest):
         *[{"role": m.role, "content": m.content} for m in request.history],
         {"role": "user", "content": request.message},
     ]
-    clean_text, parsed_json = generate_answer(question=request.message, context="")
-
+    clean_text, parsed_json = generate_answer_with_agent(question=request.message, context=SYSTEM_PROMPT, client=agent_client)
 
     intent = parsed_json.get("intent")
     print(f"[AI] Intent: {intent}")
