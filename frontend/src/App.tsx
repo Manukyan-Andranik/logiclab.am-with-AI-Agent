@@ -11,6 +11,8 @@ import CourseDetailPage from "./pages/CourseDetailPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import AboutPage from "./pages/AboutPage";
 import RegisterPage from "./pages/RegisterPage";
+import StudentLoginPage from "./pages/StudentLoginPage";
+import StudentDashboard from "./pages/StudentDashboard";
 import NotFound from "./pages/NotFound";
 import "@/styles/variables.css";
 
@@ -44,7 +46,10 @@ const App = () => (
               <Route path="/projects/:id" element={<ProjectDetailPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/student/dashboard" element={<StudentDashboard />} />
             </Route>
+
+            <Route path="/student/login" element={<StudentLoginPage />} />
 
             <Route path="/admin/login" element={<AdminLogin />} />
 

@@ -108,14 +108,14 @@ const AdminInstructors = () => {
     setIsOpen(true);
   };
 
-  if (isLoading) return <div className="animate-pulse space-y-4 text-[var(--black)]"><div className="h-12 bg-[var(--gray-dark)] rounded-lg w-full" /></div>;
+  if (isLoading) return <div className="animate-pulse space-y-4 text-foreground"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
 
   return (
-    <div className="space-y-8 text-[var(--black)]">
+    <div className="space-y-8 text-foreground">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--white)]">Instructors</h1>
-          <p className="text-[var(--gray-light)]">Manage course instructors and their profiles.</p>
+          <h1 className="text-3xl font-bold">Instructors</h1>
+          <p className="text-muted-foreground">Manage course instructors and their profiles.</p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -123,12 +123,12 @@ const AdminInstructors = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-[var(--primary-alt)] text-[var(--white)] hover:bg-[var(--primary-dark)]/90">
+            <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/80">
               <Plus size={18} />
               Add Instructor
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-[var(--white)] text-[var(--black)]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
             <DialogHeader>
               <DialogTitle>{editingInstructor ? "Edit Instructor" : "Add New Instructor"}</DialogTitle>
             </DialogHeader>
@@ -192,9 +192,9 @@ const AdminInstructors = () => {
         </Dialog>
       </div>
 
-      <div className="bg-[var(--white)] rounded-xl border border-[var(--gray-light)] overflow-hidden shadow-sm">
+      <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[var(--gray-light)] text-[var(--gray-dark)] uppercase text-[10px] font-bold tracking-wider">
+          <thead className="bg-secondary/50 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
             <tr>
               <th className="px-6 py-4">Instructor</th>
               <th className="px-6 py-4">Skills</th>
@@ -202,28 +202,28 @@ const AdminInstructors = () => {
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--gray-light)]">
+          <tbody className="divide-y divide-border">
             {instructors?.map((instructor) => (
-              <tr key={instructor.id} className="hover:bg-[var(--gray-light)]/50 transition-colors">
+              <tr key={instructor.id} className="hover:bg-secondary/20 transition-colors">
                 <td className="px-6 py-4 flex items-center gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={instructor.user?.profile_image} />
                     <AvatarFallback>{instructor.user?.first_name?.[0] || instructor.user.first_name?.[0]}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold text-[var(--black)]">{instructor.user?.first_name || instructor.user.first_name} {instructor.user?.last_name || instructor.user.last_name}</div>
-                    <div className="text-xs text-[var(--gray-dark)] opacity-70">{instructor.user?.email || instructor.user.email}</div>
+                    <div className="font-semibold text-foreground">{instructor.user?.first_name || instructor.user.first_name} {instructor.user?.last_name || instructor.user.last_name}</div>
+                    <div className="text-xs text-muted-foreground">{instructor.user?.email || instructor.user.email}</div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-1">
                     {instructor.skills?.map(skill => (
-                      <Badge key={skill} variant="outline" className="text-[10px] py-0 border-[var(--gray-dark)] text-[var(--gray-dark)]">{skill}</Badge>
+                      <Badge key={skill} variant="outline" className="text-[10px] py-0 border-border text-muted-foreground">{skill}</Badge>
                     ))}
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant={instructor.is_active ? "default" : "secondary"} className={instructor.is_active ? "bg-[var(--success)] hover:bg-[var(--success)]" : "bg-[var(--gray-dark)] text-[var(--white)]"}>
+                  <Badge variant={instructor.is_active ? "default" : "secondary"}>
                     {instructor.is_active ? "Active" : "Inactive"}
                   </Badge>
                 </td>
@@ -235,11 +235,11 @@ const AdminInstructors = () => {
                       onClick={() => handleEdit(instructor)}
                       className=" h-8 w-8 flex items-center justify-center
                                   rounded-md
-                                  bg-[var(--teal)]/10
+                                  bg-teal/10
                                   text-[var(--teal)]
                                   transition-all duration-200
-                                  hover:bg-[var(--teal)]
-                                  hover:text-[var(--white)]
+                                  hover:bg-teal
+                                  hover:text-white
                                   active:scale-95
                                 ">
                       <Edit2 size={14} />
@@ -255,11 +255,11 @@ const AdminInstructors = () => {
                       className="
         h-8 w-8 flex items-center justify-center
         rounded-md
-        bg-[var(--danger)]/10
+        bg-danger/10
         text-[var(--danger)]
         transition-all duration-200
-        hover:bg-[var(--danger)]
-        hover:text-[var(--white)]
+        hover:bg-danger
+        hover:text-white
         active:scale-95
       "
                     >

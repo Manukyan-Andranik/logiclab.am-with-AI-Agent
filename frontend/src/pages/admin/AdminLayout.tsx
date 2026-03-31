@@ -42,7 +42,10 @@ const AdminLayout = () => {
 
           <nav className="space-y-1">
             {menuItems.map((item) => {
-              const isActive = location.pathname === item.href;
+              const isActive = item.href === '/admin' 
+                ? location.pathname === item.href 
+                : location.pathname.startsWith(item.href);
+                
               return (
                 <Link
                   key={item.href}

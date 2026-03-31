@@ -14,7 +14,7 @@ const FeaturedProjects = () => {
   if (isLoading || !projects || projects.length === 0) return null;
 
   return (
-    <section id="projects" className="py-24 bg-[var(--black)]">
+    <section id="projects" className="py-24 bg-black">
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -22,8 +22,8 @@ const FeaturedProjects = () => {
           viewport={{ once: true }}
           className="mb-16"
         >
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter">
-            Ուսանողների <span className="text-[var(--primary-alt)]">նախագծերը</span>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white uppercase tracking-tighter">
+            Ուսանողների <span className="text-primary-alt">նախագծերը</span>
           </h2>
         </motion.div>
 
@@ -38,7 +38,7 @@ const FeaturedProjects = () => {
             >
               <Link
                 to={`/projects/${project.id}`}
-                className="block glass-card rounded-3xl overflow-hidden group border-2 border-[var(--gray-dark)] hover:border-[var(--primary-alt)] transition-all bg-[var(--gray-dark)]"
+                className="block glass-card rounded-3xl overflow-hidden group border-2 border-gray-dark hover:border-primary-alt transition-all bg-gray-dark"
               >
                 <div className="aspect-video relative overflow-hidden">
                   <img
@@ -46,14 +46,14 @@ const FeaturedProjects = () => {
                     alt={getLocalizedContent(project.title)}
                     className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100"
                   />
-                  <div className="absolute inset-0 bg-[var(--black)] opacity-0 group-hover:opacity-40 transition-opacity flex items-end p-6">
-                    <span className="inline-flex items-center gap-2 text-[var(--primary)] font-black uppercase text-xs tracking-widest">
+                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-40 transition-opacity flex items-end p-6">
+                    <span className="inline-flex items-center gap-2 text-primary font-black uppercase text-xs tracking-widest">
                       {"\u054f\u0565\u057d\u0576\u0565\u056c \u0561\u057e\u0565\u056c\u056b\u0576"} <ExternalLink className="w-4 h-4" />
                     </span>
                   </div>
                 </div>
                 <div className="p-8">
-                  <h3 className="font-display text-xl font-black text-[var(--white)] mb-3 group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
+                  <h3 className="font-display text-xl font-black text-white mb-3 group-hover:text-primary-alt transition-colors uppercase tracking-tighter">
                     {getLocalizedContent(project.title)}
                   </h3>
                   <p className="text-[var(--gray-light)] opacity-60 text-sm line-clamp-2 font-medium leading-relaxed">

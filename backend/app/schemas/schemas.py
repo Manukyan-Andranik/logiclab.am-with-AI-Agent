@@ -93,15 +93,7 @@ class UserPersonalResponse(UserPersonalBase):
 class StudentBase(BaseModel):
     course_id: Optional[int] = None
     status: Optional[StudentStatus] = None
-    
-class StudentCreate(StudentBase):
-    user_id: int
-    course_id: Optional[int] = None
-
-class StudentUpdate(StudentBase, UserPersonalBase):
-    last_chapter_id: Optional[int] = None
-    last_lesson_id: Optional[int] = None
-    is_active: Optional[bool] = None
+    created_at: Optional[datetime] = None
 
 class StudentResponse(StudentBase):
     id: int
@@ -114,11 +106,72 @@ class StudentResponse(StudentBase):
     class Config:
         from_attributes = True
 
+
+class StudentAdminCreate(BaseModel):
+    email: EmailStr
+    first_name: str
+    last_name: str
+    course_id: int
+
 # Instructor Schemas
 class InstructorBase(BaseModel):
     bio: Optional[str] = None
     skills: Optional[List[str]] = []
     proficiency: Optional[List[str]] = []
+
+class InstructorResponse(InstructorBase):
+    id: int
+    user_id: int
+    is_active: bool
+    user: UserPersonalResponse
+    
+    class Config:
+        from_attributes = True
+
+
+class CourseResponse(BaseModel):
+    id: int
+    slug: Optional[str] = None
+    title: Dict[str, str]
+    description: Dict[str, str]
+    curriculum_url: Optional[str]
+    order_index: Optional[int]
+    hero_video_url: Optional[str]
+    curriculum: Optional[Dict[str, List[str]]]
+
+    icon_url: Optional[str]
+    duration_months: Optional[int]
+    start_date: Optional[datetime]
+    schedule: Optional[Dict[str, str]]
+    monthly_payment: Optional[float]
+    total_payment: Optional[float]
+    is_active: bool
+    created_at: datetime
+    instructors: Optional[List[InstructorResponse]] = []
+    
+    class Config:
+        from_attributes = True
+
+class StudentDashboardResponse(BaseModel):
+    student: StudentResponse
+    course: Optional[CourseResponse] = None
+    progress: Optional[Dict[str, Any]] = None
+    materials: List[Dict[str, Any]] = []
+
+    class Config:
+        from_attributes = True
+
+class StudentCreate(StudentBase):
+    user_id: int
+    course_id: Optional[int] = None
+
+class StudentUpdate(StudentBase, UserPersonalBase):
+    last_chapter_id: Optional[int] = None
+    last_lesson_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+
 
 class InstructorCreate(BaseModel):
     first_name: str
@@ -143,14 +196,6 @@ class InstructorUpdate(BaseModel):
     social_links: Optional[Dict[str, str]] = None
     is_active: Optional[bool] = None
 
-class InstructorResponse(InstructorBase):
-    id: int
-    user_id: int
-    is_active: bool
-    user: UserPersonalResponse
-    
-    class Config:
-        from_attributes = True
 
 # Course Schemas
 class CourseBase(BaseModel):
@@ -167,6 +212,9 @@ class CourseBase(BaseModel):
     schedule: Optional[Dict[str, str]] = None
     monthly_payment: Optional[float] = None
     total_payment: Optional[float] = None
+
+
+
 
 class CourseCreate(CourseBase):
     curriculum: Optional[Dict[str, List[str]]] = {}
@@ -191,28 +239,6 @@ class CourseUpdate(BaseModel):
     is_active: Optional[bool] = None
     instructor_ids: Optional[List[int]] = None
 
-class CourseResponse(BaseModel):
-    id: int
-    slug: Optional[str] = None
-    title: Dict[str, str]
-    description: Dict[str, str]
-    curriculum_url: Optional[str]
-    order_index: Optional[int]
-    hero_video_url: Optional[str]
-    curriculum: Optional[Dict[str, List[str]]]
-
-    icon_url: Optional[str]
-    duration_months: Optional[int]
-    start_date: Optional[datetime]
-    schedule: Optional[Dict[str, str]]
-    monthly_payment: Optional[float]
-    total_payment: Optional[float]
-    is_active: bool
-    created_at: datetime
-    instructors: Optional[List[InstructorResponse]] = []
-    
-    class Config:
-        from_attributes = True
 
 # Chapter Schemas
 class ChapterBase(BaseModel):
@@ -288,23 +314,9 @@ class RegistrationResponse(BaseModel):
         from_attributes = True
 
 # Material Access Schemas (material = chapter of course)
-class MaterialAccessCreate(BaseModel):
-    chapter_id: int
-    student_id: int
 
-class MaterialAccessResponse(BaseModel):
-    id: int
-    granted_at: datetime
-    accessed_at: Optional[datetime]
-    chapter: ChapterResponse
-    student: StudentResponse
-    
-    class Config:
-        from_attributes = True
 
-class MaterialAccessListResponse(BaseModel):
-    data: List[MaterialAccessResponse]
-    total: int
+
 
 class RegistrationListResponse(BaseModel):
     data: List[RegistrationResponse]
@@ -514,3 +526,57 @@ class SuccessStoryResponse(BaseModel):
     
     class Config:
         from_attributes = True
+# Material Schemas
+class MaterialLink(BaseModel):
+    name: str
+    url: str
+
+    @validator("url")
+    def validate_url(cls, v: str) -> str:
+        # Basic URL validation to ensure proper format and protocol
+        if not v:
+            raise ValueError("URL is required")
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("URL must start with http:// or https://")
+        return v
+
+class MaterialBase(BaseModel):
+    chapter_id: int
+    lesson_id: int
+    links: List[MaterialLink] = []
+
+class MaterialCreate(MaterialBase):
+    pass
+
+class MaterialUpdate(BaseModel):
+    links: Optional[List[MaterialLink]] = None
+
+class MaterialResponse(MaterialBase):
+    id: int
+    links: List[MaterialLink] = []
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Updated Material Access Schemas
+class MaterialAccessCreate(BaseModel):
+    student_id: int
+    chapter_id: Optional[int] = None
+    lesson_id: Optional[int] = None
+
+class MaterialAccessResponse(BaseModel):
+    id: int
+    granted_at: datetime
+    accessed_at: Optional[datetime] = None
+    student_id: int
+    chapter_id: Optional[int] = None
+    lesson_id: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class MaterialAccessListResponse(BaseModel):
+    data: List[MaterialAccessResponse]
+    total: int

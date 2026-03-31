@@ -156,7 +156,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-8 left-8 z-[100] w-20 h-20 bg-[var(--primary-alt)] text-[var(--black)] rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,215,0,0.4)] border-4 border-[var(--black)] hover:scale-110 active:scale-95 transition-[var(--transition)]"
+          className="fixed bottom-8 left-8 z-[100] w-20 h-20 bg-primary-alt text-black rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(255,215,0,0.4)] border-4 border-black hover:scale-110 active:scale-95 transition-[var(--transition)]"
           aria-label="Activate Logic AI"
         >
           <Bot size={40} />
@@ -169,15 +169,15 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-screen flex flex-col bg-[var(--black)] border-r border-[var(--gray-dark)] shadow-[20px_0_50px_rgba(0,0,0,0.5)] transition-[var(--transition)] ${
+        className={`fixed top-0 left-0 h-screen flex flex-col bg-black border-r border-gray-dark shadow-[20px_0_50px_rgba(0,0,0,0.5)] transition-[var(--transition)] ${
           isOpen ? 'w-full md:w-[440px] translate-x-0 z-[150]' : '-translate-x-full z-[90]'
         }`}
       >
         {/* Header */}
-        <div className="shrink-0 p-6 md:p-7 border-b border-[var(--gray-dark)] bg-[var(--gray-dark)] flex items-center justify-between gap-4">
+        <div className="shrink-0 p-6 md:p-7 border-b border-gray-dark bg-gray-dark flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
-              <div className="w-12 h-12 bg-[var(--primary-alt)] text-[var(--black)] rounded-full flex items-center justify-center shadow-[0_0_28px_rgba(255,215,0,0.35)] border-4 border-[var(--black)]">
+              <div className="w-12 h-12 bg-primary-alt text-black rounded-full flex items-center justify-center shadow-[0_0_28px_rgba(255,215,0,0.35)] border-4 border-black">
                 <Bot size={24} />
               </div>
               <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4">
@@ -186,7 +186,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-black text-[var(--white)] tracking-tighter leading-none">LOGIC AGENT</h3>
+              <h3 className="text-sm font-black text-white tracking-tighter leading-none">LOGIC AGENT</h3>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse" />
                 <p className="text-[9px] text-[var(--gray-light)] opacity-55 font-mono uppercase tracking-[0.2em]">v1</p>
@@ -195,7 +195,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
           </div>
           <button
             onClick={() => setIsOpen(false)}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--gray-light)] hover:bg-[var(--black)] hover:text-[var(--primary)] transition-[var(--transition)]"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[var(--gray-light)] hover:bg-black hover:text-primary transition-[var(--transition)]"
             aria-label="Close"
           >
             <X size={20} />
@@ -205,15 +205,15 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-5 md:p-7 space-y-5 bg-[var(--black)] scrollbar-hide min-h-0"
+          className="flex-1 overflow-y-auto p-5 md:p-7 space-y-5 bg-black scrollbar-hide min-h-0"
           style={{ scrollBehavior: 'smooth' }}
         >
           {messages.length === 0 && (
             <div className="text-center pt-8 pb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[rgba(255,215,0,0.09)] border border-[rgba(255,215,0,0.18)] mb-4">
-                <MessageCircle size={24} className="text-[var(--primary-alt)]" />
+                <MessageCircle size={24} className="text-primary-alt" />
               </div>
-              <h4 className="text-[var(--white)] text-lg font-black mb-2.5 tracking-tight">ԻՆՉՊԵ՞Ս ԿԱՐՈՂ ԵՄ ՕԳՆԵԼ</h4>
+              <h4 className="text-white text-lg font-black mb-2.5 tracking-tight">ԻՆՉՊԵ՞Ս ԿԱՐՈՂ ԵՄ ՕԳՆԵԼ</h4>
               <p className="text-[var(--gray-light)] opacity-55 text-sm px-6 leading-relaxed">
                 Ես ձեր LOGIC նավիգացիոն օգնականն եմ։ Հարցրեք ինձ դասընթացների, դասախոսների կամ LogicLab-ի մասին։
               </p>
@@ -228,8 +228,8 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
               <div
                 className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed font-semibold shadow-xl ${
                   msg.role === 'user'
-                    ? 'bg-[var(--primary-alt)] text-[var(--black)] rounded-tr-none'
-                    : 'bg-[var(--gray-dark)] text-[var(--white)] border border-[rgba(255,255,255,0.06)] rounded-tl-none'
+                    ? 'bg-primary-alt text-black rounded-tr-none'
+                    : 'bg-gray-dark text-white border border-[rgba(255,255,255,0.06)] rounded-tl-none'
                 }`}
               >
                 {msg.content}
@@ -242,11 +242,11 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
 
           {isLoading && (
             <div className="flex items-start animate-in fade-in duration-300">
-              <div className="bg-[var(--gray-dark)] border border-[rgba(255,255,255,0.06)] p-4 rounded-2xl rounded-tl-none shadow-xl">
+              <div className="bg-gray-dark border border-[rgba(255,255,255,0.06)] p-4 rounded-2xl rounded-tl-none shadow-xl">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 bg-[var(--primary-alt)] rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-2 h-2 bg-[var(--primary-alt)] rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-2 h-2 bg-[var(--primary-alt)] rounded-full animate-bounce" />
+                  <span className="w-2 h-2 bg-primary-alt rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-2 h-2 bg-primary-alt rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-2 h-2 bg-primary-alt rounded-full animate-bounce" />
                 </div>
               </div>
             </div>
@@ -261,14 +261,14 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
             onClick={() => setShowFAQ(v => !v)}
             aria-expanded={showFAQ}
           >
-            <HelpCircle size={13} className="text-[var(--primary-alt)] shrink-0" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-alt)] flex-1 text-left">
+            <HelpCircle size={13} className="text-primary-alt shrink-0" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-alt flex-1 text-left">
               Հաճախ տրվող հարցեր
             </span>
             {!showFAQ && <span className="faq-badge">{FAQ_ITEMS.length}</span>}
             <ChevronDown
               size={13}
-              className={`faq-chevron text-[var(--primary-alt)] opacity-70 ${showFAQ ? 'open' : 'closed'}`}
+              className={`faq-chevron text-primary-alt opacity-70 ${showFAQ ? 'open' : 'closed'}`}
             />
           </button>
 
@@ -285,7 +285,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
                   >
                     <div className="faq-icon-wrap">{item.icon}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[var(--white)] font-bold text-sm leading-tight">{item.label}</div>
+                      <div className="text-white font-bold text-sm leading-tight">{item.label}</div>
                       <div className="text-[var(--gray-light)] opacity-50 text-xs mt-0.5 truncate">{item.question}</div>
                     </div>
                     <ChevronRight size={13} className="faq-arrow" />
@@ -304,7 +304,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* Input */}
-        <div className="shrink-0 p-5 md:p-6 border-t border-[var(--gray-dark)] bg-[var(--gray-dark)]">
+        <div className="shrink-0 p-5 md:p-6 border-t border-gray-dark bg-gray-dark">
           <div className="relative">
             <textarea
               value={input}
@@ -312,14 +312,14 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
               onKeyDown={onKeyDown}
               placeholder="Մուտքագրեք հրամանը..."
               rows={1}
-              className="w-full bg-[var(--black)] border-2 border-[var(--gray-dark)] text-[var(--white)] text-sm rounded-2xl p-4 pr-14 focus:outline-none focus:border-[var(--primary)] transition-[var(--transition)] resize-none shadow-inner min-h-[54px] font-semibold placeholder:opacity-35"
+              className="w-full bg-black border-2 border-gray-dark text-white text-sm rounded-2xl p-4 pr-14 focus:outline-none focus:border-primary transition-[var(--transition)] resize-none shadow-inner min-h-[54px] font-semibold placeholder:opacity-35"
             />
             <button
               onClick={handleSend}
               disabled={isLoading || !input.trim()}
               className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center transition-[var(--transition)] ${
                 input.trim() && !isLoading
-                  ? 'bg-[var(--primary)] text-[var(--primary-alt)] shadow-[0_0_18px_rgba(255,215,0,0.28)] hover:scale-105 active:scale-95'
+                  ? 'bg-primary text-primary-alt shadow-[0_0_18px_rgba(255,215,0,0.28)] hover:scale-105 active:scale-95'
                   : 'bg-[rgba(255,255,255,0.05)] text-[var(--gray-light)] opacity-35 cursor-not-allowed'
               }`}
             >
@@ -327,7 +327,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
             </button>
           </div>
           <div className="flex items-center justify-center gap-2 mt-3.5">
-            <Terminal size={10} className="text-[var(--primary-alt)] opacity-40" />
+            <Terminal size={10} className="text-primary-alt opacity-40" />
             <p className="text-[9px] text-[var(--gray-light)] opacity-25 font-black uppercase tracking-[0.25em]">
               LogicLab v1
             </p>

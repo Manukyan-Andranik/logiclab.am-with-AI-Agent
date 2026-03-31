@@ -1,4 +1,3 @@
-# app/api/endpoints/materials.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
@@ -7,46 +6,164 @@ from datetime import datetime
 from ...core.database import get_db
 from ...core.email import email_service
 from ...models.models import (
-    MaterialAccess, Chapter, Course, Student, UserPersonal
+    Material, MaterialAccess, Chapter, Lesson, Course, Student, UserPersonal
 )
-from ...schemas.schemas import MaterialAccessCreate, MaterialAccessResponse, MaterialAccessListResponse
+from ...schemas.schemas import (
+    MaterialCreate, MaterialUpdate, MaterialResponse, MaterialLink,
+    MaterialAccessCreate, MaterialAccessResponse, MaterialAccessListResponse
+)
 from ..deps import get_current_admin
 
 router = APIRouter()
 
-@router.get("/", response_model=MaterialAccessListResponse)
+# ---------------------------------------------------
+# MATERIAL (Links) MANAGEMENT
+# ---------------------------------------------------
+
+@router.get("/lesson/{lesson_id}", response_model=MaterialResponse)
+async def get_lesson_material(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    _current_admin = Depends(get_current_admin)
+):
+    """Get material for a specific lesson (Admin only)"""
+    # First verify lesson exists
+    lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
+    
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    material = db.query(Material).filter(Material.lesson_id == lesson_id).first()
+    if not material:
+        # Return empty material structure instead of 404 to support "no material" state in frontend
+        return {
+            "id": 0,
+            "chapter_id": lesson.chapter_id,
+            "lesson_id": lesson_id,
+            "links": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+    return material
+
+@router.post("/", response_model=MaterialResponse)
+async def create_material(
+    data: MaterialCreate,
+    db: Session = Depends(get_db),
+    _current_admin = Depends(get_current_admin)
+):
+    """Create/Assign material for a lesson (Admin only)
+
+    Note:
+    - `chapter_id` in the request body is ignored and derived from the lesson
+    - This ensures materials are always correctly associated with the chapter
+    """
+    # Check if lesson exists and derive chapter
+    lesson = db.query(Lesson).filter(Lesson.id == data.lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Basic server-side URL validation (defence in depth)
+    invalid_links = []
+    for link in data.links:
+        try:
+            MaterialLink(name=link.name, url=link.url)
+        except Exception as exc:
+            invalid_links.append({"name": link.name, "url": link.url, "error": str(exc)})
+
+    if invalid_links:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "One or more material links are invalid", "invalid_links": invalid_links},
+        )
+    
+    # Check if material already exists for this lesson
+    existing = db.query(Material).filter(Material.lesson_id == data.lesson_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Material already exists for this lesson. Use PUT to update.")
+    
+    new_material = Material(
+        chapter_id=lesson.chapter_id,
+        lesson_id=data.lesson_id,
+        links=[{"name": link.name, "url": link.url} for link in data.links] if data.links else [],
+    )
+    db.add(new_material)
+    db.commit()
+    db.refresh(new_material)
+    return new_material
+
+@router.put("/{material_id}", response_model=MaterialResponse)
+async def update_material(
+    material_id: int,
+    data: MaterialUpdate,
+    db: Session = Depends(get_db),
+    _current_admin = Depends(get_current_admin)
+):
+    """Update material links (Admin only)"""
+    material = db.query(Material).filter(Material.id == material_id).first()
+    if not material:
+        raise HTTPException(status_code=404, detail="Material not found")
+
+    if data.links is not None:
+        # Validate links before saving
+        invalid_links = []
+        for link in data.links:
+            try:
+                MaterialLink(name=link.name, url=link.url)
+            except Exception as exc:
+                invalid_links.append({"name": link.name, "url": link.url, "error": str(exc)})
+
+        if invalid_links:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "One or more material links are invalid", "invalid_links": invalid_links},
+            )
+
+        material.links = [link.dict() for link in data.links]
+    
+    db.commit()
+    db.refresh(material)
+    return material
+
+@router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+    _current_admin = Depends(get_current_admin)
+):
+    """Delete material record (Admin only)"""
+    material = db.query(Material).filter(Material.id == material_id).first()
+    if not material:
+        raise HTTPException(status_code=404, detail="Material not found")
+    db.delete(material)
+    db.commit()
+    return None
+
+# ---------------------------------------------------
+# MATERIAL ACCESS MANAGEMENT
+# ---------------------------------------------------
+
+@router.get("/access", response_model=MaterialAccessListResponse)
 async def get_all_material_access(
     skip: int = 0,
     limit: int = 100,
     student_id: Optional[int] = None,
-    chapter_id: Optional[int] = None,
-    search: Optional[str] = None,
+    lesson_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Get all material access records (Admin only). Material = chapter of course."""
+    """Get all material access records (Admin only)."""
     query = db.query(MaterialAccess).options(
         joinedload(MaterialAccess.student).joinedload(Student.user),
-        joinedload(MaterialAccess.chapter)
+        joinedload(MaterialAccess.lesson)
     )
     
     if student_id:
         query = query.filter(MaterialAccess.student_id == student_id)
     
-    if chapter_id:
-        query = query.filter(MaterialAccess.chapter_id == chapter_id)
+    if lesson_id:
+        query = query.filter(MaterialAccess.lesson_id == lesson_id)
     
-    if search:
-        search_term = f"%{search.lower()}%"
-        query = query.join(MaterialAccess.chapter).join(MaterialAccess.student).join(Student.user).filter(
-            or_(
-                Chapter.title.ilike(search_term),
-                UserPersonal.first_name.ilike(search_term),
-                UserPersonal.last_name.ilike(search_term),
-                UserPersonal.email.ilike(search_term)
-            )
-        )
-
     total = query.count()
     accesses = query.order_by(MaterialAccess.granted_at.desc()).offset(skip).limit(limit).all()
     
@@ -55,285 +172,49 @@ async def get_all_material_access(
 @router.post("/grant-access", status_code=status.HTTP_201_CREATED)
 async def grant_material_access(
     access_data: MaterialAccessCreate,
-    send_email: bool = True,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Grant material (chapter) access to a student (Admin only)"""
-    chapter = db.query(Chapter).options(
-        joinedload(Chapter.course)
-    ).filter(Chapter.id == access_data.chapter_id).first()
+    """Grant lesson access to a student (Admin only)"""
+    if not access_data.lesson_id:
+         raise HTTPException(status_code=400, detail="Lesson ID is required")
+
+    lesson = db.query(Lesson).options(joinedload(Lesson.chapter).joinedload(Chapter.course)).filter(Lesson.id == access_data.lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
     
-    if not chapter:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chapter not found"
-        )
-    
-    student = db.query(Student).options(
-        joinedload(Student.user)
-    ).filter(Student.id == access_data.student_id).first()
-    
+    student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == access_data.student_id).first()
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found"
-        )
+        raise HTTPException(status_code=404, detail="Student not found")
     
     existing = db.query(MaterialAccess).filter(
-        MaterialAccess.chapter_id == access_data.chapter_id,
+        MaterialAccess.lesson_id == access_data.lesson_id,
         MaterialAccess.student_id == access_data.student_id
     ).first()
     
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Material access already granted for this chapter"
-        )
+        raise HTTPException(status_code=400, detail="Access already granted for this lesson")
     
     new_access = MaterialAccess(
-        chapter_id=access_data.chapter_id,
-        student_id=access_data.student_id
+        lesson_id=access_data.lesson_id,
+        student_id=access_data.student_id,
+        chapter_id=lesson.chapter_id
     )
     db.add(new_access)
     db.commit()
-    db.refresh(new_access)
     
-    if send_email:
-        course_name = chapter.course.title.get("en", "Course")
-        await email_service.send_material_access_granted(
-            to_email=student.user.email,
-            student_name=f"{student.user.first_name} {student.user.last_name}",
-            chapter_title=chapter.title,
-            course_name=course_name
-        )
-    
-    return {
-        "message": "Material access granted successfully",
-        "access_id": new_access.id,
-        "student_id": access_data.student_id,
-        "chapter_id": access_data.chapter_id,
-        "email_sent": send_email
-    }
+    return {"message": "Access granted successfully"}
 
-@router.post("/grant-access/bulk")
-async def bulk_grant_material_access(
-    chapter_id: int,
-    student_ids: List[int],
-    send_email: bool = True,
-    db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
-):
-    """Grant material (chapter) access to multiple students (Admin only)"""
-    chapter = db.query(Chapter).options(
-        joinedload(Chapter.course)
-    ).filter(Chapter.id == chapter_id).first()
-    
-    if not chapter:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chapter not found"
-        )
-    
-    granted = []
-    skipped = []
-    course_name = chapter.course.title.get("en", "Course")
-    
-    for student_id in student_ids:
-        student = db.query(Student).options(
-            joinedload(Student.user)
-        ).filter(Student.id == student_id).first()
-        
-        if not student:
-            skipped.append({"student_id": student_id, "reason": "Student not found"})
-            continue
-        
-        existing = db.query(MaterialAccess).filter(
-            MaterialAccess.chapter_id == chapter_id,
-            MaterialAccess.student_id == student_id
-        ).first()
-        
-        if existing:
-            skipped.append({"student_id": student_id, "reason": "Access already granted"})
-            continue
-        
-        db.add(MaterialAccess(chapter_id=chapter_id, student_id=student_id))
-        
-        if send_email:
-            await email_service.send_material_access_granted(
-                to_email=student.user.email,
-                student_name=f"{student.user.first_name} {student.user.last_name}",
-                chapter_title=chapter.title,
-                course_name=course_name
-            )
-        
-        granted.append({"student_id": student_id, "access_granted": True})
-    
-    db.commit()
-    
-    return {
-        "message": f"Bulk access granted: {len(granted)} successful, {len(skipped)} skipped",
-        "chapter_id": chapter_id,
-        "granted": granted,
-        "skipped": skipped
-    }
-
-@router.post("/grant-access/course")
-async def grant_course_access(
-    course_id: int,
-    student_ids: List[int],
-    send_email: bool = True,
-    db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
-):
-    """Grant access to all chapters (materials) of a course to multiple students (Admin only)"""
-    course = db.query(Course).filter(Course.id == course_id).first()
-    
-    if not course:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Course not found"
-        )
-    
-    chapters = db.query(Chapter).filter(Chapter.course_id == course_id).all()
-    
-    if not chapters:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No chapters found in this course"
-        )
-    
-    total_granted = 0
-    results = []
-    course_name = course.title.get("en", "Course")
-    
-    for student_id in student_ids:
-        student = db.query(Student).options(
-            joinedload(Student.user)
-        ).filter(Student.id == student_id).first()
-        
-        if not student:
-            results.append({
-                "student_id": student_id,
-                "status": "skipped",
-                "reason": "Student not found"
-            })
-            continue
-        
-        granted_chapters = 0
-        
-        for ch in chapters:
-            existing = db.query(MaterialAccess).filter(
-                MaterialAccess.chapter_id == ch.id,
-                MaterialAccess.student_id == student_id
-            ).first()
-            
-            if not existing:
-                db.add(MaterialAccess(chapter_id=ch.id, student_id=student_id))
-                granted_chapters += 1
-                total_granted += 1
-        
-        if granted_chapters and send_email:
-            await email_service.send_email(
-                to_email=student.user.email,
-                subject=f"Course Materials Available - {course_name}",
-                body=f"""
-                <html>
-                    <body>
-                        <h2>Hello {student.user.first_name},</h2>
-                        <p>All course materials (chapters) for <strong>{course_name}</strong> are now available!</p>
-                        <p>You have access to {len(chapters)} chapters.</p>
-                        <p>Login to your student portal to access the materials.</p>
-                        <br>
-                        <p>Happy learning!<br>LogicLab Team</p>
-                    </body>
-                </html>
-                """,
-                html=True
-            )
-        
-        results.append({
-            "student_id": student_id,
-            "status": "success",
-            "chapters_granted": granted_chapters
-        })
-    
-    db.commit()
-    
-    return {
-        "message": f"Course access granted: {total_granted} total chapter accesses created",
-        "course_id": course_id,
-        "total_chapters": len(chapters),
-        "students_processed": len(student_ids),
-        "results": results
-    }
-
-@router.delete("/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/revoke-access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_material_access(
     access_id: int,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Revoke material access (Admin only)"""
+    """Revoke lesson access (Admin only)"""
     access = db.query(MaterialAccess).filter(MaterialAccess.id == access_id).first()
-    
     if not access:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Material access not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Access record not found")
     db.delete(access)
     db.commit()
     return None
-
-@router.delete("/revoke/bulk")
-async def bulk_revoke_material_access(
-    chapter_id: int,
-    student_ids: List[int],
-    db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
-):
-    """Bulk revoke material (chapter) access (Admin only)"""
-    revoked = 0
-    
-    for student_id in student_ids:
-        access = db.query(MaterialAccess).filter(
-            MaterialAccess.chapter_id == chapter_id,
-            MaterialAccess.student_id == student_id
-        ).first()
-        
-        if access:
-            db.delete(access)
-            revoked += 1
-    
-    db.commit()
-    
-    return {
-        "message": f"Revoked access for {revoked} students",
-        "chapter_id": chapter_id,
-        "revoked_count": revoked
-    }
-
-@router.get("/statistics")
-async def get_material_access_statistics(
-    course_id: Optional[int] = None,
-    db: Session = Depends(get_db),
-    current_admin = Depends(get_current_admin)
-):
-    """Get material (chapter) access statistics (Admin only)"""
-    query = db.query(MaterialAccess)
-    
-    if course_id:
-        query = query.join(Chapter).filter(Chapter.course_id == course_id)
-    
-    total_access = query.count()
-    accessed = query.filter(MaterialAccess.isnot(None)).count()
-    not_accessed = total_access - accessed  
-    
-    return {
-        "total_access_granted": total_access,
-        "materials_accessed": accessed,
-        "materials_not_accessed": not_accessed,
-        "access_rate": round(accessed / total_access * 100, 2) if total_access > 0 else 0
-    }

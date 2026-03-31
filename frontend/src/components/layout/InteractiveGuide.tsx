@@ -7,13 +7,13 @@ const GUIDE_STEPS = [
     title: "Ինչ է Logic AI Navigation-ը?", 
     desc: "Սա LogicLab-ի նորարարական մոտեցումն է։ Այստեղ չկան սովորական մենյուներ։ Դուք կառավարում եք կայքը LOGIC-ի միջոցով, որը հասկանում է ձեր ցանկությունները:", 
     icon: <Navigation size={30} />,
-    color: "border-[var(--primary)] text-[var(--primary)]"
+    color: "border-primary text-primary"
   },
   { 
     title: "Ինչպես հարցնել?", 
     desc: "Գրեք LOGIC-ին. «Ցույց տուր Python-ի դասերը» կամ «Ովքեր են դասախոսները»։ Նա ակնթարթորեն կտանի ձեզ համապատասխան էջ, կարծես ունենաք անձնական օգնական:", 
     icon: <MessageSquare size={30} />,
-    color: "border-[var(--primary)] text-[var(--primary)]"
+    color: "border-primary text-primary"
   },
   { 
     title: "Իսկ եթե նախընտրում եմ դասականը?", 
@@ -60,11 +60,11 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 40, opacity: 0, scale: 0.9 }}
         transition={transition}
-        className="relative z-10 w-full max-w-xl rounded-[2.5rem] bg-[#1a1a1a] border-2 border-[var(--primary)] shadow-[0_0_50px_rgba(255,215,0,0.15)] overflow-hidden"
+        className="relative z-10 w-full max-w-xl rounded-[2.5rem] bg-[#1a1a1a] border-2 border-primary shadow-[0_0_50px_rgba(255,215,0,0.15)] overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-1.5 bg-white/5">
           <motion.div 
-            className="h-full bg-[var(--primary)] shadow-[0_0_10px_var(--primary)]" 
+            className="h-full bg-primary shadow-[0_0_10px_var(--primary)]" 
             initial={{ width: 0 }}
             animate={{ width: `${((activeStep + 1) / GUIDE_STEPS.length) * 100}%` }}
           />
@@ -108,7 +108,7 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
               {GUIDE_STEPS.map((_, i) => (
                 <div 
                   key={i} 
-                  className={`h-2 rounded-full transition-all duration-500 ${i === activeStep ? 'w-10 bg-[var(--primary)]' : 'w-2 bg-white/10'}`}
+                  className={`h-2 rounded-full transition-all duration-500 ${i === activeStep ? 'w-10 bg-primary' : 'w-2 bg-white/10'}`}
                 />
               ))}
             </div>
@@ -117,7 +117,7 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
               {activeStep > 0 && (
                 <button
                   onClick={() => setActiveStep(s => s - 1)}
-                  className="px-6 py-3 text-white font-black text-sm uppercase tracking-widest hover:text-[var(--primary)] transition-colors flex items-center gap-2"
+                  className="px-6 py-3 text-white font-black text-sm uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2"
                 >
                   <ChevronLeft size={20} strokeWidth={3} /> Հետ
                 </button>
@@ -125,7 +125,7 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
               
               <button
                 onClick={() => activeStep === GUIDE_STEPS.length - 1 ? finish() : setActiveStep(s => s + 1)}
-                className="bg-[var(--primary)] text-[var(--black)] px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-[var(--primary)]/20"
+                className="bg-primary text-black px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-[var(--primary)]/20"
               >
                 {activeStep === GUIDE_STEPS.length - 1 ? 'Պարզ է' : 'Հաջորդը'} 
                 <ChevronRight size={20} strokeWidth={3} />
@@ -134,7 +134,7 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
           </div>
         </div>
 
-        <div className="bg-black/40 px-8 py-4 flex items-center gap-3 text-[var(--primary)] text-[10px] font-black uppercase tracking-[0.3em] border-t border-white/5">
+        <div className="bg-black/40 px-8 py-4 flex items-center gap-3 text-primary text-[10px] font-black uppercase tracking-[0.3em] border-t border-white/5">
           <Sparkles size={14} /> Logic Lab Interactive Guide
         </div>
       </motion.div>

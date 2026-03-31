@@ -49,12 +49,14 @@ async def public_create_registration(
         )
 
     # 3. Create inactive user
+    # Use provided password or generate a secure random one
+    password = data.password or secrets.token_urlsafe(12)
     user = UserPersonal(
         first_name=data.first_name,
         last_name=data.last_name,
         email=data.email,
         phone=data.phone,
-        password_hash=get_password_hash(data.password),
+        password_hash=get_password_hash(password),
         role=UserRole.STUDENT,
         is_active=False
     )

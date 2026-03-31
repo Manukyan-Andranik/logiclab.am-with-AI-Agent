@@ -5,7 +5,7 @@ from datetime import datetime
 from ...core.database import get_db
 from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
-    Lesson, Chapter, Course
+    Lesson, Chapter, Course, Material
 )
 
 from ...schemas.schemas import StudentResponse, StudentUpdate, UserRole
@@ -54,42 +54,49 @@ async def get_my_materials(
             "materials": []
         }
     
-    material_accesses = db.query(MaterialAccess).options(
-        joinedload(MaterialAccess.chapter).joinedload(Chapter.lessons)
-    ).filter(
-        MaterialAccess.student_id == current_student.id
+    # Get all lessons this student has access to
+    accesses = db.query(MaterialAccess).filter(
+        MaterialAccess.student_id == current_student.id,
+        MaterialAccess.lesson_id.isnot(None)
     ).all()
     
-    materials_by_chapter = {}
+    allowed_lesson_ids = [a.lesson_id for a in accesses]
     
-    for access in material_accesses:
-        chapter = access.chapter
-        if chapter.id not in materials_by_chapter:
-            materials_by_chapter[chapter.id] = {
+    # Get chapters for the course
+    chapters = db.query(Chapter).options(
+        joinedload(Chapter.lessons).joinedload(Lesson.materials)
+    ).filter(
+        Chapter.course_id == current_student.course_id
+    ).order_by(Chapter.order_index).all()
+    
+    materials_list = []
+    
+    for chapter in chapters:
+        visible_lessons = []
+        for lesson in sorted(chapter.lessons, key=lambda l: l.order_index):
+            if lesson.id in allowed_lesson_ids:
+                # Prefer links from Material table, fallback to lesson.resource_links
+                material_links = []
+                if lesson.materials:
+                    material_links = lesson.materials.links
+                else:
+                    material_links = lesson.resource_links or []
+                
+                visible_lessons.append({
+                    "lesson_id": lesson.id,
+                    "lesson_title": lesson.title,
+                    "lesson_description": getattr(lesson, "description", ""),
+                    "lesson_order": lesson.order_index,
+                    "resource_links": material_links,
+                })
+        
+        if visible_lessons:
+            materials_list.append({
                 "chapter_id": chapter.id,
                 "chapter_title": chapter.title,
                 "chapter_order": chapter.order_index,
-                "granted_at": access.granted_at,
-                "accessed_at": access.accessed_at,
-                "is_accessed": access.accessed_at is not None,
-                "lessons": []
-            }
-        for lesson in sorted(chapter.lessons, key=lambda l: l.order_index):
-            materials_by_chapter[chapter.id]["lessons"].append({
-                "lesson_id": lesson.id,
-                "lesson_title": lesson.title,
-                "lesson_description": lesson.description,
-                "lesson_order": lesson.order_index,
-                "resource_links": lesson.resource_links or [],
+                "lessons": visible_lessons
             })
-    
-    materials_list = sorted(
-        materials_by_chapter.values(),
-        key=lambda x: x["chapter_order"]
-    )
-    
-    for ch in materials_list:
-        ch["lessons"].sort(key=lambda x: x["lesson_order"])
     
     return {
         "student_id": current_student.id,
@@ -102,41 +109,66 @@ async def get_my_progress(
     current_student: Student = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
-    """Get current student's progress (material = chapter)"""
+    """Get current student's progress (based on lessons)"""
     if not current_student.course_id:
         return {
             "message": "No course assigned yet",
             "progress": None
         }
     
-    total_chapters = db.query(Chapter).filter(
-        Chapter.course_id == current_student.course_id
-    ).count()
-    
+    # Total lessons in the course
     total_lessons = db.query(Lesson).join(Chapter).filter(
         Chapter.course_id == current_student.course_id
     ).count()
     
-    accessed_materials = db.query(MaterialAccess).filter(
+    # Get all granted access records that have been accessed
+    accessed_records = db.query(MaterialAccess).options(
+        joinedload(MaterialAccess.chapter).joinedload(Chapter.lessons),
+        joinedload(MaterialAccess.lesson)
+    ).filter(
         MaterialAccess.student_id == current_student.id,
         MaterialAccess.accessed_at.isnot(None)
-    ).count()
+    ).all()
     
-    granted_materials = db.query(MaterialAccess).filter(
-        MaterialAccess.student_id == current_student.id
-    ).count()
+    accessed_lesson_ids = set()
+    for access in accessed_records:
+        if access.lesson_id:
+            accessed_lesson_ids.add(access.lesson_id)
+        elif access.chapter_id and access.chapter:
+            # If chapter access is marked as accessed, all lessons in it are considered accessed
+            for lesson in access.chapter.lessons:
+                accessed_lesson_ids.add(lesson.id)
     
-    # Progress by chapters (material = chapter)
-    progress_percentage = (accessed_materials / total_chapters * 100) if total_chapters > 0 else 0
+    accessed_lessons_count = len(accessed_lesson_ids)
+    progress_percentage = (accessed_lessons_count / total_lessons * 100) if total_lessons > 0 else 0
     
     return {
         "student_id": current_student.id,
         "course_id": current_student.course_id,
-        "total_chapters": total_chapters,
         "total_lessons": total_lessons,
-        "granted_materials": granted_materials,
-        "accessed_materials": accessed_materials,
+        "accessed_lessons": accessed_lessons_count,
         "progress_percentage": round(progress_percentage, 2),
         "last_chapter_id": current_student.last_chapter_id,
         "last_lesson_id": current_student.last_lesson_id
     }
+
+@router.get("/me/lessons/{lesson_id}/materials", response_model=List[dict])
+async def get_my_lesson_materials(
+    lesson_id: int,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db)
+):
+    """Get materials only if student has access to lesson"""
+    access = db.query(MaterialAccess).filter(
+        MaterialAccess.student_id == current_student.id,
+        MaterialAccess.lesson_id == lesson_id
+    ).first()
+    
+    if not access:
+        raise HTTPException(status_code=403, detail="Access denied to this lesson")
+    
+    material = db.query(Material).filter(Material.lesson_id == lesson_id).first()
+    if not material:
+        return []
+    
+    return material.links

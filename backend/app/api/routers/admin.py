@@ -57,7 +57,12 @@ async def admin_dashboard(
     ).all()
     courses_with_stats = []
     for c in all_courses:
-        title = c.title.get("en", "") if isinstance(c.title, dict) else str(c.title)
+        # Fix: Safely handle course title if it's a string or dict
+        if isinstance(c.title, dict):
+            title = c.title.get("en", "") or c.title.get("hy", "") or c.title.get("ru", "")
+        else:
+            title = str(c.title)
+            
         courses_with_stats.append({
             "id": str(c.id),
             "title": title,
@@ -264,8 +269,8 @@ async def toggle_student_active_admin(
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Toggle student active status (Admin only)"""
-    student = db.query(Student).filter(Student.id == student_id).first()
+    """Toggle student user active status (Admin only)"""
+    student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == student_id).first()
     
     if not student:
         raise HTTPException(
@@ -273,11 +278,46 @@ async def toggle_student_active_admin(
             detail="Student not found"
         )
     
-    # student.is_active = not student.is_active
-    # student.user.is_active = student.is_active
+    if student.user:
+        student.user.is_active = not student.user.is_active
     db.commit()
     db.refresh(student)
     return student
+
+@router.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_student_admin(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Delete student and their user account (Admin only)"""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found"
+        )
+    
+    user_id = student.user_id
+    
+    # Delete related records to avoid foreign key violations
+    db.query(Registration).filter(Registration.student_id == student_id).delete()
+    db.query(Enrollment).filter(Enrollment.student_id == student_id).delete()
+    db.query(Project).filter(Project.student_id == student_id).delete()
+    db.query(SuccessStory).filter(SuccessStory.student_id == student_id).delete()
+    db.query(Certificate).filter(Certificate.student_id == student_id).delete()
+    db.query(MaterialAccess).filter(MaterialAccess.student_id == student_id).delete()
+
+    db.delete(student)
+    
+    # Also delete the user account
+    if user_id:
+        user = db.query(UserPersonal).filter(UserPersonal.id == user_id).first()
+        if user:
+            db.delete(user)
+            
+    db.commit()
+    return None
 
 @router.patch("/students/{student_id}/progress")
 async def update_student_progress_admin(
@@ -319,53 +359,61 @@ async def mark_material_accessed_admin(
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Mark a chapter (material) as accessed by student"""
+    """Mark a chapter as accessed/grant access (Admin only)"""
     # Verify student exists
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found"
-        )
+        raise HTTPException(status_code=404, detail="Student not found")
     
     # Verify chapter exists
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Chapter not found"
-        )
+        raise HTTPException(status_code=404, detail="Chapter not found")
 
-    # access material
+    # Check if access already exists (chapter-level access)
+    existing = db.query(MaterialAccess).filter(
+        MaterialAccess.student_id == student_id,
+        MaterialAccess.chapter_id == chapter_id,
+        MaterialAccess.lesson_id.is_(None)
+    ).first()
+
+    if existing:
+        if existing.accessed_at is None:
+            existing.accessed_at = datetime.utcnow()
+            db.commit()
+        return {"message": "Access updated", "access_id": existing.id}
+
+    # Create new access
     material_access = MaterialAccess(
         chapter_id=chapter_id,
-        student_id=student_id
+        student_id=student_id,
+        accessed_at=datetime.utcnow()
     )
     db.add(material_access)
     db.commit()
     db.refresh(material_access)
 
-    # Verify material access record exists
-    material_access = db.query(MaterialAccess).filter(
-        MaterialAccess.chapter_id == chapter_id,
-        MaterialAccess.student_id == student_id
-    ).first()
-    
-    if not material_access:
+    return {
+        "message": "Material (chapter) access granted",
+        "access_id": material_access.id
+    }
+
+@router.delete("/students/access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_student_access_admin(
+    access_id: int,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Revoke student material/lesson access (Admin only)"""
+    access = db.query(MaterialAccess).filter(MaterialAccess.id == access_id).first()
+    if not access:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Material access not found for this chapter"
+            detail="Access record not found"
         )
-    
-    if material_access.accessed_at is None:
-        material_access.accessed_at = datetime.utcnow()
-        db.commit()
-    
-    return {
-        "message": "Material (chapter) marked as accessed",
-        "chapter_id": chapter_id,
-        "accessed_at": material_access.accessed_at
-    }
+    db.delete(access)
+    db.commit()
+    return None
 
 @router.get("/registrations", response_model=RegistrationListResponse)
 async def get_all_registrations_admin(
@@ -473,8 +521,8 @@ async def update_registration_status_admin(
     if new_status == RegistrationStatus.CONFIRMED:
         # Activate student account and send credentials
         user.is_active = True
-        student.is_active = True
         student.course_id = registration.course_id
+        student.status = RegistrationStatus.CONFIRMED  # Sync status
         
         # Generate temporary password if not already set properly
         temp_password = secrets.token_urlsafe(12)
@@ -617,13 +665,18 @@ async def bulk_update_registration_status_admin(
                 student = registration.student
                 user = student.user
                 user.is_active = True
-                student.is_active = True
                 student.course_id = registration.course_id
+                student.status = RegistrationStatus.CONFIRMED  # Sync student status
                 
                 temp_password = secrets.token_urlsafe(12)
                 user.password_hash = get_password_hash(temp_password)
                 
-                course_name = registration.course.title.get("en", "Course")
+                # Fix: Safely handle course title
+                if isinstance(registration.course.title, dict):
+                    course_name = registration.course.title.get("en", "Course")
+                else:
+                    course_name = str(registration.course.title)
+                    
                 await email_service.send_registration_confirmed(
                     to_email=user.email,
                     student_name=f"{user.first_name} {user.last_name}",

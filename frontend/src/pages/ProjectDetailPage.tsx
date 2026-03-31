@@ -4,10 +4,10 @@ import { useParams, Link } from "react-router-dom";
 import { getProject } from "@/api/projects";
 import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ExternalLink, Github } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
+import { ArrowLeft, ExternalLink} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
 // --- ImageGallery Component ---
 interface ImageGalleryProps {
   images: string[];
@@ -19,7 +19,7 @@ export const ImageGallery = ({ images }: ImageGalleryProps) => {
   return (
     <div className="flex flex-col gap-4 mt-8">
       <button
-        className="text-[var(--primary)] font-bold uppercase text-xs mb-2"
+        className="text-primary font-bold uppercase text-xs mb-2"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? "Փակել պատկերասրահը" : "Բացել պատկերասրահը"}
@@ -66,19 +66,19 @@ const ProjectDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--black)]">
+      <div className="min-h-screen bg-black">
         <main className="container mx-auto px-6 pt-32 pb-24">
-          <Skeleton className="h-8 w-32 mb-8 bg-[var(--gray-dark)]" />
+          <Skeleton className="h-8 w-32 mb-8 bg-gray-dark" />
           <div className="space-y-6">
-            <Skeleton className="h-12 w-3/4 bg-[var(--gray-dark)]" />
-            <Skeleton className="h-6 w-1/4 bg-[var(--gray-dark)]" />
+            <Skeleton className="h-12 w-3/4 bg-gray-dark" />
+            <Skeleton className="h-6 w-1/4 bg-gray-dark" />
             <div className="space-y-4 pt-8">
-              <Skeleton className="h-4 w-full bg-[var(--gray-dark)]" />
-              <Skeleton className="h-4 w-full bg-[var(--gray-dark)]" />
-              <Skeleton className="h-4 w-2/3 bg-[var(--gray-dark)]" />
+              <Skeleton className="h-4 w-full bg-gray-dark" />
+              <Skeleton className="h-4 w-full bg-gray-dark" />
+              <Skeleton className="h-4 w-2/3 bg-gray-dark" />
             </div>
           </div>
-          <Skeleton className="mt-12 h-60 w-full bg-[var(--gray-dark)] rounded-2xl" />
+          <Skeleton className="mt-12 h-60 w-full bg-gray-dark rounded-2xl" />
         </main>
       </div>
     );
@@ -86,14 +86,14 @@ const ProjectDetailPage = () => {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-[var(--black)] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-black mb-4 text-[var(--white)] uppercase tracking-tighter">
+          <h1 className="text-4xl font-black mb-4 text-white uppercase tracking-tighter">
             Նախագիծը չի գտնվել
           </h1>
           <Link
             to="/"
-            className="text-[var(--primary)] font-black uppercase text-xs tracking-widest hover:underline flex items-center justify-center gap-2"
+            className="text-primary font-black uppercase text-xs tracking-widest hover:underline flex items-center justify-center gap-2"
           >
             <ArrowLeft size={20} /> Վերադառնալ գլխավոր էջ
           </Link>
@@ -115,7 +115,7 @@ const ProjectDetailPage = () => {
   const projectImages = project.image_urls
 
   return (
-    <div className="min-h-screen bg-[var(--black)] text-[var(--white)]">
+    <div className="min-h-screen bg-black text-white">
       <main className="container mx-auto px-6 pt-32 pb-24 flex flex-col gap-8">
         {/* --- Project Info --- */}
         <div className="space-y-6">
@@ -135,7 +135,7 @@ const ProjectDetailPage = () => {
                 <a
                   href={links.demo}
                   target="_blank"
-                  className="flex items-center gap-1 hover:text-[var(--primary)]"
+                  className="flex items-center gap-1 hover:text-primary"
                 >
                   <ExternalLink size={18} /> Demo
                 </a>
@@ -144,9 +144,9 @@ const ProjectDetailPage = () => {
                 <a
                   href={links.github}
                   target="_blank"
-                  className="flex items-center gap-1 hover:text-[var(--primary)]"
+                  className="flex items-center gap-1 hover:text-primary"
                 >
-                  <Github size={18} /> GitHub
+                  <FaGithub size={18} /> GitHub
                 </a>
               )}
             </div>

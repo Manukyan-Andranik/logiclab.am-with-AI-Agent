@@ -18,11 +18,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   const baseStyles = "inline-flex items-center justify-center font-bold uppercase tracking-wider transition-[all_0.3s_cubic-bezier(0.25,0.8,0.25,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-full";
   
   const variants = {
-    primary: "bg-[var(--primary)] text-[var(--black)] hover:bg-[var(--primary-alt)]",
-    secondary: "bg-[var(--blue)] text-[var(--white)] hover:bg-[var(--teal)]",
-    outline: "border-2 border-[var(--white)] text-[var(--white)] hover:bg-[var(--white)] hover:text-[var(--black)]",
-    ghost: "bg-transparent text-[var(--white)] hover:bg-[var(--gray-dark)]",
-    danger: "bg-[var(--danger)] text-[var(--white)] hover:opacity-90"
+    primary: "bg-primary text-primary-foreground hover:bg-primary-alt",
+    secondary: "bg-blue text-white hover:bg-teal",
+    outline: "border-2 border-white text-white hover:bg-white hover:text-black",
+    ghost: "bg-transparent text-white hover:bg-gray-dark",
+    danger: "bg-danger text-white hover:opacity-90"
   };
 
   const sizes = {

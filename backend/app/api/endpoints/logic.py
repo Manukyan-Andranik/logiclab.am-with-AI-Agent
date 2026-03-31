@@ -6,84 +6,27 @@ import ast
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel, LoraConfig, get_peft_model, TaskType
 
 from deep_translator import GoogleTranslator as TRANSLATOR
 
 
 from gradio_client import Client
 
-agent_client = Client("LogicLabAcademy/Logic_Agnet")
+agent_client = None
 
-torch.set_num_threads(1)
+def get_agent_client():
+    global agent_client
+    if agent_client is None:
+        print("Initializing Logic Agent client...")
+        try:
+            agent_client = Client("LogicLabAcademy/Logic_Agnet")
+        except Exception as e:
+            print(f"Failed to initialize Logic Agent client: {e}")
+            raise e
+    return agent_client
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
-
-def load_model_and_tokenizer(model_name=None, mode="eval", BASE_MODEL_NAME="gpt2", DEVICE=None):
-
-    if DEVICE is None:
-        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-    # Case 1: None or invalid path -> create empty LoRA GPT-2
-    if model_name is None or not os.path.exists(model_name):
-        print("No valid model found. Creating empty LoRA GPT-2 model...")
-
-        # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_NAME)
-        tokenizer.pad_token = tokenizer.eos_token
-
-        # Load base GPT-2
-        base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL_NAME)
-        base_model.config.use_cache = False
-        base_model.to(DEVICE)
-
-        # Create empty LoRA
-        lora_config = LoraConfig(
-            r=64,
-            lora_alpha=128,
-            lora_dropout=0.5,
-            bias="none",
-            task_type=TaskType.SEQ_2_SEQ_LM,
-            target_modules=["c_attn", "c_proj"],
-        )
-        model = get_peft_model(base_model, lora_config)
-        model.print_trainable_parameters()
-        if mode == "train":
-            model.train()
-        else:
-            model.eval()
-        return model, tokenizer
-
-    # Case 2: Load existing LoRA adapter
-    print(f"Loading LoRA model from: {model_name}")
-
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL_NAME)
-    base_model.config.use_cache = False
-
-    # is_trainable=True ensures LoRA weights are attached for training
-    is_trainable = mode == "train"
-    model = PeftModel.from_pretrained(base_model, model_name, is_trainable=is_trainable)
-
-    model.to(DEVICE)
-    if mode == "train":
-        model.train()
-    else:
-        model.eval()
-
-    return model, tokenizer
-
-# Use absolute path relative to this file
-# MODEL_DIR = os.path.join(os.path.dirname(__file__), "models", "logic_agent_1")
-# AGENT, TOKENIXER = load_model_and_tokenizer(model_name=MODEL_DIR, mode="eval")
 
 import re
 
@@ -147,7 +90,7 @@ def generate_answer_with_agent(question: str, context: str, client, max_new_toke
         else:
             clean_text = result
     else:
-        clean_text = result
+        clean_text = result or ""
 
     translated_clean_answer = clean_text
     return translated_clean_answer, parsed_json
@@ -242,7 +185,11 @@ async def logic_chat(request: ChatRequest):
         *[{"role": m.role, "content": m.content} for m in request.history],
         {"role": "user", "content": request.message},
     ]
-    clean_text, parsed_json = generate_answer_with_agent(question=request.message, context=SYSTEM_PROMPT, client=agent_client)
+    
+    # Get client lazily
+    client = get_agent_client()
+    
+    clean_text, parsed_json = generate_answer_with_agent(question=request.message, context=SYSTEM_PROMPT, client=client)
 
     intent = parsed_json.get("intent")
     print(f"[AI] Intent: {intent}")

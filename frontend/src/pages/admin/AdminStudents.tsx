@@ -1,22 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAdminStudents, updateStudentProgress, assignChapterToStudent } from "@/api/admin";
+import {
+  getAdminStudents,
+  updateStudentProgress,
+  assignChapterToStudent,
+  getStudentLessonAccess,
+  grantLessonAccess,
+  revokeLessonAccess
+} from "@/api/admin";
 import { getCourseCurriculum } from "@/api/courses";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
 import Button from "@/components/ui/Button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { BookOpen, GraduationCap, CheckCircle2, ChevronRight } from "lucide-react";
+import { BookOpen, GraduationCap, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AdminStudents = () => {
   const queryClient = useQueryClient();
@@ -29,18 +36,23 @@ const AdminStudents = () => {
     queryFn: getAdminStudents,
   });
 
-  const { data: curriculumData, isLoading: isCurriculumLoading } = useQuery({
+  const { data: curriculumData } = useQuery({
     queryKey: ["curriculum", selectedStudent?.course_id],
     queryFn: () => getCourseCurriculum(selectedStudent.course_id),
     enabled: !!selectedStudent?.course_id,
   });
 
+  const { data: accessData, refetch: refetchAccess } = useQuery({
+    queryKey: ["student-access", selectedStudent?.id],
+    queryFn: () => getStudentLessonAccess(selectedStudent.id),
+    enabled: !!selectedStudent?.id,
+  });
+
   const progressMutation = useMutation({
-    mutationFn: (data: { chapter_id?: number, lesson_id?: number }) => 
+    mutationFn: (data: { chapter_id?: number, lesson_id?: number }) =>
       updateStudentProgress(selectedStudent.id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-students"] });
-      // Update local state to reflect changes in the UI immediately
       setSelectedStudent((prev: any) => ({
         ...prev,
         ...variables
@@ -49,16 +61,48 @@ const AdminStudents = () => {
     },
   });
 
-  const assignChapterMutation = useMutation({
+  const grantChapterMutation = useMutation({
     mutationFn: (chapterId: number) => assignChapterToStudent(selectedStudent.id, chapterId),
     onSuccess: () => {
+      refetchAccess();
       toast({ title: "Success", description: "Chapter access granted." });
+    },
+  });
+
+  const grantLessonMutation = useMutation({
+    mutationFn: (lessonId: number) => grantLessonAccess(selectedStudent.id, lessonId),
+    onSuccess: () => {
+      refetchAccess();
+      toast({ title: "Success", description: "Lesson access granted." });
+    },
+  });
+
+  const revokeAccessMutation = useMutation({
+    mutationFn: (accessId: number) => revokeLessonAccess(accessId),
+    onSuccess: () => {
+      refetchAccess();
+      toast({ title: "Success", description: "Access revoked." });
     },
   });
 
   const handleManageProgress = (student: any) => {
     setSelectedStudent(student);
     setIsProgressOpen(true);
+  };
+
+  const hasAccess = (chapterId?: number, lessonId?: number) => {
+    if (!accessData?.data) return false;
+    return accessData.data.some((a: any) =>
+      (lessonId && a.lesson_id === lessonId) || (!lessonId && chapterId && a.chapter_id === chapterId && !a.lesson_id)
+    );
+  };
+
+  const getAccessId = (chapterId?: number, lessonId?: number) => {
+    if (!accessData?.data) return null;
+    const access = accessData.data.find((a: any) =>
+      (lessonId && a.lesson_id === lessonId) || (!lessonId && chapterId && a.chapter_id === chapterId && !a.lesson_id)
+    );
+    return access?.id;
   };
 
   if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
@@ -114,7 +158,7 @@ const AdminStudents = () => {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <Button variant="outline" size="sm" onClick={() => handleManageProgress(student)}>
-                    Manage Progress
+                    Manage Student
                   </Button>
                 </td>
               </tr>
@@ -123,25 +167,23 @@ const AdminStudents = () => {
         </table>
       </div>
 
-      {/* Progress Management Dialog */}
       <Dialog open={isProgressOpen} onOpenChange={setIsProgressOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               <GraduationCap className="text-primary" />
-              Manage Progress: {selectedStudent?.user?.first_name} {selectedStudent?.user?.last_name}
+              Manage: {selectedStudent?.user?.first_name} {selectedStudent?.user?.last_name}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-8 py-6">
-            {/* Set Current Chapter/Lesson */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <div className="space-y-4">
               <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Set Current Position</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Current Chapter</Label>
-                  <Select 
-                    value={selectedStudent?.last_chapter_id?.toString()} 
+                  <Select
+                    value={selectedStudent?.last_chapter_id?.toString()}
                     onValueChange={(val) => progressMutation.mutate({ chapter_id: parseInt(val) })}
                   >
                     <SelectTrigger>
@@ -158,7 +200,7 @@ const AdminStudents = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Current Lesson</Label>
-                  <Select 
+                  <Select
                     value={selectedStudent?.last_lesson_id?.toString()}
                     onValueChange={(val) => progressMutation.mutate({ lesson_id: parseInt(val) })}
                   >
@@ -179,32 +221,63 @@ const AdminStudents = () => {
               </div>
             </div>
 
-            {/* Assign Access to Chapters */}
             <div className="space-y-4 pt-6 border-t border-border">
-              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Grant Chapter Access</h3>
-              <p className="text-xs text-muted-foreground">Marking a chapter as accessed allows the student to view its contents.</p>
-              <div className="space-y-2">
-                {curriculumData?.curriculum.map((item: any) => (
-                  <div key={item.chapter.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border">
-                    <span className="text-sm font-medium">{item.chapter.title}</span>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="text-primary hover:text-primary hover:bg-primary/10 gap-2"
-                      onClick={() => assignChapterMutation.mutate(item.chapter.id)}
-                    >
-                      <CheckCircle2 size={14} />
-                      Grant Access
-                    </Button>
-                  </div>
-                ))}
-              </div>
+              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Access Management</h3>
+
+              <Tabs defaultValue="lessons" className="space-y-4">
+
+                <TabsContent value="lessons" className="space-y-4">
+                  {curriculumData?.curriculum.map((chapter: any) => (
+                    <div
+                      key={chapter.chapter.id}
+                      className="space-y-2 border border-white p-4">
+                      <h4 className="text-xs font-semibold text-primary-alt px-1">{chapter.chapter.title}</h4>
+                      {chapter.lessons.map((lesson: any) => {
+                        const accessId = getAccessId(undefined, lesson.id);
+                        const isGranted = !!accessId;
+
+                        return (
+                          <div key={lesson.id} className="flex items-center justify-between p-2 pl-4 rounded-lg bg-secondary/10 border border-border/50">
+                            <div className="flex items-center gap-2">
+                              {isGranted && <ShieldCheck className="text-emerald-500" size={14} />}
+                              <span className="text-xs">{lesson.title}</span>
+                            </div>
+                            {isGranted ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                onClick={() => revokeAccessMutation.mutate(accessId)}
+                              >
+                                <XCircle size={12} />
+                                Revoke
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[10px] text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
+                                onClick={() => grantLessonMutation.mutate(lesson.id)}
+                              >
+                                <CheckCircle2 size={12} />
+                                Grant
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button onClick={() => setIsProgressOpen(false)}>Done</Button>
-          </DialogFooter>
+          <div className="p-6 border-t border-border bg-secondary/10">
+            <DialogFooter>
+              <Button onClick={() => setIsProgressOpen(false)} className="w-full sm:w-auto">Done</Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -212,3 +285,4 @@ const AdminStudents = () => {
 };
 
 export default AdminStudents;
+

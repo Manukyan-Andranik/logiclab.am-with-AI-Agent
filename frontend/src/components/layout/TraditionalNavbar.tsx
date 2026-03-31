@@ -47,7 +47,7 @@ const TraditionalNavbar: React.FC = () => {
     { name: 'Դասընթացներ', path: '/courses' },
     { name: 'Մեր Մասին', path: '/about' },
     { name: 'Նախագծեր', path: '/#projects' },
-    { name: 'Դասախոսներ', path: '/#instructors' },
+    { name: 'Դասախոսներ', path: '/about/#instructors' },
     { name: 'Կապ', path: '/#contact' },
   ];
 
@@ -76,17 +76,15 @@ const TraditionalNavbar: React.FC = () => {
     <>
       <nav className="fixed top-0 left-0 right-0 z-[100]">
         {/* Fixed Navbar Background Layer */}
-        <div 
-          className={`absolute inset-0 transition-all duration-500 ${
-            scrolled ? 'bg-[#222]/40 backdrop-blur-xl border-b border-white/10' : 'bg-transparent'
-          }`}
+        <div
+          className={`absolute inset-0 transition-all duration-500 ${scrolled ? 'bg-[#222]/40 backdrop-blur-xl border-b border-white/10' : 'bg-transparent'
+            }`}
         />
 
         {/* Content Layer */}
-        <div 
-          className={`t-container relative z-10 flex items-center justify-between gap-4 transition-all duration-500 ${
-            scrolled ? 'py-4' : 'py-8'
-          }`}
+        <div
+          className={`relative z-10 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-4 transition-all duration-500 ${scrolled ? 'py-2' : 'py-2'
+            }`}
         >
           <Link to="/" onClick={() => handleLinkClick('/')} className="shrink-0">
             <img src="/logo.png" alt="Logic Lab Logo" className={`w-auto transition-all duration-500 ${scrolled ? 'h-8 md:h-10' : 'h-10 md:h-14'}`} />
@@ -104,7 +102,7 @@ const TraditionalNavbar: React.FC = () => {
               </Link>
             ))}
             <Link to="/register" className="px-6 py-3 rounded-xl bg-[#FFD700] text-[#222] text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]">
-              Գրանցվել հիմա
+              Գրանցվել
             </Link>
           </div>
 
@@ -115,10 +113,9 @@ const TraditionalNavbar: React.FC = () => {
       </nav>
 
       {/* Mobile Drawer */}
-      <div 
-        className={`fixed inset-0 bg-[#222] z-[9999] transition-transform duration-500 md:hidden flex flex-col ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+      <div
+        className={`fixed inset-0 bg-[#222] z-[9999] transition-transform duration-500 md:hidden flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         <div className="flex items-center justify-between p-8 border-b border-white/5">
           <Link to="/" onClick={() => setIsOpen(false)}>
@@ -142,7 +139,7 @@ const TraditionalNavbar: React.FC = () => {
             </Link>
           ))}
           <Link to="/register" onClick={() => setIsOpen(false)} className="w-full py-5 rounded-2xl bg-[#FFD700] text-[#222] text-center text-xl font-black uppercase tracking-widest block shadow-[0_0_30px_rgba(255,215,0,0.3)]">
-            Գրանցվել հիմա
+            Գրանցվել
           </Link>
         </div>
       </div>

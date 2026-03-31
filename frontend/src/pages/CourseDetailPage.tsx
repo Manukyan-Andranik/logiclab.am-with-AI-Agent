@@ -52,20 +52,20 @@ const CourseDetailPage = () => {
 
   if (isCourseLoading) {
     return (
-      <div className="min-h-screen bg-[var(--black)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[var(--primary)]"></div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!course) {
     return (
-      <div className="min-h-screen bg-[var(--black)] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <h1 className="font-display text-3xl font-bold text-[var(--white)] mb-4">
+          <h1 className="font-display text-3xl font-bold text-white mb-4">
             Դասընթացը չի գտնվել
           </h1>
-          <Link to="/courses" className="text-[var(--primary)] hover:underline">
+          <Link to="/courses" className="text-primary hover:underline">
             Վերադառնալ դասընթացներին
           </Link>
         </div>
@@ -77,27 +77,21 @@ const CourseDetailPage = () => {
   const curriculum = curriculumData?.curriculum || [];
 
   return (
-    <div className="min-h-screen bg-[var(--black)]">
+    <div className="min-h-screen bg-black">
 
       <VideoHero
         videoSrc={course.hero_video_url}
         title={getLocalizedContent(course.title)}>
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--black)] border-2 border-[var(--primary-alt)] text-[var(--primary-alt)] text-sm font-black uppercase tracking-widest">
+          <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black border-2 border-primary-alt text-primary-alt text-sm font-black uppercase tracking-widest">
             <Clock className="w-4 h-4" />
             {course.duration_months} ամիս
           </span>
-          <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--black)] border-2 border-[var(--primary)] text-[var(--primary)] text-sm font-black uppercase tracking-widest">
+          <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black border-2 border-primary text-primary text-sm font-black uppercase tracking-widest">
             <Signal className="w-4 h-4" />
             {course.level || "Բոլոր"}
           </span>
         </div>
-        <Link
-          to={`/register?course=${course.id}`}
-          className="inline-flex items-center gap-3 bg-[var(--primary-alt)] text-[var(--black)] px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[var(--primary-alt)] hover:scale-105 active:scale-95 transition-all shadow-2xl">
-          Գրանցվել
-          <ArrowRight className="w-4 h-4" />
-        </Link>
       </VideoHero>
 
       {/* Main Content */}
@@ -105,7 +99,7 @@ const CourseDetailPage = () => {
         <div className="container mx-auto px-6">
           <Link
             to="/courses"
-            className="inline-flex items-center gap-2 text-[var(--primary-alt)] font-black text-xs uppercase tracking-widest hover:text-[var(--white)] transition-colors mb-16"
+            className="inline-flex items-center gap-2 text-primary-alt font-black text-xs uppercase tracking-widest hover:text-white transition-colors mb-16"
           >
             <ArrowLeft className="w-4 h-4" />
             Բոլոր դասընթացները
@@ -116,8 +110,8 @@ const CourseDetailPage = () => {
             <div className="lg:col-span-2 space-y-24">
               {/* About */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <h2 className="font-display text-4xl font-black text-[var(--white)] mb-8 uppercase tracking-tighter">
-                  Դասընթացի <span className="text-[var(--primary)]">մասին</span>
+                <h2 className="font-display text-4xl font-black text-white mb-8 uppercase tracking-tighter">
+                  Դասընթացի <span className="text-primary">մասին</span>
                 </h2>
                 <p className="text-[var(--gray-light)] opacity-80 text-lg leading-relaxed font-medium whitespace-pre-wrap">
                   {getLocalizedContent(course.description)}
@@ -130,23 +124,23 @@ const CourseDetailPage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}>
-                  <h2 className="font-display text-4xl font-black text-[var(--white)] mb-12 uppercase tracking-tighter">
-                    ԴԱՍԸՆԹԱՑԻ <span className="text-[var(--primary-alt)]">ԾՐԱԳԻՐԸ</span>
+                  <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter">
+                    ԴԱՍԸՆԹԱՑԻ <span className="text-primary-alt">ԾՐԱԳԻՐԸ</span>
                   </h2>
                   <Accordion type="single" collapsible className="w-full space-y-6">
                     {curriculum.map((item: any, i: number) => (
                       <AccordionItem
                         key={item.chapter.id}
                         value={`chapter-${item.chapter.id}`}
-                        className="border-2 border-[var(--gray-dark)] rounded-3xl px-8 bg-[var(--gray-dark)]"
+                        className="border-2 border-gray-dark rounded-3xl px-8 bg-gray-dark"
                       >
                         <AccordionTrigger className="hover:no-underline py-8 group">
                           <div className="flex items-center gap-6 text-left">
-                            <span className="w-12 h-12 rounded-2xl bg-[var(--primary)] text-[var(--black)] flex items-center justify-center text-lg font-black shrink-0 group-hover:bg-[var(--primary-alt)] transition-colors">
+                            <span className="w-12 h-12 rounded-2xl bg-primary text-black flex items-center justify-center text-lg font-black shrink-0 group-hover:bg-primary-alt transition-colors">
                               {i + 1}
                             </span>
                             <div>
-                              <h3 className="font-black text-xl text-[var(--white)] uppercase tracking-tight group-hover:text-[var(--primary)] transition-colors">{item.chapter.title}</h3>
+                              <h3 className="font-black text-xl text-white uppercase tracking-tight group-hover:text-primary transition-colors">{item.chapter.title}</h3>
                             </div>
                           </div>
                         </AccordionTrigger>
@@ -154,9 +148,9 @@ const CourseDetailPage = () => {
                           <ul className="space-y-4 ml-16">
                             {item.lessons.map((lesson: any) => (
                               <li key={lesson.id} className="flex items-start gap-4 group">
-                                <div className="mt-2 w-2 h-2 rounded-full bg-[var(--primary-alt)] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
+                                <div className="mt-2 w-2 h-2 rounded-full bg-primary-alt opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
                                 <div>
-                                  <p className="text-base text-[var(--white)] font-bold">{lesson.title}</p>
+                                  <p className="text-base text-white font-bold">{lesson.title}</p>
                                 </div>
                               </li>
                             ))}
@@ -175,22 +169,22 @@ const CourseDetailPage = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                 >
-                  <h2 className="font-display text-4xl font-black text-[var(--white)] mb-12 uppercase tracking-tighter">
+                  <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter">
                     ԴԱՍԱԽՈՍՆԵՐ
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-10">
                     {course.instructors.map((instructor) => (
-                      <div key={instructor.id} className="flex flex-col gap-6 p-10 rounded-3xl bg-[var(--gray-dark)] border-2 border-[var(--black)] hover:border-[var(--primary)] transition-all">
+                      <div key={instructor.id} className="flex flex-col gap-6 p-10 rounded-3xl bg-gray-dark border-2 border-black hover:border-primary transition-all">
                         <div className="flex items-center gap-6">
-                          <Avatar className="w-20 h-20 border-4 border-[var(--black)] shadow-2xl">
+                          <Avatar className="w-20 h-20 border-4 border-black shadow-2xl">
                             <AvatarImage src={instructor.user.profile_image} alt={instructor.user.first_name} />
-                            <AvatarFallback className="bg-[var(--primary)] text-[var(--black)] font-black">{instructor.user.first_name[0]}{instructor.user.last_name[0]}</AvatarFallback>
+                            <AvatarFallback className="bg-primary text-black font-black">{instructor.user.first_name[0]}{instructor.user.last_name[0]}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-black text-xl text-[var(--white)] uppercase tracking-tighter">
+                            <h3 className="font-black text-xl text-white uppercase tracking-tighter">
                               {instructor.user.first_name} {instructor.user.last_name}
                             </h3>
-                            <p className="text-[10px] text-[var(--primary-alt)] font-black uppercase tracking-[0.2em] mt-1">Դասախոս</p>
+                            <p className="text-[10px] text-primary-alt font-black uppercase tracking-[0.2em] mt-1">Դասախոս</p>
                           </div>
                         </div>
                         {instructor.bio && (
@@ -201,7 +195,7 @@ const CourseDetailPage = () => {
                         {instructor.skills && instructor.skills.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {instructor.skills.map((skill) => (
-                              <span key={skill} className="px-3 py-1.5 rounded-lg bg-[var(--black)] text-[var(--white)] text-[10px] font-black uppercase tracking-widest border border-[var(--gray-dark)]">
+                              <span key={skill} className="px-3 py-1.5 rounded-lg bg-black text-white text-[10px] font-black uppercase tracking-widest border border-gray-dark">
                                 {skill}
                               </span>
                             ))}
@@ -222,50 +216,50 @@ const CourseDetailPage = () => {
               className="space-y-8"
             >
               {/* Tools Card */}
-              <div className="glass-card rounded-[40px] p-10 sticky top-24 bg-[var(--gray-dark)] border-4 border-[var(--black)] shadow-2xl">
+              <div className="glass-card rounded-[40px] p-10 sticky top-24 bg-gray-dark border-4 border-black shadow-2xl">
                 {/* Schedule and Details */}
                 <div className="space-y-8 mb-12">
-                  <h3 className="font-display text-2xl font-black text-[var(--white)] uppercase tracking-tighter">
+                  <h3 className="font-display text-2xl font-black text-white uppercase tracking-tighter">
                     Մանրամասներ
                   </h3>
                   <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--black)] flex items-center justify-center text-[var(--primary)] shadow-inner">
+                    <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-primary shadow-inner">
                       <BookOpen size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] text-[var(--white)] opacity-90 font-black uppercase tracking-widest">Տևողությունը</p>
-                      <p className="text-lg text-[var(--primary-alt)] font-black">{course.duration_months} ամիս</p>
+                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">Տևողությունը</p>
+                      <p className="text-lg text-primary-alt font-black">{course.duration_months} ամիս</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--black)] flex items-center justify-center text-[var(--white)] shadow-inner">
+                    <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-inner">
                       <Signal size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] text-[var(--white)] opacity-90 font-black uppercase tracking-widest">Մակարդակ</p>
-                      <p className="text-lg text-[var(--primary-alt)] font-black">{course.level || "Բոլոր"}</p>
+                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">Մակարդակ</p>
+                      <p className="text-lg text-primary-alt font-black">{course.level || "Բոլոր"}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--black)] flex items-center justify-center text-[var(--primary)] shadow-inner">
+                    <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-primary shadow-inner">
                       <Laptop size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] text-[var(--white)] opacity-90 font-black uppercase tracking-widest">Ֆորմատ</p>
-                      <p className="text-lg text-[var(--primary-alt)] font-black">Առցանց / Առկա</p>
+                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">Ֆորմատ</p>
+                      <p className="text-lg text-primary-alt font-black">Առցանց / Առկա</p>
                     </div>
                   </div>
                 </div>
 
                 {/* CTA */}
-                <div className="space-y-6 pt-10 border-t-4 border-[var(--black)]">
+                <div className="space-y-6 pt-10 border-t-4 border-black">
                   <div>
-                    <p className="text-[10px] text-[var(--white)] opacity-90 font-black uppercase tracking-widest mb-2">Ամսական վճար</p>
-                    <p className="text-4xl font-black text-[var(--white)] tracking-tighter">{course.monthly_payment.toLocaleString()} <span className="text-sm font-bold opacity-90">AMD</span></p>
+                    <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest mb-2">Ամսական վճար</p>
+                    <p className="text-4xl font-black text-white tracking-tighter">{course.monthly_payment.toLocaleString()} <span className="text-sm font-bold opacity-90">AMD</span></p>
                   </div>
                   <Link
                     to={`/register?course=${course.id}`}
-                    className="block w-full bg-[var(--primary-alt)] text-[var(--black)] py-6 rounded-2xl font-black text-base text-center uppercase tracking-[0.2em] hover:bg-[var(--primary-alt)] hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    className="block w-full bg-primary-alt text-black py-6 rounded-2xl font-black text-base text-center uppercase tracking-[0.2em] hover:bg-primary-alt hover:scale-105 active:scale-95 transition-all shadow-xl"
                   >
                     Գրանցվել
                   </Link>
@@ -277,7 +271,7 @@ const CourseDetailPage = () => {
       </section>
 
       {/* Other Courses */}
-      <section className="py-24 bg-[var(--gray-dark)]">
+      <section className="py-24 bg-gray-dark">
         <div className="container mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -285,8 +279,8 @@ const CourseDetailPage = () => {
             viewport={{ once: true }}
             className="mb-16"
           >
-            <h2 className="font-display text-4xl font-black text-[var(--white)] uppercase tracking-tighter">
-              ԱՅԼ <span className="text-[var(--primary-alt)]">ԴԱՍԸՆԹԱՑՆԵՐ</span>
+            <h2 className="font-display text-4xl font-black text-white uppercase tracking-tighter">
+              ԱՅԼ <span className="text-primary-alt">ԴԱՍԸՆԹԱՑՆԵՐ</span>
             </h2>
           </motion.div>
 
@@ -303,22 +297,22 @@ const CourseDetailPage = () => {
                 >
                   <Link
                     to={`/courses/${course.slug || course.id}`}
-                    className="glass-card rounded-3xl p-8 border-2 border-[var(--black)] hover:border-[var(--primary-alt)] transition-all duration-300 group block h-full bg-[var(--black)]"
+                    className="glass-card rounded-3xl p-8 border-2 border-black hover:border-primary-alt transition-all duration-300 group block h-full bg-black"
                   >
                     <div className="flex items-start justify-between mb-8">
-                      <div className="w-14 h-14 rounded-2xl bg-[var(--gray-dark)] flex items-center justify-center group-hover:bg-[var(--primary)] transition-colors text-[var(--primary)] group-hover:text-[var(--black)]">
+                      <div className="w-14 h-14 rounded-2xl bg-gray-dark flex items-center justify-center group-hover:bg-primary transition-colors text-primary group-hover:text-black">
                         {course.icon_url ? (
                           <img src={course.icon_url} alt="" className="w-15 h-15" />
                         ) : (
                           <Icon className="w-7 h-7" />
                         )}
                       </div>
-                      <span className="text-[10px] font-black text-[var(--primary-alt)] bg-[var(--gray-dark)] px-4 py-2 rounded-full uppercase tracking-[0.2em]">
+                      <span className="text-[10px] font-black text-primary-alt bg-gray-dark px-4 py-2 rounded-full uppercase tracking-[0.2em]">
                         {course.duration_months} ամիս
                       </span>
                     </div>
 
-                    <h3 className="font-display text-xl font-black mb-4 text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
+                    <h3 className="font-display text-xl font-black mb-4 text-white group-hover:text-primary-alt transition-colors uppercase tracking-tighter">
                       {getLocalizedContent(course.title)}
                     </h3>
 
@@ -326,7 +320,7 @@ const CourseDetailPage = () => {
                       {getLocalizedContent(course.description)}
                     </p>
 
-                    <div className="flex items-center gap-3 text-xs font-black text-[var(--primary)] uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-[var(--gray-dark)] pt-6">
+                    <div className="flex items-center gap-3 text-xs font-black text-primary uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-gray-dark pt-6">
                       {"ծանոթանալ"}
                       <ArrowRight className="w-4 h-4" />
                     </div>

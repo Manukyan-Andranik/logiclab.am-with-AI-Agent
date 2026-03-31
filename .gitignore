@@ -27,7 +27,7 @@ dist-ssr
 downloaded_html
 
 # Python virtual environments
-backend/venv_logic/
+venv_logic/
 backend/setup_db
 backend/insert_data.sql
 backend/full_dump.sql

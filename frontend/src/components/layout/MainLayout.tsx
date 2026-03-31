@@ -15,12 +15,12 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
 
   // If mode is not selected yet, show WelcomePage
-  if (mode === null) {
-    return <WelcomePage onSelect={selectMode} />;
-  }
+  // if (mode === null) {
+  //   return <WelcomePage onSelect={selectMode} />;
+  // }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--black)] transition-[var(--transition)] overflow-x-hidden relative">
+    <div className="min-h-screen flex flex-col bg-black transition-[var(--transition)] overflow-x-hidden relative">
       <ScrollToTop />
       
       <AnimatePresence mode="wait">

@@ -28,6 +28,7 @@ import { Course, Instructor, Chapter, Lesson } from "@/api/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { getLessonMaterials, createOrUpdateLessonMaterials } from "@/api/admin";
 
 const AdminCourses = () => {
   const queryClient = useQueryClient();
@@ -71,9 +72,14 @@ const AdminCourses = () => {
     order_index: 0,
   });
 
-  const [lessonFormData, setLessonFormData] = useState({
+  const [lessonFormData, setLessonFormData] = useState<{
+    title: string;
+    order_index: number;
+    materials: { name: string; url: string }[];
+  }>({
     title: "",
     order_index: 0,
+    materials: [{ name: "", url: "" }],
   });
 
   const { data: courses, isLoading } = useQuery({
@@ -182,9 +188,34 @@ const AdminCourses = () => {
 
   // Lesson Mutations
   const lessonMutation = useMutation({
-    mutationFn: (data: typeof lessonFormData) => {
-      if (editingLesson) return updateLesson(editingLesson.id, data);
-      return createLesson(targetChapterId!, data);
+    mutationFn: async (data: typeof lessonFormData) => {
+      // Only send supported lesson fields to the lesson API
+      const lessonPayload = {
+        title: data.title,
+        order_index: data.order_index,
+      };
+
+      let savedLesson: Lesson;
+
+      if (editingLesson) {
+        savedLesson = await updateLesson(editingLesson.id, lessonPayload as any);
+      } else {
+        savedLesson = await createLesson(targetChapterId!, lessonPayload as any);
+      }
+
+      // Handle materials via dedicated materials API
+      const cleanedLinks = data.materials
+        .filter((m) => m.url.trim().length > 0)
+        .map((m) => ({
+          name: m.name && m.name.trim().length > 0 ? m.name.trim() : m.url.trim(),
+          url: m.url.trim(),
+        }));
+
+      if (cleanedLinks.length > 0) {
+        await createOrUpdateLessonMaterials(savedLesson.id, cleanedLinks);
+      }
+
+      return savedLesson;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-curriculum"] });
@@ -273,14 +304,80 @@ const AdminCourses = () => {
   const handleAddLesson = (chapterId: number, currentLessonsCount: number) => {
     setTargetChapterId(chapterId);
     setEditingLesson(null);
-    setLessonFormData({ title: "", order_index: currentLessonsCount + 1 });
+    setLessonFormData({
+      title: "",
+      order_index: currentLessonsCount + 1,
+      materials: [{ name: "", url: "" }],
+    });
     setIsLessonOpen(true);
   };
 
-  const handleEditLesson = (lesson: Lesson) => {
+  const handleEditLesson = async (lesson: Lesson) => {
     setEditingLesson(lesson);
-    setLessonFormData({ title: lesson.title, order_index: lesson.order_index });
+
+    // Try to load existing materials for this lesson
+    try {
+      const material = await getLessonMaterials(lesson.id);
+      const links = Array.isArray(material?.links) ? material.links : [];
+      setLessonFormData({
+        title: lesson.title,
+        order_index: lesson.order_index,
+        materials: links.length > 0 ? links : [{ name: "", url: "" }],
+      });
+    } catch {
+      // If no materials yet or error, just initialize with empty row
+      setLessonFormData({
+        title: lesson.title,
+        order_index: lesson.order_index,
+        materials: [{ name: "", url: "" }],
+      });
+    }
+
     setIsLessonOpen(true);
+  };
+
+  const handleAddMaterialRow = () => {
+    setLessonFormData((prev) => ({
+      ...prev,
+      materials: [...prev.materials, { name: "", url: "" }],
+    }));
+  };
+
+  const handleRemoveMaterialRow = (index: number) => {
+    setLessonFormData((prev) => ({
+      ...prev,
+      materials: prev.materials.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleMaterialChange = (index: number, field: "name" | "url", value: string) => {
+    setLessonFormData((prev) => ({
+      ...prev,
+      materials: prev.materials.map((m, i) =>
+        i === index
+          ? {
+              ...m,
+              [field]: value,
+            }
+          : m
+      ),
+    }));
+  };
+
+  const isSupportedMaterialSource = (url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      return (
+        host.includes("colab.research.google.com") ||
+        host.includes("youtube.com") ||
+        host.includes("youtu.be") ||
+        host.includes("drive.google.com") ||
+        host.includes("docs.google.com")
+      );
+    } catch {
+      return false;
+    }
   };
 
   const sortedCourses = courses ? [...courses].sort((a, b) => (a.order_index || 0) - (b.order_index || 0)) : [];
@@ -300,7 +397,7 @@ const AdminCourses = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button variant="primary" className="gap-2 bg-[var(--primary)]/10 text-[var(--white)] hover:bg-[var(--primary)]/20 text">
+            <Button variant="primary" className="gap-2 bg-primary/10 text-white hover:bg-primary/20 text">
               <Plus size={18} />
               Add Course
             </Button>
@@ -508,10 +605,10 @@ const AdminCourses = () => {
                     <AccordionItem key={item.chapter.id} value={`chap-${item.chapter.id}`} className="border rounded-xl px-4 bg-secondary/10">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-3 text-left">
-                          <span className="w-6 h-6 rounded-full bg-[var(--primary)]/20 text-[var(--primary)] flex items-center justify-center text-xs font-bold shrink-0">
+                          <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                             {i + 1}
                           </span>
-                          <span className="font-semibold text-[var(--white)]">{item.chapter.title}</span>
+                          <span className="font-semibold text-white">{item.chapter.title}</span>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pb-4">
@@ -519,7 +616,7 @@ const AdminCourses = () => {
                           <div className="flex justify-between items-center text-xs mb-2">
                             <span>{item.lessons.length} Lessons</span>
                             <div className="flex gap-2">
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--teal)]" onClick={() => handleEditChapter(item.chapter)}>
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-primary hover:bg-primary/10" onClick={() => handleEditChapter(item.chapter)}>
                                 <Edit2 size={12} />
                               </Button>
                               <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--danger)]" onClick={() => {
@@ -530,12 +627,12 @@ const AdminCourses = () => {
                             </div>
                           </div>
 
-                          <div className="space-y-2 border-l-2 border-[var(--primary)]/20 pl-4">
+                          <div className="space-y-2 border-l-2 border-primary/20 pl-4">
                             {item.lessons?.map((lesson: any, li: number) => (
-                              <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-[var(--white)] border border-[var(--gray-light)] group">
-                                <span className="text-sm text-[var(--black)]">{li + 1}. {lesson.title}</span>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--teal)]" onClick={() => handleEditLesson(lesson)}>
+                              <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border group">
+                                <span className="text-sm text-foreground">{li + 1}. {lesson.title}</span>
+                                <div className="flex gap-1 text-primary">
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-primary" onClick={() => handleEditLesson(lesson)}>
                                     <Edit2 size={12} />
                                   </Button>
                                   <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--danger)]" onClick={() => {
@@ -549,7 +646,7 @@ const AdminCourses = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="w-full border-dashed border border-[var(--gray-dark)] text-xs gap-2 text-[var(--black)]"
+                              className="w-full border-dashed border border-gray-dark text-xs gap-2 text-black"
                               onClick={() => handleAddLesson(item.chapter.id, item.lessons?.length || 0)}
                             >
                               <Plus size={12} /> Add Lesson
@@ -563,7 +660,7 @@ const AdminCourses = () => {
               </div>
             )}
             <DialogFooter>
-              <Button onClick={() => setIsCurriculumOpen(false)}>Done</Button>
+              <Button  onClick={() => setIsCurriculumOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -608,6 +705,63 @@ const AdminCourses = () => {
                 <Label htmlFor="lesson-order">Order Index</Label>
                 <Input id="lesson-order" type="number" value={lessonFormData.order_index} onChange={e => setLessonFormData({ ...lessonFormData, order_index: parseInt(e.target.value) })} />
               </div>
+              <div className="space-y-3">
+                <Label>Materials (links)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add lesson materials such as Google Colab, YouTube, Google Drive, or presentation links.
+                </p>
+                <div className="space-y-2">
+                  {lessonFormData.materials.map((material, index) => {
+                    const showSourceWarning =
+                      material.url.trim().length > 0 &&
+                      !isSupportedMaterialSource(material.url.trim());
+
+                    return (
+                      <div key={index} className="flex flex-col gap-1 rounded-lg border border-border p-3 bg-secondary/10">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Label (optional, e.g. Colab Notebook)"
+                            value={material.name}
+                            onChange={(e) => handleMaterialChange(index, "name", e.target.value)}
+                            className="text-xs"
+                          />
+                          <Input
+                            placeholder="https://..."
+                            type="url"
+                            value={material.url}
+                            onChange={(e) => handleMaterialChange(index, "url", e.target.value)}
+                            className="text-xs"
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleRemoveMaterialRow(index)}
+                            disabled={lessonFormData.materials.length === 1}
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                        {showSourceWarning && (
+                          <p className="text-[10px] text-amber-400">
+                            This URL is not from a typical source (Colab, YouTube, Drive). Please double-check it.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-2"
+                  onClick={handleAddMaterialRow}
+                >
+                  <Plus size={12} /> Add another material
+                </Button>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsLessonOpen(false)}>Cancel</Button>
@@ -632,11 +786,11 @@ const AdminCourses = () => {
               </div>
               <div className="absolute top-4 right-4 flex gap-2 transition-opacity">
                 
-                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[var(--teal)]" onClick={() => handleEdit(course)}>
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-teal" onClick={() => handleEdit(course)}>
                   <Edit2 size={14} />
                 </Button>
                 
-                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[var(--danger)]" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-danger" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
                   <Trash2 size={14} />
                 </Button>
               </div>

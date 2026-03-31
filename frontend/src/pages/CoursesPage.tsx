@@ -39,10 +39,10 @@ const CoursesPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--black)] flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
         <div className="relative">
-          <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-[var(--primary)]"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--primary)] font-display font-bold text-xs">
+          <div className="animate-spin rounded-full h-24 w-24 border-t-2 border-b-2 border-primary"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary font-display font-bold text-xs">
             LOGIC
           </div>
         </div>
@@ -53,7 +53,7 @@ const CoursesPage = () => {
   const courses = coursesData; //?.filter((c) => c.category === "course") || [];
 
   return (
-    <div className="min-h-screen bg-[var(--black)] selection:bg-[var(--primary)] selection:text-[var(--black)]">
+    <div className="min-h-screen bg-black selection:bg-primary selection:text-black">
       <VideoHero
         videoSrc={coursesVideo}
         titleHighlight={"ԿԵՐՏԻ՛Ր"}
@@ -64,8 +64,8 @@ const CoursesPage = () => {
       {/* Courses Section */}
       <section id="all" className="py-24 relative overflow-hidden">
         {/* Background Decorative Elements */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--primary)] opacity-[0.03] blur-[120px] rounded-full" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[var(--primary-alt)] opacity-[0.03] blur-[120px] rounded-full" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary opacity-[0.03] blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary-alt opacity-[0.03] blur-[120px] rounded-full" />
 
         <div className="container mx-auto px-6 relative z-10">
           <motion.div
@@ -76,12 +76,12 @@ const CoursesPage = () => {
           >
             <div className="max-w-2xl">
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-[var(--primary-alt)]" />
-                <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-[0.3em]">
+                <Sparkles className="w-5 h-5 text-primary-alt" />
+                <span className="text-primary-alt font-display font-bold text-sm uppercase tracking-[0.3em]">
                   Մասնագիտացումներ
                 </span>
               </div>
-              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-[var(--white)] uppercase tracking-tighter leading-none">
+              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-white uppercase tracking-tighter leading-none">
                 ՊԱՀԱՆՋՎԱԾ <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--white)] to-[var(--gray-light)]">
                   ՈՒՂՂՈՒԹՅՈՒՆՆԵՐ
@@ -89,7 +89,7 @@ const CoursesPage = () => {
               </h2>
             </div>
             
-            <p className="text-[var(--gray-light)] font-medium max-w-xs border-l-2 border-[var(--primary)] pl-6 py-2 opacity-80">
+            <p className="text-[var(--gray-light)] font-medium max-w-xs border-l-2 border-primary pl-6 py-2 opacity-80">
               Մենք ստեղծում ենք միջավայր, որտեղ տեսությունը վերածվում է իրական փորձի:
             </p>
           </motion.div>
@@ -107,22 +107,22 @@ const CoursesPage = () => {
                 >
                   <Link
                     to={`/courses/${course.slug || course.id}`}
-                    className="glass-card rounded-3xl p-8 border-2 border-[var(--black)] hover:border-[var(--primary-alt)] transition-all duration-300 group block h-full bg-[var(--black)]"
+                    className="glass-card rounded-3xl p-8 border-2 border-black hover:border-primary-alt transition-all duration-300 group block h-full bg-black"
                   >
                     <div className="flex items-start justify-between mb-8">
-                      <div className="w-14 h-14 rounded-2xl bg-[var(--gray-dark)] flex items-center justify-center group-hover:bg-[var(--primary)] transition-colors text-[var(--primary)] group-hover:text-[var(--black)]">
+                      <div className="w-14 h-14 rounded-2xl bg-gray-dark flex items-center justify-center group-hover:bg-primary transition-colors text-primary group-hover:text-black">
                         {course.icon_url ? (
                           <img src={course.icon_url} alt="" className="w-15 h-15" />
                         ) : (
                           <Icon className="w-7 h-7" />
                         )}
                       </div>
-                      <span className="text-[10px] font-black text-[var(--primary-alt)] bg-[var(--gray-dark)] px-4 py-2 rounded-full uppercase tracking-[0.2em]">
+                      <span className="text-[10px] font-black text-primary-alt bg-gray-dark px-4 py-2 rounded-full uppercase tracking-[0.2em]">
                         {course.duration_months} ամիս
                       </span>
                     </div>
 
-                    <h3 className="font-display text-xl font-black mb-4 text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
+                    <h3 className="font-display text-xl font-black mb-4 text-white group-hover:text-primary-alt transition-colors uppercase tracking-tighter">
                       {getLocalizedContent(course.title)}
                     </h3>
 
@@ -130,7 +130,7 @@ const CoursesPage = () => {
                       {getLocalizedContent(course.description)}
                     </p>
 
-                    <div className="flex items-center gap-3 text-xs font-black text-[var(--primary)] uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-[var(--gray-dark)] pt-6">
+                    <div className="flex items-center gap-3 text-xs font-black text-primary uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-gray-dark pt-6">
                       {"ծանոթանալ"}
                       <ArrowRight className="w-4 h-4" />
                     </div>

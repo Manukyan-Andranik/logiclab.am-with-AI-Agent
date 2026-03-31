@@ -133,6 +133,7 @@ class Chapter(Base):
     # Relationships
     course = relationship("Course", back_populates="chapters")
     lessons = relationship("Lesson", back_populates="chapter", cascade="all, delete-orphan")
+    materials = relationship("Material", back_populates="chapter")
     material_access = relationship(
         "MaterialAccess",
         back_populates="chapter",
@@ -153,6 +154,22 @@ class Lesson(Base):
     
     # Relationships
     chapter = relationship("Chapter", back_populates="lessons")
+    materials = relationship("Material", back_populates="lesson", uselist=False)
+    material_access = relationship("MaterialAccess", back_populates="lesson")
+
+class Material(Base):
+    __tablename__ = "materials"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=False)
+    links = Column(JSON, default=[])  # [{name, url}, ...]
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    chapter = relationship("Chapter", back_populates="materials")
+    lesson = relationship("Lesson", back_populates="materials")
 
 
 class Registration(Base):
@@ -175,13 +192,15 @@ class MaterialAccess(Base):
     __tablename__ = "material_access"
     
     id = Column(Integer, primary_key=True, index=True)
-    chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     granted_at = Column(DateTime, default=datetime.utcnow)
     accessed_at = Column(DateTime, nullable=True)
     
-    # Relationships (material = chapter of course)
+    # Relationships
     chapter = relationship("Chapter", back_populates="material_access")
+    lesson = relationship("Lesson", back_populates="material_access")
     student = relationship("Student", back_populates="material_access")
 
 

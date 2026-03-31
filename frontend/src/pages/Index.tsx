@@ -25,7 +25,7 @@ const Index = () => {
   }, [hash]);
 
   return (
-    <div className="bg-[var(--black)] text-[var(--white)]">
+    <div className="bg-black text-white">
       {/* Hero Section matches Tilda ml.html visually */}
       <Hero />
       
@@ -46,18 +46,6 @@ const Index = () => {
         <Section id="instructors" dark>
           <Container>
              <InstructorsSection />
-          </Container>
-        </Section>
-
-        <Section id="projects">
-          <Container>
-             <FeaturedProjects />
-          </Container>
-        </Section>
-
-        <Section id="success" dark>
-          <Container>
-             <SuccessStories />
           </Container>
         </Section>
 

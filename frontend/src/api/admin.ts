@@ -1,5 +1,31 @@
 import { apiClient } from './client';
 
+// Shared admin API types
+export type MaterialLink = { name: string; url: string };
+
+export type LessonMaterial = {
+  id: number;
+  chapter_id: number;
+  lesson_id: number;
+  links: MaterialLink[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type MaterialAccess = {
+  id: number;
+  granted_at: string;
+  accessed_at: string | null;
+  student_id: number;
+  chapter_id: number | null;
+  lesson_id: number | null;
+};
+
+export type MaterialAccessListResponse = {
+  data: MaterialAccess[];
+  total: number;
+};
+
 export const getDashboardStats = async (): Promise<Record<string, any>> => {
   return apiClient('/admin/dashboard');
 };
@@ -21,6 +47,51 @@ export const getAdminStudents = async (): Promise<any[]> => {
 
 export const getVisitStatsSummary = async (): Promise<Record<string, any>> => {
   return apiClient('/visits/stats/summary');
+};
+
+// Lesson Materials management
+export const getLessonMaterials = async (lessonId: number): Promise<LessonMaterial> => {
+  return apiClient<LessonMaterial>(`/materials/lesson/${lessonId}`);
+};
+
+export const createOrUpdateLessonMaterials = async (
+  lessonId: number,
+  links: MaterialLink[],
+): Promise<LessonMaterial> => {
+  // First check if exists
+  const existing = await getLessonMaterials(lessonId);
+  
+  if (existing && existing.id !== 0) {
+    return apiClient<LessonMaterial>(`/materials/${existing.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ links }),
+    });
+  } else {
+    // Create new
+    return apiClient<LessonMaterial>('/materials', {
+      method: 'POST',
+      body: JSON.stringify({ lesson_id: lessonId, links, chapter_id: 0 }), // chapter_id handled by backend
+    });
+  }
+};
+
+export const grantLessonAccess = async (studentId: number, lessonId: number) => {
+  return apiClient('/materials/grant-access', {
+    method: 'POST',
+    body: JSON.stringify({ student_id: studentId, lesson_id: lessonId })
+  });
+};
+
+export const revokeLessonAccess = async (accessId: number) => {
+  return apiClient(`/admin/students/access/${accessId}`, {
+    method: 'DELETE'
+  });
+};
+
+export const getStudentLessonAccess = async (studentId: number): Promise<MaterialAccessListResponse> => {
+  return apiClient<MaterialAccessListResponse>('/materials/access', {
+    params: { student_id: studentId }
+  });
 };
 
 // Student Progress management

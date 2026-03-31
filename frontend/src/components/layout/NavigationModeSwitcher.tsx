@@ -7,17 +7,17 @@ const NavigationModeSwitcher: React.FC = () => {
   const { mode, selectMode } = useNavigationMode();
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-[var(--gray-dark)]/50 backdrop-blur-md border border-[var(--white)]/5 rounded-2xl">
+    <div className="flex items-center gap-1 p-1 bg-gray-dark/50 backdrop-blur-md border border-white/5 rounded-2xl">
       <button
         onClick={() => selectMode('modern')}
         className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
-          mode === 'modern' ? 'text-[var(--black)]' : 'text-[var(--white)]/40 hover:text-[var(--white)]'
+          mode === 'modern' ? 'text-black' : 'text-white/40 hover:text-white'
         }`}
       >
         {mode === 'modern' && (
           <motion.div
             layoutId="mode-bg"
-            className="absolute inset-0 bg-[var(--primary)] rounded-xl"
+            className="absolute inset-0 bg-primary rounded-xl"
             transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
           />
         )}
@@ -28,13 +28,13 @@ const NavigationModeSwitcher: React.FC = () => {
       <button
         onClick={() => selectMode('traditional')}
         className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
-          mode === 'traditional' ? 'text-[var(--black)]' : 'text-[var(--white)]/40 hover:text-[var(--white)]'
+          mode === 'traditional' ? 'text-black' : 'text-white/40 hover:text-white'
         }`}
       >
         {mode === 'traditional' && (
           <motion.div
             layoutId="mode-bg"
-            className="absolute inset-0 bg-[var(--primary)] rounded-xl"
+            className="absolute inset-0 bg-primary rounded-xl"
             transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
           />
         )}

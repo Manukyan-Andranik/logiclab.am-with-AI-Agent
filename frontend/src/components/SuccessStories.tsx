@@ -10,10 +10,11 @@ const SuccessStories = () => {
     queryFn: getFeaturedSuccessStories,
   });
 
+
   if (isLoading || !stories || stories.length === 0) return null;
 
   return (
-    <section id="stories" className="py-24 bg-[var(--black)]">
+    <section id="stories" className="py-24 bg-black">
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -21,11 +22,11 @@ const SuccessStories = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-widest mb-2 block">
+          <span className="text-primary-alt font-display font-bold text-sm uppercase tracking-widest mb-2 block">
             Logic Lab
           </span>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter">
-            Մեր <span className="text-[var(--primary)]">հաջողակները</span>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white uppercase tracking-tighter">
+            Մեր <span className="text-primary">հաջողակները</span>
           </h2>
         </motion.div>
 
@@ -37,14 +38,14 @@ const SuccessStories = () => {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="glass-card rounded-3xl p-8 relative group hover:border-[var(--primary-alt)] transition-all border-2 border-[var(--gray-dark)] bg-[var(--gray-dark)]"
+              className="glass-card rounded-3xl p-8 relative group hover:border-primary-alt transition-all border-2 border-gray-dark bg-gray-dark"
             >
-              <div className="absolute top-6 right-8 text-[var(--primary)] opacity-10 group-hover:opacity-20 transition-opacity">
+              <div className="absolute top-6 right-8 text-primary opacity-10 group-hover:opacity-20 transition-opacity">
                 <Quote size={48} />
               </div>
               
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--primary)]">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary">
                   <img
                     src={story.image_urls[0] || "/placeholder.svg"}
                     alt={getLocalizedContent(story.title)}
@@ -52,10 +53,10 @@ const SuccessStories = () => {
                   />
                 </div>
                 <div>
-                  <h3 className="font-display font-black text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter leading-tight">
+                  <h3 className="font-display font-black text-white group-hover:text-primary-alt transition-colors uppercase tracking-tighter leading-tight">
                     {getLocalizedContent(story.title)}
                   </h3>
-                  <p className="text-[10px] text-[var(--primary-alt)] font-black uppercase tracking-[0.2em]">
+                  <p className="text-[10px] text-primary-alt font-black uppercase tracking-[0.2em]">
                     Մեր դասընթաց
                   </p>
                 </div>

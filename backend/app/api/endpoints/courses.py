@@ -192,7 +192,6 @@ async def create_chapter(
     new_chapter = Chapter(
         course_id=course_id,
         title=chapter_data.title,
-        description=chapter_data.description,
         order_index=chapter_data.order_index
     )
     db.add(new_chapter)
@@ -257,12 +256,25 @@ async def create_course(
                 detail="Course with this slug already exists"
             )
     
+    # If order_index is already taken, find the next available one
+    # Note: unique constraint exists on order_index
+    order_index = course_data.order_index
+    if order_index is None:
+        max_idx = db.query(Course.order_index).order_by(Course.order_index.desc()).first()
+        order_index = (max_idx[0] + 1) if max_idx else 0
+    else:
+        existing_idx = db.query(Course).filter(Course.order_index == order_index).first()
+        if existing_idx:
+            # If specifically requested but exists, find max and increment to avoid crash
+            max_idx = db.query(Course.order_index).order_by(Course.order_index.desc()).first()
+            order_index = (max_idx[0] + 1) if max_idx else 0
+
     new_course = Course(
         slug=course_data.slug,
         title=_multilingual_to_dict(course_data.title),
         description=_multilingual_to_dict(course_data.description),
         curriculum_url=course_data.curriculum_url,
-        order_index=course_data.order_index,
+        order_index=order_index,
         curriculum=course_data.curriculum or {},
         icon_url=course_data.icon_url,
         hero_video_url=course_data.hero_video_url,

@@ -54,10 +54,12 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Github,
   Globe,
   Upload
 } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
+
+
 
 const AdminProjects = () => {
   const queryClient = useQueryClient();
@@ -404,7 +406,7 @@ const AdminProjects = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Github size={14} /> GitHub Repository</Label>
+                <Label className="flex items-center gap-2"><FaGithub size={14} /> GitHub Repository</Label>
                 <Input
                   value={formData.links?.github || ""}
                   onChange={(e) => setFormData({

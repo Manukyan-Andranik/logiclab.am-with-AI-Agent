@@ -112,4 +112,5 @@ export type Student = {
   status: string;
   is_active: boolean;
   courses?: Course[];
+  created_at: string;
 };

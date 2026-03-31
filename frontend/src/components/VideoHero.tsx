@@ -15,7 +15,7 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
   const fullPosterSrc = getMediaUrl(posterSrc);
 
   return (
-    <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-[var(--black)]">
+    <section className="relative min-h-[70vh] flex items-center overflow-hidden bg-black">
       <div className="absolute inset-0">
         <video
           key={fullVideoSrc}
@@ -28,7 +28,7 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
         >
           <source src={fullVideoSrc} type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-[var(--black)] opacity-40" />
+        <div className="absolute inset-0 bg-black opacity-40" />
       </div>
 
       <div className="relative container mx-auto px-6 pt-24 pb-16">
@@ -36,11 +36,11 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-6 text-[var(--white)] uppercase tracking-tighter"
+          className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-tight mb-6 text-white uppercase tracking-tighter"
         >
           {titleHighlight ? (
             <>
-              <span className="text-[var(--primary-alt)]">{titleHighlight}</span>{" "}
+              <span className="text-primary-alt">{titleHighlight}</span>{" "}
               <span>{title}</span>
             </>
           ) : (
