@@ -170,28 +170,42 @@ async def get_course_curriculum(
         "curriculum": curriculum
     }
 
-@router.get("/{course_id}/chapters", response_model=List[ChapterResponse])
+@router.get("/{course_id_or_slug}/chapters", response_model=List[ChapterResponse])
 async def get_course_chapters(
-    course_id: int,
+    course_id_or_slug: str,
     db: Session = Depends(get_db)
 ):
     """Get all chapters for a course"""
-    return db.query(Chapter).filter(Chapter.course_id == course_id).order_by(Chapter.order_index).all()
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    return db.query(Chapter).filter(Chapter.course_id == course.id).order_by(Chapter.order_index).all()
 
-@router.post("/{course_id}/chapters", response_model=ChapterResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{course_id_or_slug}/chapters", response_model=ChapterResponse, status_code=status.HTTP_201_CREATED)
 async def create_chapter(
-    course_id: int,
+    course_id_or_slug: str,
     chapter_data: ChapterCreate,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Create new chapter (Admin only)"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     
     new_chapter = Chapter(
-        course_id=course_id,
+        course_id=course.id,
         title=chapter_data.title,
         order_index=chapter_data.order_index
     )
@@ -300,20 +314,27 @@ async def create_course(
         
     return new_course
 
-@router.put("/{course_id}", response_model=CourseResponse)
+@router.put("/{course_id_or_slug}", response_model=CourseResponse)
 async def update_course(
-    course_id: int,
+    course_id_or_slug: str,
     course_data: CourseUpdate,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Update course (Admin only)"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
     if not course:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Course not found"
         )
+    
+    course_id = course.id
     
     raw = getattr(course_data, "model_dump", None) or getattr(course_data, "dict")
     update_data = raw(exclude_unset=True, exclude={'instructor_ids'})
@@ -365,28 +386,38 @@ async def update_course(
     db.refresh(course)
     return course
 
-@router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{course_id_or_slug}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_course(
-    course_id: int,
+    course_id_or_slug: str,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Delete course (Admin only)"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     db.delete(course)
     db.commit()
     return None
 
-@router.patch("/{course_id}/toggle-active", response_model=CourseResponse)
+@router.patch("/{course_id_or_slug}/toggle-active", response_model=CourseResponse)
 async def toggle_course_active(
-    course_id: int,
+    course_id_or_slug: str,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Toggle course active status (Admin only)"""
-    course = db.query(Course).filter(Course.id == course_id).first()
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     course.is_active = not course.is_active

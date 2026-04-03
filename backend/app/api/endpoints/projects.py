@@ -241,19 +241,28 @@ async def toggle_project_featured(
     db.refresh(project)
     return project
 
-@router.get("/by-course/{course_id}", response_model=List[ProjectResponse])
+@router.get("/by-course/{course_id_or_slug}", response_model=List[ProjectResponse])
 async def get_projects_by_course(
-    course_id: int,
+    course_id_or_slug: str,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
     """Get all published projects for a specific course"""
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
     projects = db.query(Project).options(
         joinedload(Project.student).joinedload(Student.user),
         joinedload(Project.course)
     ).filter(
-        Project.course_id == course_id,
+        Project.course_id == course.id,
         Project.is_published == True
     ).order_by(Project.created_at.desc()).offset(skip).limit(limit).all()
     

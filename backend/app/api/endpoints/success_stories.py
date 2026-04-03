@@ -186,19 +186,28 @@ async def toggle_story_published(
     db.refresh(story)
     return story
 
-@router.get("/by-course/{course_id}", response_model=List[SuccessStoryResponse])
+@router.get("/by-course/{course_id_or_slug}", response_model=List[SuccessStoryResponse])
 async def get_stories_by_course(
-    course_id: int,
+    course_id_or_slug: str,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
     """Get all published success stories for a specific course"""
+    query = db.query(Course)
+    if course_id_or_slug.isdigit():
+        course = query.filter(Course.id == int(course_id_or_slug)).first()
+    else:
+        course = query.filter(Course.slug == course_id_or_slug).first()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
     stories = db.query(SuccessStory).options(
         joinedload(SuccessStory.student).joinedload(Student.user),
         joinedload(SuccessStory.course)
     ).filter(
-        SuccessStory.course_id == course_id,
+        SuccessStory.course_id == course.id,
         SuccessStory.is_published == True
     ).order_by(SuccessStory.published_date.desc()).offset(skip).limit(limit).all()
     
