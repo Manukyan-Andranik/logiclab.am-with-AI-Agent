@@ -30,19 +30,19 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 const CourseDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const idOrSlug = id || "0";
+  const { slug } = useParams<{ slug: string }>();
+  const courseSlug = slug || "0";
 
   const { data: course, isLoading: isCourseLoading } = useQuery({
-    queryKey: ["course", idOrSlug],
-    queryFn: () => getCourse(idOrSlug),
-    enabled: !!idOrSlug,
+    queryKey: ["course", courseSlug],
+    queryFn: () => getCourse(courseSlug),
+    enabled: !!courseSlug,
   });
 
   const { data: curriculumData } = useQuery({
-    queryKey: ["curriculum", idOrSlug],
-    queryFn: () => getCourseCurriculum(idOrSlug),
-    enabled: !!idOrSlug,
+    queryKey: ["curriculum", courseSlug],
+    queryFn: () => getCourseCurriculum(courseSlug),
+    enabled: !!courseSlug,
   });
 
   const { data: allCourses } = useQuery({
@@ -295,7 +295,7 @@ const CourseDetailPage = () => {
                   transition={{ delay: i * 0.08 }}
                 >
                   <Link
-                    to={`/courses/${course.id}`}
+                    to={`/courses/${course.slug}`}
                     className="glass-card rounded-3xl p-8 border-2 border-[var(--black)] hover:border-[var(--primary-alt)] transition-all duration-300 group block h-full bg-[var(--black)]"
                   >
                     <div className="flex items-start justify-between mb-8">
