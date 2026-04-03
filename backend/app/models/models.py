@@ -155,7 +155,6 @@ class Lesson(Base):
     # Relationships
     chapter = relationship("Chapter", back_populates="lessons")
     materials = relationship("Material", back_populates="lesson", uselist=False)
-    material_access = relationship("MaterialAccess", back_populates="lesson")
 
 class Material(Base):
     __tablename__ = "materials"
@@ -193,14 +192,12 @@ class MaterialAccess(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=True)
-    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     granted_at = Column(DateTime, default=datetime.utcnow)
     accessed_at = Column(DateTime, nullable=True)
     
     # Relationships
     chapter = relationship("Chapter", back_populates="material_access")
-    lesson = relationship("Lesson", back_populates="material_access")
     student = relationship("Student", back_populates="material_access")
 
 
