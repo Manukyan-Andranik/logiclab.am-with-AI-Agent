@@ -512,7 +512,12 @@ async def update_registration_status_admin(
     user = student.user
     course = registration.course
     student_name = f"{user.first_name} {user.last_name}"
-    course_name = course.title.get("en", "Course")
+    
+    # Fix: Safely handle course title
+    if isinstance(course.title, dict):
+        course_name = course.title.get("en", "Course")
+    else:
+        course_name = str(course.title)
     
     # Send appropriate email based on status
     email_sent = False

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Container from './Container';
 import { Bot, Layout } from 'lucide-react';
 import { 
@@ -8,9 +8,27 @@ import {
   FaTelegramPlane 
 } from 'react-icons/fa';
 import { useNavigationMode } from '../../hooks/useNavigationMode';
+import { useNavigationContext } from './NavigationProvider';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  navigationSystem?: 'AGENT' | 'TRADITIONAL' | null;
+}
+
+const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
   const { mode, selectMode } = useNavigationMode();
+  const { navigationSystem: configNavigationSystem } = useNavigationContext();
+  const [showComingSoonDialog, setShowComingSoonDialog] = useState(false);
+  
+  // Use passed prop or context value
+  const system = navigationSystem || configNavigationSystem;
 
 const socialLinks = [
   { 
@@ -34,6 +52,17 @@ const socialLinks = [
     label: 'Telegram'
   },
 ];
+
+const handleNavigationModeChange = (newMode: 'modern' | 'traditional') => {
+  // If in TRADITIONAL mode, show "Coming Soon" message
+  if (system === 'TRADITIONAL') {
+    setShowComingSoonDialog(true);
+    return;
+  }
+  
+  // In AGENT mode, allow switching
+  selectMode(newMode);
+};
 
   return (
     <footer className="relative bg-black border-t border-gray-dark pt-[100px] pb-[60px]">
@@ -76,34 +105,36 @@ const socialLinks = [
             </ul>
           </div>
 
-          {/* Navigation Mode Section */}
-          {/* <div className="space-y-6">
-            <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">ՆԱՎԻԳԱՑԻԱՅԻ ՌԵԺԻՄ</h4>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => selectMode('modern')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
-                  mode === 'modern'
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-transparent text-[var(--gray-light)] opacity-50 border-gray-dark hover:border-primary hover:opacity-100'
-                }`}
-              >
-                <Bot size={18} />
-                Logic AI
-              </button>
-              <button
-                onClick={() => selectMode('traditional')}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
-                  mode === 'traditional'
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-transparent text-[var(--gray-light)] opacity-50 border-gray-dark hover:border-primary hover:opacity-100'
-                }`}
-              >
-                <Layout size={18} />
-                Ավանդական
-              </button>
+          {/* Navigation Mode Section - Only show if AGENT mode is enabled */}
+          {system === 'AGENT' && (
+            <div className="space-y-6">
+              <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">ՆԱՎԻԳԱՑԻԱՅԻ ՌԵԺԻՄ</h4>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => handleNavigationModeChange('modern')}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
+                    mode === 'modern'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-transparent text-[var(--gray-light)] opacity-50 border-gray-dark hover:border-primary hover:opacity-100'
+                  }`}
+                >
+                  <Bot size={18} />
+                  Logic AI
+                </button>
+                <button
+                  onClick={() => handleNavigationModeChange('traditional')}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
+                    mode === 'traditional'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-transparent text-[var(--gray-light)] opacity-50 border-gray-dark hover:border-primary hover:opacity-100'
+                  }`}
+                >
+                  <Layout size={18} />
+                  Ավանդական
+                </button>
+              </div>
             </div>
-          </div> */}
+          )}
         </div>
 
         {/* Bottom Bar */}
@@ -117,6 +148,22 @@ const socialLinks = [
           </div>
         </div>
       </Container>
+
+      {/* "Coming Soon" Dialog for Traditional Mode */}
+      <AlertDialog open={showComingSoonDialog} onOpenChange={setShowComingSoonDialog}>
+        <AlertDialogContent className="bg-black border border-gray-dark">
+          <AlertDialogTitle className="text-primary-alt">Coming Soon</AlertDialogTitle>
+          <AlertDialogDescription className="text-[var(--gray-light)]">
+            Navigation system switching is currently disabled in Traditional mode. This feature will be available in a future update. For now, you're using the Traditional navigation system.
+          </AlertDialogDescription>
+          <AlertDialogAction 
+            onClick={() => setShowComingSoonDialog(false)}
+            className="bg-primary hover:bg-primary-alt text-white"
+          >
+            Understood
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
     </footer>
   );
 };

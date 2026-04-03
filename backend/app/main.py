@@ -26,7 +26,8 @@ from .api.endpoints import (
     certificates,
     enrollments,
     uploads,
-    logic
+    logic,
+    config
 )
 from .api.routers import admin
 
@@ -118,6 +119,7 @@ app.include_router(enrollments.router, prefix="/enrollments", tags=["Enrollments
 app.include_router(uploads.router, tags=["Uploads"])  # router already defines its prefix
 app.include_router(logic.router, prefix="/logic", tags=["Logic AI Agent"])
 app.include_router(student.router, tags=["Student Dashboard"])
+app.include_router(config.router, tags=["Configuration"])  # Config endpoints
 app.include_router(admin.router, tags=["Admin"])  # router already defines its prefix
 
 

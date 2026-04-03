@@ -81,7 +81,7 @@ const CoursesPage = () => {
                   Մասնագիտացումներ
                 </span>
               </div>
-              <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-white uppercase tracking-tighter leading-none">
+              <h2 className="text-[var(--primary-alt)] font-display text-4xl sm:text-5xl lg:text-6xl font-black  uppercase tracking-tighter leading-none">
                 ՊԱՀԱՆՋՎԱԾ <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--white)] to-[var(--gray-light)]">
                   ՈՒՂՂՈՒԹՅՈՒՆՆԵՐ
@@ -106,23 +106,23 @@ const CoursesPage = () => {
                   transition={{ delay: i * 0.08 }}
                 >
                   <Link
-                    to={`/courses/${course.slug || course.id}`}
-                    className="glass-card rounded-3xl p-8 border-2 border-black hover:border-primary-alt transition-all duration-300 group block h-full bg-black"
+                    to={`/courses/${course.id}`}
+                    className="glass-card rounded-3xl p-8 border-2 border-[var(--black)] hover:border-[var(--primary-alt)] transition-all duration-300 group block h-full bg-[var(--black)]"
                   >
                     <div className="flex items-start justify-between mb-8">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-dark flex items-center justify-center group-hover:bg-primary transition-colors text-primary group-hover:text-black">
+                      <div className="w-14 h-14 rounded-2xl bg-[var(--gray-dark)] flex items-center justify-center group-hover:bg-[var(--primary)] transition-colors text-[var(--primary)] group-hover:text-[var(--black)]">
                         {course.icon_url ? (
                           <img src={course.icon_url} alt="" className="w-15 h-15" />
                         ) : (
                           <Icon className="w-7 h-7" />
                         )}
                       </div>
-                      <span className="text-[10px] font-black text-primary-alt bg-gray-dark px-4 py-2 rounded-full uppercase tracking-[0.2em]">
+                      <span className="text-[10px] font-black text-[var(--primary-alt)] bg-[var(--gray-dark)] px-4 py-2 rounded-full uppercase tracking-[0.2em]">
                         {course.duration_months} ամիս
                       </span>
                     </div>
 
-                    <h3 className="font-display text-xl font-black mb-4 text-white group-hover:text-primary-alt transition-colors uppercase tracking-tighter">
+                    <h3 className="font-display text-xl font-black mb-4 text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
                       {getLocalizedContent(course.title)}
                     </h3>
 
@@ -130,7 +130,7 @@ const CoursesPage = () => {
                       {getLocalizedContent(course.description)}
                     </p>
 
-                    <div className="flex items-center gap-3 text-xs font-black text-primary uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-gray-dark pt-6">
+                    <div className="flex items-center gap-3 text-xs font-black text-[var(--primary)] uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-[var(--gray-dark)] pt-6">
                       {"ծանոթանալ"}
                       <ArrowRight className="w-4 h-4" />
                     </div>

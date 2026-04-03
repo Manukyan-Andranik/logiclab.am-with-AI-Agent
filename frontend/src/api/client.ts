@@ -61,7 +61,7 @@ export const uploadFile = async (file: File): Promise<{ url: string }> => {
 export const getMediaUrl = (path?: string) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  // backend base url is without /api for static files usually
-  const backendBase = BASE_URL.replace('/api', '');
-  return `${backendBase}${path}`;
+  // If the path already starts with /api, don't double it
+  if (path.startsWith('/api')) return `${BASE_URL.replace('/api', '')}${path}`;
+  return `${BASE_URL}${path}`;
 };

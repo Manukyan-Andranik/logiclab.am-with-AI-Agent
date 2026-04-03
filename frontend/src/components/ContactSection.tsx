@@ -42,8 +42,8 @@ const ContactSection = () => {
           viewport={{ once: true }}
           className="mb-16"
         >
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-white uppercase tracking-tighter">
-            Կապվեք <span className="text-primary-alt">մեզ հետ</span>
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--primary-alt)] uppercase tracking-tighter">
+            Կապվեք <span className="text-[var(--white)]">մեզ հետ</span>
           </h2>
         </motion.div>
 

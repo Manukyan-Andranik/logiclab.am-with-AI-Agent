@@ -40,7 +40,7 @@ const VideoHero = ({ videoSrc, posterSrc, title, titleHighlight, subtitle, child
         >
           {titleHighlight ? (
             <>
-              <span className="text-primary-alt">{titleHighlight}</span>{" "}
+              <span className="text-[var(--primary-alt)]">{titleHighlight}</span>{" "}
               <span>{title}</span>
             </>
           ) : (

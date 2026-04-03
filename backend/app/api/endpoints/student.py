@@ -64,10 +64,13 @@ async def get_student_dashboard(
     db: Session = Depends(get_db)
 ):
     """Get aggregated dashboard data for student"""
+    # Re-query student with joined user to ensure all data is available for serialization
+    student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == current_student.id).first()
+    
     # Get course
     course = None
-    if current_student.course_id:
-        course = db.query(Course).filter(Course.id == current_student.course_id).first()
+    if student.course_id:
+        course = db.query(Course).filter(Course.id == student.course_id).first()
     
     # Get materials: only granted chapters/lessons with Material.links
     materials_list = []

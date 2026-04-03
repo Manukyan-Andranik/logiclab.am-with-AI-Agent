@@ -3,9 +3,10 @@ import os
 import json
 import dotenv
 import ast
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from app.core.config import settings
 
 from deep_translator import GoogleTranslator as TRANSLATOR
 
@@ -61,15 +62,28 @@ def format_answer(decoded: str) -> str:
     return answer + "\n</JSON>"
 
 def generate_answer_with_agent(question: str, context: str, client, max_new_tokens: int = 64, temperature: float = 0.3):
-    result = client.predict(
-	message=question,
-	system_message=context,
-	max_tokens=512,
-	temperature=0.7,
-	top_p=0.95,
-	api_name="/respond"
-    )
+    try:
+        result = client.predict(
+            message=question,
+            system_message=context,
+            max_tokens=512,
+            temperature=0.7,
+            top_p=0.95,
+            api_name="/respond"
+        )
+    except Exception as e:
+        print(f"Error calling Gradio client: {e}")
+        return "Ցավոք, կապի խնդիր առաջացավ։", {}
+
+    # Ensure result is a string
+    if isinstance(result, (list, tuple)) and len(result) > 0:
+        result = str(result[0])
+    elif not isinstance(result, str):
+        result = str(result) if result is not None else ""
+
     parsed_json = {}
+    clean_text = result
+    
     if result:
         json_match = re.search(r"<JSON>(.*?)</JSON>", result, re.DOTALL)
         if json_match:
@@ -90,9 +104,20 @@ def generate_answer_with_agent(question: str, context: str, client, max_new_toke
         else:
             clean_text = result
     else:
-        clean_text = result or ""
+        clean_text = ""
 
+    # Translate back to Armenian if it contains English and doesn't look like code
     translated_clean_answer = clean_text
+    if clean_text and any(ord(c) < 128 for c in clean_text):
+        try:
+            translator = TRANSLATOR(source='en', target='hy')
+            # Only translate if it's substantial text
+            if len(clean_text) > 2:
+                translated_clean_answer = translator.translate(clean_text)
+        except Exception as te:
+            print(f"Translation failed: {te}")
+            translated_clean_answer = clean_text
+
     return translated_clean_answer, parsed_json
 
 
@@ -179,6 +204,13 @@ def format_prompt(question, context):
 
 @router.post("/chat", response_model=LogicAgentResponse)
 async def logic_chat(request: ChatRequest):
+    # Check if Logic Agent is enabled via NAVIGATION_SYSTEM config
+    if settings.NAVIGATION_SYSTEM == "TRADITIONAL":
+        raise HTTPException(
+            status_code=403,
+            detail="Logic Agent is not available in TRADITIONAL navigation mode."
+        )
+    
     # Construct conversation
     conversation = [
         {"role": "system", "content": SYSTEM_PROMPT},

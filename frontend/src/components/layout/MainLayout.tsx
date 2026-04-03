@@ -7,24 +7,37 @@ import WelcomePage from './WelcomePage';
 import ScrollToTop from './ScrollToTop';
 import ScrollToTopButton from './ScrollToTopButton';
 import { useNavigationMode } from '../../hooks/useNavigationMode';
+import { useNavigationContext } from './NavigationProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MainLayout: React.FC = () => {
   const { mode, selectMode } = useNavigationMode();
+  const { navigationSystem, isConfigLoading } = useNavigationContext();
   const [isAgentOpen, setIsAgentOpen] = useState(true);
   const location = useLocation();
 
-  // If mode is not selected yet, show WelcomePage
-  // if (mode === null) {
-  //   return <WelcomePage onSelect={selectMode} />;
-  // }
+  // Show loading state while config is being fetched
+  if (isConfigLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  // In TRADITIONAL mode, show WelcomePage if no mode is selected yet
+  // In AGENT mode, also show WelcomePage if no mode is selected
+  // But in TRADITIONAL mode, don't actually show the selection buttons
+  if (mode === null && navigationSystem === 'AGENT') {
+    return <WelcomePage onSelect={selectMode} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-black transition-[var(--transition)] overflow-x-hidden relative">
       <ScrollToTop />
       
       <AnimatePresence mode="wait">
-        {mode === 'modern' ? (
+        {mode === 'modern' && navigationSystem === 'AGENT' ? (
           <motion.div
             key="modern-nav"
             initial={{ opacity: 0, x: -20 }}
@@ -51,8 +64,8 @@ const MainLayout: React.FC = () => {
       {/* Main Content Area */}
       <main 
         className={`flex-1 transition-[padding_0.5s_cubic-bezier(0.25,0.8,0.25,1)] pl-0 ${
-          mode === 'modern' && isAgentOpen ? 'md:pl-[420px]' : 'md:pl-0'
-        } ${mode === 'traditional' ? 'pt-24' : ''}`}
+          mode === 'modern' && isAgentOpen && navigationSystem === 'AGENT' ? 'md:pl-[420px]' : 'md:pl-0'
+        } ${mode === 'traditional' || navigationSystem === 'TRADITIONAL' ? 'pt-24' : ''}`}
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -71,10 +84,10 @@ const MainLayout: React.FC = () => {
       {/* Footer also moved to content area to align with padding */}
       <div 
         className={`transition-[padding_0.5s_cubic-bezier(0.25,0.8,0.25,1)] pl-0 ${
-          mode === 'modern' && isAgentOpen ? 'md:pl-[420px]' : 'md:pl-0'
+          mode === 'modern' && isAgentOpen && navigationSystem === 'AGENT' ? 'md:pl-[420px]' : 'md:pl-0'
         }`}
       >
-        <Footer />
+        <Footer navigationSystem={navigationSystem} />
       </div>
 
       {/* Global Floating Elements */}

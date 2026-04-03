@@ -49,6 +49,18 @@ const Index = () => {
           </Container>
         </Section>
 
+        <Section id="projects">
+          <Container>
+             <FeaturedProjects />
+          </Container>
+        </Section>
+
+        <Section id="success" dark>
+          <Container>
+             <SuccessStories />
+          </Container>
+        </Section>
+
         <Section id="contact">
           <Container>
              <ContactSection />

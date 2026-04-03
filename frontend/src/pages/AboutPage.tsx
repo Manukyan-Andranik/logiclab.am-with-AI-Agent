@@ -119,8 +119,8 @@ const AboutPage = () => {
             viewport={{ once: true }}
             className="mb-16"
           >
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--white)] uppercase tracking-tighter">
-              Ո՞ՒՄ ՀԱՄԱՐ ԵՆ <span className="text-[var(--primary-alt)]">ԴԱՍԸՆԹԱՑՆԵՐԸ</span>
+            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--primary-alt)] uppercase tracking-tighter">
+              Ո՞ՒՄ ՀԱՄԱՐ ԵՆ <span className="text-[var(--white)]">ԴԱՍԸՆԹԱՑՆԵՐԸ</span>
             </h2>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

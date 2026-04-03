@@ -71,6 +71,10 @@ class Settings(BaseSettings):
 
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:3000"
+
+    # Navigation System Configuration
+    # Values: "AGENT" (AI-powered navigation) or "TRADITIONAL" (standard navigation)
+    NAVIGATION_SYSTEM: str = "AGENT"
     
     class Config:
         env_file = ".env"

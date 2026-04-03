@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional, Union
 from ...core.database import get_db
 from ...models.models import Course, CourseInstructor, Instructor, Chapter, Lesson
@@ -326,15 +327,15 @@ async def update_course(
         other_course = db.query(Course).filter(Course.order_index == new_index).first()
         if other_course:
             # We need to swap. To avoid unique constraint violation, 
-            # we use a temporary very large index for one of them
-            temp_index = -1  # Assuming order_index is normally >= 0
+            # we use a temporary very small index
+            min_idx = db.query(func.min(Course.order_index)).scalar() or 0
+            temp_index = min_idx - 1
             
-            # Step 1: Move current course to temp
-            # Actually, just move the other course to temp, then current to new, then other to old
+            # Step 1: Move other course to temp
             other_course.order_index = temp_index
             db.flush() # Send to DB but don't commit yet
             
-            # Now we can update current course (setattr will do it later, but let's be explicit for index)
+            # Now we can update current course
             course.order_index = new_index
             db.flush()
             

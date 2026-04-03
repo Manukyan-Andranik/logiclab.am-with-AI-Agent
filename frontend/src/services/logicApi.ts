@@ -1,3 +1,5 @@
+import { BASE_URL } from '@/api/client';
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -15,7 +17,8 @@ export interface ChatResponse {
   learning_path?: string[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Logic API is currently on /logic/chat which is matched by FastAPI root_path stripping
+const API_BASE_URL = BASE_URL.replace('/api', '');
 
 export const logicApi = {
   chat: async (message: string, history: Message[]): Promise<ChatResponse> => {
