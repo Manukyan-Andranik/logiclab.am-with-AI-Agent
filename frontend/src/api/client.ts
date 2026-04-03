@@ -45,6 +45,11 @@ export const apiClient = async <T>(endpoint: string, options: FetchOptions = {})
     throw new Error(typeof message === 'object' ? JSON.stringify(message) : message);
   }
 
+  // Handle 204 No Content responses (e.g., DELETE operations)
+  if (response.status === 204) {
+    return undefined as unknown as T;
+  }
+
   return response.json() as Promise<T>;
 };
 

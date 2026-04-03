@@ -5,7 +5,8 @@ import {
   assignChapterToStudent,
   getStudentLessonAccess,
   grantLessonAccess,
-  revokeLessonAccess
+  revokeLessonAccess,
+  deleteStudent
 } from "@/api/admin";
 import { getCourseCurriculum } from "@/api/courses";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,10 +19,19 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { BookOpen, GraduationCap, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from "lucide-react";
+import { BookOpen, GraduationCap, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -30,6 +40,8 @@ const AdminStudents = () => {
   const { toast } = useToast();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isProgressOpen, setIsProgressOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: students, isLoading } = useQuery({
     queryKey: ["admin-students"],
@@ -83,6 +95,26 @@ const AdminStudents = () => {
       refetchAccess();
       toast({ title: "Success", description: "Access revoked." });
     },
+  });
+
+  const deleteStudentMutation = useMutation({
+    mutationFn: (studentId: number) => deleteStudent(studentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      setIsDeleteDialogOpen(false);
+      setStudentToDelete(null);
+      toast({ 
+        title: "Success", 
+        description: "Student and all related data have been deleted." 
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete student",
+        variant: "destructive"
+      });
+    }
   });
 
   const handleManageProgress = (student: any) => {
@@ -157,9 +189,26 @@ const AdminStudents = () => {
                   </Badge>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <Button variant="outline" size="sm" onClick={() => handleManageProgress(student)}>
-                    Manage Student
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleManageProgress(student)}
+                    >
+                      Manage Student
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                      onClick={() => {
+                        setStudentToDelete(student);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -280,6 +329,41 @@ const AdminStudents = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Student Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete Student</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="space-y-3 text-foreground">
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{studentToDelete?.user?.first_name} {studentToDelete?.user?.last_name}</strong>?
+            </AlertDialogDescription>
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+              <p className="font-semibold mb-1">⚠️ This action cannot be undone. The following will be deleted:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Student account and profile</li>
+                <li>All course registrations</li>
+                <li>All enrollments and progress</li>
+                <li>All projects</li>
+                <li>All certificates</li>
+                <li>User account</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <AlertDialogCancel className="flex-1">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteStudentMutation.mutate(studentToDelete.id)}
+              disabled={deleteStudentMutation.isPending}
+              className="flex-1 bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleteStudentMutation.isPending ? "Deleting..." : "Delete Student"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

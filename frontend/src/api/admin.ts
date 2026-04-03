@@ -111,3 +111,16 @@ export const assignChapterToStudent = async (studentId: number, chapterId: numbe
     method: 'POST'
   });
 };
+
+// Student and Registration deletion
+export const deleteStudent = async (studentId: number): Promise<void> => {
+  return apiClient(`/admin/students/${studentId}`, {
+    method: 'DELETE'
+  });
+};
+
+export const deleteRegistration = async (registrationId: number): Promise<void> => {
+  return apiClient(`/admin/registrations/${registrationId}`, {
+    method: 'DELETE'
+  });
+};

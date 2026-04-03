@@ -10,7 +10,8 @@ from ...core.email import email_service
 from ...core.security import get_password_hash
 from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
-    Lesson, Chapter, Course, EmailLog, Instructor, Project
+    Lesson, Chapter, Course, EmailLog, Instructor, Project,
+    Enrollment, SuccessStory, Certificate
 )
 from ...schemas.schemas import (
     StudentResponse, StudentUpdate, UserRole,
@@ -291,33 +292,42 @@ async def delete_student_admin(
     current_admin = Depends(get_current_admin)
 ):
     """Delete student and their user account (Admin only)"""
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Student not found"
-        )
-    
-    user_id = student.user_id
-    
-    # Delete related records to avoid foreign key violations
-    db.query(Registration).filter(Registration.student_id == student_id).delete()
-    db.query(Enrollment).filter(Enrollment.student_id == student_id).delete()
-    db.query(Project).filter(Project.student_id == student_id).delete()
-    db.query(SuccessStory).filter(SuccessStory.student_id == student_id).delete()
-    db.query(Certificate).filter(Certificate.student_id == student_id).delete()
-    db.query(MaterialAccess).filter(MaterialAccess.student_id == student_id).delete()
+    try:
+        student = db.query(Student).filter(Student.id == student_id).first()
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Student not found"
+            )
+        
+        user_id = student.user_id
+        
+        # Delete related records to avoid foreign key violations
+        # Order matters! Delete from tables with foreign keys first
+        db.query(Registration).filter(Registration.student_id == student_id).delete(synchronize_session=False)
+        db.query(MaterialAccess).filter(MaterialAccess.student_id == student_id).delete(synchronize_session=False)
+        db.query(Enrollment).filter(Enrollment.student_id == student_id).delete(synchronize_session=False)
+        db.query(Project).filter(Project.student_id == student_id).delete(synchronize_session=False)
+        db.query(SuccessStory).filter(SuccessStory.student_id == student_id).delete(synchronize_session=False)
+        db.query(Certificate).filter(Certificate.student_id == student_id).delete(synchronize_session=False)
 
-    db.delete(student)
-    
-    # Also delete the user account
-    if user_id:
-        user = db.query(UserPersonal).filter(UserPersonal.id == user_id).first()
-        if user:
-            db.delete(user)
-            
-    db.commit()
-    return None
+        # Finally delete the student record
+        db.delete(student)
+        
+        # Also delete the user account
+        if user_id:
+            user = db.query(UserPersonal).filter(UserPersonal.id == user_id).first()
+            if user:
+                db.delete(user)
+        
+        db.commit()
+        return None
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete student: {str(e)}"
+        )
 
 @router.patch("/students/{student_id}/progress")
 async def update_student_progress_admin(
@@ -584,19 +594,28 @@ async def delete_registration_admin(
     current_admin = Depends(get_current_admin)
 ):
     """Delete registration (Admin only)"""
-    registration = db.query(Registration).filter(
-        Registration.id == registration_id
-    ).first()
-    
-    if not registration:
+    try:
+        registration = db.query(Registration).filter(
+            Registration.id == registration_id
+        ).first()
+        
+        if not registration:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Registration not found"
+            )
+        
+        db.delete(registration)
+        db.commit()
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Registration not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete registration: {str(e)}"
         )
-    
-    db.delete(registration)
-    db.commit()
-    return None
 
 @router.get("/registrations/{registration_id}/email-logs")
 async def get_registration_email_logs_admin(

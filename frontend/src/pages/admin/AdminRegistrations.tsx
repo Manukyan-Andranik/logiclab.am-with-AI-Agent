@@ -1,15 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getRegistrations, updateRegistrationStatus } from "@/api/admin";
+import { getRegistrations, updateRegistrationStatus, deleteRegistration } from "@/api/admin";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 // import { Button } from "@/components/ui/button";
 import Button from "@/components/ui/Button";
-import { Check, X, Clock, Eye } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Check, X, Clock, Eye, Trash2 } from "lucide-react";
 import { getLocalizedContent } from "@/lib/localization";
+import { useState } from "react";
 
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [registrationToDelete, setRegistrationToDelete] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: registrationsResponse, isLoading } = useQuery({
     queryKey: ["admin-registrations"],
@@ -24,6 +36,26 @@ const AdminRegistrations = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-registrations"] });
       toast({ title: "Success", description: "Registration status updated." });
     },
+  });
+
+  const deleteRegistrationMutation = useMutation({
+    mutationFn: (registrationId: number) => deleteRegistration(registrationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-registrations"] });
+      setIsDeleteDialogOpen(false);
+      setRegistrationToDelete(null);
+      toast({
+        title: "Success",
+        description: "Registration has been deleted."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete registration",
+        variant: "destructive"
+      });
+    }
   });
 
   if (isLoading) return <div className="animate-pulse space-y-4 text-foreground"><div className="h-12 bg-secondary rounded-lg w-full" /><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
@@ -92,6 +124,17 @@ const AdminRegistrations = () => {
                     <Button size="icon" variant="ghost" className="h-8 w-8">
                       <Eye size={14} />
                     </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setRegistrationToDelete(reg);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -99,6 +142,34 @@ const AdminRegistrations = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Delete Registration Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Delete Registration</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="space-y-3 text-foreground">
+            <AlertDialogDescription>
+              Are you sure you want to delete the registration for <strong>{registrationToDelete?.student?.user?.first_name} {registrationToDelete?.student?.user?.last_name}</strong> in <strong>{getLocalizedContent(registrationToDelete?.course?.title)}</strong>?
+            </AlertDialogDescription>
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+              <p className="font-semibold mb-1">⚠️ This action cannot be undone.</p>
+              <p className="text-xs">The registration record will be permanently deleted.</p>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <AlertDialogCancel className="flex-1">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteRegistrationMutation.mutate(registrationToDelete.id)}
+              disabled={deleteRegistrationMutation.isPending}
+              className="flex-1 bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deleteRegistrationMutation.isPending ? "Deleting..." : "Delete Registration"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
