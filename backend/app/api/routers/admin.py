@@ -11,7 +11,7 @@ from ...core.security import get_password_hash
 from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
     Lesson, Chapter, Course, EmailLog, Instructor, Project,
-    Enrollment, SuccessStory, Certificate
+    Enrollment, Certificate
 )
 from ...schemas.schemas import (
     StudentResponse, StudentUpdate, UserRole,
@@ -308,7 +308,6 @@ async def delete_student_admin(
         db.query(MaterialAccess).filter(MaterialAccess.student_id == student_id).delete(synchronize_session=False)
         db.query(Enrollment).filter(Enrollment.student_id == student_id).delete(synchronize_session=False)
         db.query(Project).filter(Project.student_id == student_id).delete(synchronize_session=False)
-        db.query(SuccessStory).filter(SuccessStory.student_id == student_id).delete(synchronize_session=False)
         db.query(Certificate).filter(Certificate.student_id == student_id).delete(synchronize_session=False)
 
         # Finally delete the student record

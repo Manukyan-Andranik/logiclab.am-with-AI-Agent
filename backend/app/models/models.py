@@ -67,7 +67,6 @@ class Student(Base):
     registrations = relationship("Registration", back_populates="student")
     material_access = relationship("MaterialAccess", back_populates="student")
     projects = relationship("Project", back_populates="student")
-    success_stories = relationship("SuccessStory", back_populates="student")
 
 
 class Instructor(Base):
@@ -112,7 +111,6 @@ class Course(Base):
     chapters = relationship("Chapter", back_populates="course", cascade="all, delete-orphan")
     registrations = relationship("Registration", back_populates="course")
     projects = relationship("Project", back_populates="course")
-    success_stories = relationship("SuccessStory", back_populates="course")
     
 class CourseInstructor(Base):
     __tablename__ = "course_instructors"
@@ -208,6 +206,7 @@ class Project(Base):
     course_id = Column(Integer, ForeignKey("courses.id"))
     student_id = Column(Integer, ForeignKey("students.id"))
     title = Column(JSON, nullable=False)  # {en, ru, hy}
+    subtitle = Column(JSON, nullable=True)  # {en, ru, hy}
     description = Column(JSON, nullable=False)  # {en, ru, hy}
     image_urls = Column(JSON, default=[])
     links = Column(JSON, default={})  # {github, web, colab}
@@ -221,22 +220,23 @@ class Project(Base):
     student = relationship("Student", back_populates="projects")
 
 
-class SuccessStory(Base):
-    __tablename__ = "success_stories"
+class DailyLife(Base):
+    """
+    Daily Life Story model.
+    Displays inspiring daily life stories and achievements.
+    Used in the "Daily Life" section on the home page.
+    """
+    __tablename__ = "daily_life"
     
     id = Column(Integer, primary_key=True, index=True)
-    course_id = Column(Integer, ForeignKey("courses.id"))
-    student_id = Column(Integer, ForeignKey("students.id"))
-    title = Column(JSON, nullable=False)  # {en, ru, hy}
-    content = Column(JSON, nullable=False)  # {en, ru, hy}
-    image_urls = Column(JSON, default=[])
-    published_date = Column(DateTime, default=datetime.utcnow)
-    is_published = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    course = relationship("Course", back_populates="success_stories")
-    student = relationship("Student", back_populates="success_stories")
+    title = Column(JSON, nullable=False)  # {en, ru, hy} - Story title
+    subtitle = Column(JSON, nullable=True)  # {en, ru, hy} - Story subtitle
+    description = Column(JSON, nullable=False)  # {en, ru, hy} - Story description/narrative
+    image_urls = Column(JSON, default=[])  # List of image URLs
+    video_url = Column(String(500), nullable=True)  # Optional video URL
+    published_date = Column(DateTime, default=datetime.utcnow)  # When story was published
+    is_published = Column(Boolean, default=False)  # Admin can control visibility
+    created_at = Column(DateTime, default=datetime.utcnow)  # When story was created
 
 
 class EmailLog(Base):

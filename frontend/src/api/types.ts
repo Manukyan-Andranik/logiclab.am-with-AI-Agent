@@ -74,6 +74,7 @@ export type Instructor = {
 export type Project = {
   id: number;
   title: LocalizedText;
+  subtitle?: LocalizedText;
   description: LocalizedText;
   image_urls: string[];
   course_id: number;
@@ -83,20 +84,18 @@ export type Project = {
   student?: Student;
   course?: Course;
   links?: Record<string, string>;
-
 };
 
-export type SuccessStory = {
+export type DailyLife = {
   id: number;
   title: LocalizedText;
-  content: LocalizedText;
+  subtitle?: LocalizedText;
+  description: LocalizedText;
   image_urls: string[];
-  course_id: number;
-  student_id: number;
+  video_url?: string;
+  published_date: string;
   is_published: boolean;
-  is_featured: boolean;
-  student?: any;
-  course?: any;
+  created_at: string;
 };
 
 export type LoginResponse = {

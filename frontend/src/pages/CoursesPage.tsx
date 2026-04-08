@@ -17,6 +17,7 @@ import VideoHero from "@/components/VideoHero";
 import { useQuery } from "@tanstack/react-query";
 import { getCourses } from "@/api/courses";
 import { getLocalizedContent } from "@/lib/localization";
+import { getMediaUrl } from "@/api/client";
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -32,7 +33,7 @@ const iconMap: Record<string, LucideIcon> = {
 const coursesVideo = "https://res.cloudinary.com/dujmbcltl/video/upload/v1772482244/hero-video_mqafze.mp4"
 
 const CoursesPage = () => {
-  const { data: coursesData, isLoading } = useQuery({
+  const { data: courses, isLoading } = useQuery({
     queryKey: ["courses"],
     queryFn: () => getCourses(true),
   });
@@ -50,7 +51,6 @@ const CoursesPage = () => {
     );
   }
 
-  const courses = coursesData; //?.filter((c) => c.category === "course") || [];
 
   return (
     <div className="min-h-screen bg-black selection:bg-primary selection:text-black">
@@ -82,9 +82,9 @@ const CoursesPage = () => {
                 </span>
               </div>
               <h2 className="text-[var(--primary-alt)] font-display text-4xl sm:text-5xl lg:text-6xl font-black  uppercase tracking-tighter leading-none">
-                ՊԱՀԱՆՋՎԱԾ <br />
+                ԲՈԼՈՐ <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--white)] to-[var(--gray-light)]">
-                  ՈՒՂՂՈՒԹՅՈՒՆՆԵՐ
+                  ԴԱՍԸՆԹԱՑՆԵՐԸ
                 </span>
               </h2>
             </div>
@@ -112,7 +112,7 @@ const CoursesPage = () => {
                     <div className="flex items-start justify-between mb-8">
                       <div className="w-14 h-14 rounded-2xl bg-[var(--gray-dark)] flex items-center justify-center group-hover:bg-[var(--primary)] transition-colors text-[var(--primary)] group-hover:text-[var(--black)]">
                         {course.icon_url ? (
-                          <img src={course.icon_url} alt="" className="w-15 h-15" />
+                          <img src={getMediaUrl(course.icon_url)} alt="" className="w-15 h-15" />
                         ) : (
                           <Icon className="w-7 h-7" />
                         )}

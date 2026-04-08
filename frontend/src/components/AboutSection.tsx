@@ -35,32 +35,14 @@ const aboutText = "«Logic Lab»-ը կրթական և տեխնոլոգիական
 const locationText = "Վանաձոր, Հայաստան";
 
 const AboutSection = () => {
+  // Check if content exists before rendering
+  if (!aboutText && !locationText && features.length === 0) {
+    return null;
+  }
+
   return (
     <section id="about" className="py-24">
       <div className="container mx-auto px-6">
-        {/* Stats Bar - ACA style */}
-        {/* <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-20"
-        >
-          {stats.map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="rounded-2xl bg-[var(--gray-dark)] border border-[var(--black)] p-6 text-center shadow-lg"
-            >
-              <stat.icon className="w-6 h-6 text-[var(--primary-alt)] mx-auto mb-3" />
-              <div className="font-display text-3xl sm:text-4xl font-bold text-[var(--primary)] mb-1">{stat.value}</div>
-              <div className="text-sm text-[var(--gray-light)] opacity-60 font-bold uppercase tracking-widest">{stat.label}</div>
-            </motion.div>
-          ))}
-        </motion.div> */}
-
         {/* Why Choose Us */}
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <motion.div
@@ -68,40 +50,50 @@ const AboutSection = () => {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <span className="text-[var(--primary-alt)] font-display font-bold text-sm uppercase tracking-widest mb-3 block">
+            <span className="text-[var(--primary-alt)] font-display font-bold text-base uppercase tracking-widest mb-4 block">
               Ինչո՞ւ ընտրել հենց
             </span>
-            <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 text-[var(--white)] uppercase tracking-tighter leading-tight">
-              Logic <span className="text-[var(--primary)]">Lab-ը</span>?
+            <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 text-[var(--white)] uppercase tracking-tighter leading-tight">
+              Logic <span className="text-[#FFD700]">Lab-ը</span>?
             </h2>
-            <p className="text-[var(--gray-light)] text-lg mb-4 leading-relaxed opacity-90">
-              {aboutText}
-            </p>
-            <p className="text-[var(--primary-alt)] text-lg font-black uppercase tracking-widest">
-              {locationText}
-            </p>
+            {aboutText && (
+              <p className="text-[var(--gray-light)] text-xl mb-6 leading-relaxed opacity-90">
+                {aboutText}
+              </p>
+            )}
+            {locationText && (
+              <p className="text-[var(--primary-alt)] text-xl font-black uppercase tracking-widest">
+                {locationText}
+              </p>
+            )}
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="grid grid-cols-2 gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 lg:gap-6"
           >
-            {features.map((f, i) => (
+            {features && features.length > 0 && features.map((f, i) => (
               <motion.div
                 key={f.title}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="glass-card rounded-2xl p-5 border-2 border-[var(--gray-dark)] hover:border-[var(--primary-alt)] transition-all"
+                className="glass-card rounded-xl sm:rounded-2xl p-5 sm:p-6 lg:p-7 border-2 border-[var(--gray-dark)] hover:border-[#FFC000] transition-all h-full"
               >
-                <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center mb-3 text-[var(--primary-alt)]">
-                  <f.icon className="w-5 h-5" />
-                </div>
-                <h3 className="font-display font-black text-xs mb-1 text-[var(--white)] uppercase tracking-tighter">{f.title}</h3>
-                <p className="text-[10px] text-[var(--gray-light)] opacity-60 font-medium leading-tight">{f.desc}</p>
+                {f.icon && (
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-lg sm:rounded-xl bg-[#FFD700] flex items-center justify-center mb-3 sm:mb-4 text-[var(--black)] flex-shrink-0">
+                    <f.icon className="w-6 h-6 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+                  </div>
+                )}
+                {f.title && (
+                  <h3 className="font-display font-black text-sm sm:text-base lg:text-lg mb-2 text-[var(--white)] uppercase tracking-tighter leading-tight">{f.title}</h3>
+                )}
+                {f.desc && (
+                  <p className="text-xs sm:text-sm lg:text-base text-[var(--gray-light)] opacity-70 font-medium leading-relaxed">{f.desc}</p>
+                )}
               </motion.div>
             ))}
           </motion.div>

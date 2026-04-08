@@ -24,9 +24,10 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: list = [
         "https://logiclab.am", 
-        "https://logiclab-am-with-ai-agent.onrender.com", 
+        "https://www.logiclab.am",
         "http://localhost:8080", 
         "http://192.168.1.3:8080", 
+        "http://localhost:8080",
         "http://127.0.0.1:8080", 
         "http://192.168.1.6:8080",
         "http://localhost:3000",

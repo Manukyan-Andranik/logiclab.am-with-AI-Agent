@@ -42,6 +42,22 @@ const TraditionalNavbar: React.FC = () => {
     return () => { document.body.style.overflow = 'auto'; };
   }, [isOpen]);
 
+  // Handle hash-based anchor scrolling
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      const element = document.getElementById(hash);
+      if (element) {
+        setTimeout(() => {
+          window.scrollTo({
+            top: element.offsetTop - 80,
+            behavior: 'smooth'
+          });
+        }, 100);
+      }
+    }
+  }, [location.pathname, location.hash]);
+
   const navLinks = [
     { name: 'Գլխավոր', path: '/' },
     { name: 'Դասընթացներ', path: '/courses' },
@@ -61,14 +77,24 @@ const TraditionalNavbar: React.FC = () => {
 
   const handleLinkClick = (path: string) => {
     setIsOpen(false);
-    if (location.pathname === '/' && path.includes('#')) {
-      const element = document.getElementById(path.split('#')[1]);
-      if (element) {
-        window.scrollTo({
-          top: element.offsetTop - 80,
-          behavior: 'smooth'
-        });
+    
+    // Handle anchor scrolling for any path with a hash
+    if (path.includes('#')) {
+      const sectionId = path.split('#')[1];
+      
+      // If we're already on the target page, scroll immediately
+      if (location.pathname === path.split('#')[0]) {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          setTimeout(() => {
+            window.scrollTo({
+              top: element.offsetTop - 80,
+              behavior: 'smooth'
+            });
+          }, 100);
+        }
       }
+      // If navigating to a different page, the scroll will happen in useEffect
     }
   };
 
@@ -101,9 +127,14 @@ const TraditionalNavbar: React.FC = () => {
                 {link.name}
               </Link>
             ))}
-            <Link to="/register" className="px-6 py-3 rounded-xl bg-[#FFD700] text-[#222] text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]">
+
+            <Link to="/register" className="px-6 py-3 rounded-xl bg-[#FFD700] hover:bg-[#FFC000] text-[#222] text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]">
               Գրանցվել
             </Link>
+
+            {/* <Link to="/register" className="px-6 py-3 rounded-xl bg-[#FFD700] text-[#222] text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]">
+              Գրանցվել
+            </Link> */}
           </div>
 
           <button className="md:hidden text-white p-2" onClick={() => setIsOpen(true)}>

@@ -12,23 +12,26 @@ import { useToast } from "@/hooks/use-toast";
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams();
-  const preselectedCourse = searchParams.get("course") || "";
+  const preselectedCourseParam = searchParams.get("course") || "";
   const { toast } = useToast();
+
+  const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
+    queryKey: ["courses"],
+    queryFn: () => getCourses(),
+  });
+
+  // Find course ID from slug
+  const preselectedCourseId = coursesData?.find(c => c.slug === preselectedCourseParam)?.id?.toString() || "";
 
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
-    course: preselectedCourse,
+    course: preselectedCourseId,
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
-
-  const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
-    queryKey: ["courses"],
-    queryFn: () => getCourses(),
-  });
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, string | number>) => registerStudent(data),
@@ -104,9 +107,9 @@ return (
           animate={{ opacity: 1, y: 0 }}
           className="glass-card rounded-2xl p-8 sm:p-10 space-y-6 bg-black border border-white/20"
         >
-            <h2 className="font-display text-2xl font-bold text-white mb-2">
-              Գրանցման ձև
-            </h2>
+                    <h2 className="font-display text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--primary-alt)] uppercase tracking-tighter">
+            Գրանցման <span className="text-[var(--white)]">ձև</span>
+          </h2>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>

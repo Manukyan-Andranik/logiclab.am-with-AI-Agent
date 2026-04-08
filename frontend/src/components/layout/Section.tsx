@@ -11,7 +11,7 @@ const Section: React.FC<SectionProps> = ({ id, className = '', children, dark = 
   return (
     <section 
       id={id} 
-      className={`py-[100px] md:py-[120px] ${dark ? 'bg-[var(--gray-dark)]' : 'bg-[var(--black)]'} ${className}`}
+      className={`py-[100px] md:py-[60px] ${dark ? 'bg-[var(--gray-dark)]' : 'bg-[var(--black)]'} ${className}`}
       style={{ transition: 'var(--transition)' }}
     >
       {children}

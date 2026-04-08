@@ -60,6 +60,7 @@ export const uploadFile = async (file: File): Promise<{ url: string }> => {
   return apiClient<{ url: string }>('/upload', {
     method: 'POST',
     body: formData,
+    headers: {}, // Explicitly empty headers to let browser set boundary for FormData
   });
 };
 

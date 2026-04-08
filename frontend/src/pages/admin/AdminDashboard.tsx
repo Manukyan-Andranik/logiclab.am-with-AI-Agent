@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDashboardStats, getVisitStatsSummary } from "@/api/admin";
+import { getDashboardStats, getVisitStatsSummary, getDailyLifeStats } from "@/api/admin";
 import { 
   Users, 
   BookOpen, 
@@ -12,12 +12,17 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Briefcase
+  Briefcase,
+  Heart,
+  ArrowRight
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
+import Button from "@/components/ui/Button";
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const { data: stats, isLoading: isStatsLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: getDashboardStats,
@@ -26,6 +31,11 @@ const AdminDashboard = () => {
   const { data: visits, isLoading: isVisitsLoading } = useQuery({
     queryKey: ["visit-stats"],
     queryFn: getVisitStatsSummary,
+  });
+
+  const { data: dailyLifeStats, isLoading: isDailyLifeLoading } = useQuery({
+    queryKey: ["daily-life-stats"],
+    queryFn: getDailyLifeStats,
   });
 
   if (isStatsLoading || isVisitsLoading) {
@@ -47,6 +57,7 @@ const AdminDashboard = () => {
     { label: "Pending Regs", value: stats?.registrations?.pending || 0, icon: UserCheck, color: "text-amber-400" },
     { label: "Instructors", value: stats?.total_instructors || 0, icon: UserCircle, color: "text-blue-400" },
     { label: "ML Projects", value: stats?.total_ml_projects || 0, icon: Rocket, color: "text-purple-400" },
+    { label: "Daily Life", value: dailyLifeStats?.total || 0, icon: Heart, color: "text-pink-400" },
     { label: "Total Visits", value: visits?.total_visits || 0, icon: TrendingUp, color: "text-primary" },
   ];
 
@@ -137,6 +148,38 @@ const AdminDashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Daily Life Management */}
+      <Card className="border border-border/50 shadow-sm bg-card" hoverable={false}>
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border/50">
+          <h3 className="font-bold flex items-center gap-2">
+            <Heart size={18} className="text-pink-400" />
+            Daily Life Stories Management
+          </h3>
+          <Button 
+            size="sm"
+            onClick={() => navigate('/admin/daily-life')}
+            className="gap-2"
+          >
+            <span>Manage Stories</span>
+            <ArrowRight size={16} />
+          </Button>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="p-4 rounded-lg bg-pink-500/5 border border-pink-500/10 text-center">
+            <div className="text-2xl font-bold text-pink-500 mb-1">{dailyLifeStats?.total || 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Total Stories</div>
+          </div>
+          <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-center">
+            <div className="text-2xl font-bold text-emerald-500 mb-1">{dailyLifeStats?.published || 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Published</div>
+          </div>
+          <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+            <div className="text-2xl font-bold text-amber-500 mb-1">{dailyLifeStats?.draft || 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Drafts</div>
+          </div>
+        </div>
+      </Card>
 
       {/* Course Breakdown Table */}
       <Card className="border border-border/50 shadow-sm bg-card overflow-hidden" hoverable={false}>

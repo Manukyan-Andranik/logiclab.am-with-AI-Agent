@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, BookOpen, UserCheck, MessageSquare, LogOut, Settings, Briefcase } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, UserCheck, MessageSquare, LogOut, Settings, Briefcase, Heart } from "lucide-react";
 import { useEffect } from "react";
 import { ModeToggle } from "@/components/mode-toggle";
 
@@ -22,6 +22,7 @@ const AdminLayout = () => {
     { label: "Courses", href: "/admin/courses", icon: BookOpen },
     { label: "Students", href: "/admin/students", icon: Users },
     { label: "Projects", href: "/admin/projects", icon: Briefcase },
+    { label: "Daily Life", href: "/admin/daily-life", icon: Heart },
     { label: "Instructors", href: "/admin/instructors", icon: Users },
     { label: "Messages", href: "/admin/messages", icon: MessageSquare },
   ];

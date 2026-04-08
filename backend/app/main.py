@@ -20,7 +20,7 @@ from .api.endpoints import (
     registrations,
     materials,
     projects,
-    success_stories,
+    daily_life,
     visits,
     contact_messages,
     certificates,
@@ -111,7 +111,7 @@ app.include_router(students.router, prefix="/students", tags=["Students"])
 app.include_router(registrations.router, prefix="/registrations", tags=["Registrations"])
 app.include_router(materials.router, prefix="/materials", tags=["Materials"])
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
-app.include_router(success_stories.router, prefix="/success-stories", tags=["Success Stories"])
+app.include_router(daily_life.router, prefix="/daily-life", tags=["Daily Life"])
 app.include_router(visits.router, tags=["Visits"])
 app.include_router(contact_messages.router, prefix="/contact-messages", tags=["Contact Messages"])
 app.include_router(certificates.router, prefix="/certificates", tags=["Certificates"])

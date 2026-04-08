@@ -49,6 +49,16 @@ export const getVisitStatsSummary = async (): Promise<Record<string, any>> => {
   return apiClient('/visits/stats/summary');
 };
 
+export const getDailyLifeStats = async (): Promise<{ total: number; published: number; draft: number }> => {
+  const stories = await apiClient<any[]>('/daily-life/admin/list', { params: { limit: 1000 } });
+  const published = (stories as any[]).filter((s: any) => s.is_published).length;
+  return {
+    total: (stories as any[]).length,
+    published,
+    draft: (stories as any[]).length - published
+  };
+};
+
 // Lesson Materials management
 export const getLessonMaterials = async (lessonId: number): Promise<LessonMaterial> => {
   return apiClient<LessonMaterial>(`/materials/lesson/${lessonId}`);

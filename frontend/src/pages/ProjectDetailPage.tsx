@@ -122,6 +122,11 @@ const ProjectDetailPage = () => {
           <h1 className="text-3xl font-black uppercase tracking-tighter">
             {getLocalizedContent(project.title)}
           </h1>
+          {project.subtitle && (
+            <p className="text-xl font-bold text-primary uppercase tracking-tight">
+              {getLocalizedContent(project.subtitle)}
+            </p>
+          )}
           <p className="text-[var(--gray-light)]">{getLocalizedContent(project.description)}</p>
 
           <div className="flex flex-wrap gap-2">

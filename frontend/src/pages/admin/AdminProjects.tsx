@@ -13,6 +13,7 @@ import {
 import { getCourses } from "@/api/courses";
 import { getAdminStudents } from "@/api/admin";
 import { Project } from "@/api/types";
+import { getMediaUrl } from "@/api/client";
 import {
   Table,
   TableBody,
@@ -73,6 +74,7 @@ const AdminProjects = () => {
     course_id: 0,
     student_id: 0,
     title: { en: "", ru: "", hy: "" },
+    subtitle: { en: "", ru: "", hy: "" },
     description: { en: "", ru: "", hy: "" },
     image_urls: [],
     links: { github: "", web: "" },
@@ -148,6 +150,7 @@ const AdminProjects = () => {
         course_id: project.course_id,
         student_id: project.student_id,
         title: project.title,
+        subtitle: project.subtitle || { en: "", ru: "", hy: "" },
         description: project.description,
         image_urls: project.image_urls || [],
         links: project.links || { github: "", web: "" },
@@ -160,6 +163,7 @@ const AdminProjects = () => {
         course_id: 0,
         student_id: 0,
         title: { en: "", ru: "", hy: "" },
+        subtitle: { en: "", ru: "", hy: "" },
         description: { en: "", ru: "", hy: "" },
         image_urls: [],
         links: { github: "", web: "" },
@@ -256,7 +260,7 @@ const AdminProjects = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center overflow-hidden border">
                       {project.image_urls?.[0] ? (
-                        <img src={project.image_urls[0]} alt="" className="w-full h-full object-cover" />
+                        <img src={getMediaUrl(project.image_urls[0])} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <ImageIcon size={20} className="text-muted-foreground" />
                       )}
@@ -388,6 +392,17 @@ const AdminProjects = () => {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label>Subtitle ({lang.toUpperCase()})</Label>
+                    <Input
+                      value={formData.subtitle?.[lang] || ""}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        subtitle: { ...formData.subtitle, [lang]: e.target.value }
+                      })}
+                      placeholder={`Project subtitle in ${lang}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Description ({lang.toUpperCase()})</Label>
                     <Textarea
                       value={formData.description[lang] || ""}
@@ -434,7 +449,7 @@ const AdminProjects = () => {
               <div className="grid grid-cols-4 gap-4">
                 {formData.image_urls?.map((url, index) => (
                   <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <img src={getMediaUrl(url)} alt="" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}

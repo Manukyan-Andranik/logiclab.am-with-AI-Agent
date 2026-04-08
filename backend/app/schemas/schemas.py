@@ -29,7 +29,7 @@ class EnrollmentStatusEnum(str, Enum):
 
 # Multilingual Text
 class MultilingualText(BaseModel):
-    en: str
+    en: Optional[str] = None
     ru: Optional[str] = None
     hy: Optional[str] = None
 
@@ -460,6 +460,7 @@ class EnrollmentListResponse(BaseModel):
 # Project Schemas
 class ProjectBase(BaseModel):
     title: MultilingualText
+    subtitle: Optional[MultilingualText] = None
     description: MultilingualText
     image_urls: Optional[List[str]] = []
     links: Optional[Dict[str, str]] = {}
@@ -472,6 +473,7 @@ class ProjectCreate(ProjectBase):
 
 class ProjectUpdate(BaseModel):
     title: Optional[MultilingualText] = None
+    subtitle: Optional[MultilingualText] = None
     description: Optional[MultilingualText] = None
     image_urls: Optional[List[str]] = None
     links: Optional[Dict[str, str]] = None
@@ -483,6 +485,7 @@ class ProjectResponse(BaseModel):
     course_id: int
     student_id: int
     title: Dict[str, str]
+    subtitle: Optional[Dict[str, str]] = None
     description: Dict[str, str]
     image_urls: List[str]
     links: Dict[str, str]
@@ -495,34 +498,35 @@ class ProjectResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Success Story Schemas
-class SuccessStoryBase(BaseModel):
+# Daily Life Schemas
+class DailyLifeBase(BaseModel):
     title: MultilingualText
-    content: MultilingualText
+    subtitle: Optional[MultilingualText] = None
+    description: MultilingualText
     image_urls: Optional[List[str]] = []
+    video_url: Optional[str] = None
 
-class SuccessStoryCreate(SuccessStoryBase):
-    course_id: int
-    student_id: int
+class DailyLifeCreate(DailyLifeBase):
     is_published: Optional[bool] = False
 
-class SuccessStoryUpdate(BaseModel):
+class DailyLifeUpdate(BaseModel):
     title: Optional[MultilingualText] = None
-    content: Optional[MultilingualText] = None
+    subtitle: Optional[MultilingualText] = None
+    description: Optional[MultilingualText] = None
     image_urls: Optional[List[str]] = None
+    video_url: Optional[str] = None
     is_published: Optional[bool] = None
 
-class SuccessStoryResponse(BaseModel):
+class DailyLifeResponse(BaseModel):
     id: int
-    course_id: int
-    student_id: int
     title: Dict[str, str]
-    content: Dict[str, str]
+    subtitle: Optional[Dict[str, str]] = None
+    description: Dict[str, str]
     image_urls: List[str]
+    video_url: Optional[str] = None
     published_date: datetime
     is_published: bool
-    student: StudentResponse
-    course: CourseResponse
+    created_at: datetime
     
     class Config:
         from_attributes = True

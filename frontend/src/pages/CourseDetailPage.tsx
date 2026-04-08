@@ -17,6 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { getMediaUrl } from "@/api/client";
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -73,7 +74,7 @@ const CourseDetailPage = () => {
     );
   }
 
-  const otherCourses = allCourses?.filter((c) => c.id !== course.id).slice(0, 3) || [];
+  const otherCourses = allCourses ? [...allCourses].filter((c) => c.id !== course.id).sort((a, b) => (b.order_index || 0) - (a.order_index || 0)).slice(0, 3) : [];
   const curriculum = curriculumData?.curriculum || [];
 
   return (
@@ -177,7 +178,7 @@ const CourseDetailPage = () => {
                       <div key={instructor.id} className="flex flex-col gap-6 p-10 rounded-3xl bg-gray-dark border-2 border-black hover:border-primary transition-all">
                         <div className="flex items-center gap-6">
                           <Avatar className="w-20 h-20 border-4 border-black shadow-2xl">
-                            <AvatarImage src={instructor.user.profile_image} alt={instructor.user.first_name} />
+                            <AvatarImage src={getMediaUrl(instructor.user.profile_image)} alt={instructor.user.first_name} />
                             <AvatarFallback className="bg-primary text-black font-black">{instructor.user.first_name[0]}{instructor.user.last_name[0]}</AvatarFallback>
                           </Avatar>
                           <div>
@@ -257,9 +258,10 @@ const CourseDetailPage = () => {
                     <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest mb-2">Ամսական վճար</p>
                     <p className="text-4xl font-black text-white tracking-tighter">{course.monthly_payment.toLocaleString()} <span className="text-sm font-bold opacity-90">AMD</span></p>
                   </div>
+
                   <Link
-                    to={`/register?course=${course.id}`}
-                    className="block w-full bg-primary-alt text-black py-6 rounded-2xl font-black text-base text-center uppercase tracking-[0.2em] hover:bg-primary-alt hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    to={`/register?course=${course.slug}`}
+                    className="block w-full px-6 py-3 rounded-xl bg-[#FFC700] hover:bg-[#FFD000] text-[#222] text-sm font-black uppercase tracking-widest text-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]"
                   >
                     Գրանցվել
                   </Link>
@@ -301,7 +303,7 @@ const CourseDetailPage = () => {
                     <div className="flex items-start justify-between mb-8">
                       <div className="w-14 h-14 rounded-2xl bg-[var(--gray-dark)] flex items-center justify-center group-hover:bg-[var(--primary)] transition-colors text-[var(--primary)] group-hover:text-[var(--black)]">
                         {course.icon_url ? (
-                          <img src={course.icon_url} alt="" className="w-15 h-15" />
+                          <img src={getMediaUrl(course.icon_url)} alt="" className="w-15 h-15" />
                         ) : (
                           <Icon className="w-7 h-7" />
                         )}

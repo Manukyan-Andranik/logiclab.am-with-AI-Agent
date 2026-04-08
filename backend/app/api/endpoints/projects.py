@@ -138,6 +138,7 @@ async def create_project(
         course_id=project_data.course_id,
         student_id=project_data.student_id,
         title=project_data.title.dict(),
+        subtitle=project_data.subtitle.dict() if project_data.subtitle else None,
         description=project_data.description.dict(),
         image_urls=project_data.image_urls or [],
         links=project_data.links or {},
@@ -169,14 +170,17 @@ async def update_project(
     # Update fields
     update_data = project_data.dict(exclude_unset=True)
     
-    # Handle multilingual fields
+    # Handle multilingual fields explicitly to ensure they are dicts
     if 'title' in update_data and update_data['title']:
         update_data['title'] = update_data['title']
+    if 'subtitle' in update_data and update_data['subtitle']:
+        update_data['subtitle'] = update_data['subtitle']
     if 'description' in update_data and update_data['description']:
         update_data['description'] = update_data['description']
     
     for field, value in update_data.items():
-        setattr(project, field, value)
+        if value is not None:
+            setattr(project, field, value)
     
     db.commit()
     db.refresh(project)

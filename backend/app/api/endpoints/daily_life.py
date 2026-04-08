@@ -42,16 +42,18 @@ async def list_all_daily_life_admin(
     
     if is_published is not None:
         query = query.filter(DailyLife.is_published == is_published)
+
     
+    total = query.count()
     stories = query.order_by(
         DailyLife.published_date.desc()
     ).offset(skip).limit(limit).all()
     
     return stories
 
-@router.get("/featured", response_model=List[DailyLifeResponse])
+@router.get("/featured")
 async def get_featured_daily_life(
-    limit: int = 3,
+    limit: int = 10,
     db: Session = Depends(get_db)
 ):
     """Get featured daily life stories for homepage"""
@@ -92,11 +94,14 @@ async def create_daily_life(
     current_admin = Depends(get_current_admin)
 ):
     """Create new daily life story (Admin only)"""
+    
     # Create daily life story
     new_story = DailyLife(
-        title=story_data.title.dict(),
-        description=story_data.description.dict(),
+        title=story_data.title.dict() if hasattr(story_data.title, 'dict') else story_data.title,
+        subtitle=story_data.subtitle.dict() if story_data.subtitle and hasattr(story_data.subtitle, 'dict') else story_data.subtitle,
+        description=story_data.description.dict() if hasattr(story_data.description, 'dict') else story_data.description,
         image_urls=story_data.image_urls or [],
+        video_url=story_data.video_url,
         is_published=story_data.is_published,
         published_date=datetime.utcnow()  # Set published date when story is created
     )
@@ -125,21 +130,9 @@ async def update_daily_life(
     # Update fields
     update_data = story_data.dict(exclude_unset=True)
     
-    # Handle multilingual fields - convert to dict if needed
-    if 'title' in update_data and update_data['title']:
-        if isinstance(update_data['title'], dict):
-            update_data['title'] = update_data['title']
-        else:
-            update_data['title'] = update_data['title'].dict()
-    
-    if 'description' in update_data and update_data['description']:
-        if isinstance(update_data['description'], dict):
-            update_data['description'] = update_data['description']
-        else:
-            update_data['description'] = update_data['description'].dict()
-    
     for field, value in update_data.items():
-        setattr(story, field, value)
+        if value is not None:
+            setattr(story, field, value)
     
     db.commit()
     db.refresh(story)

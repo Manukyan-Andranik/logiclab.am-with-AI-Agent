@@ -6,10 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from "react";
 
 const roles = [
-  { id: 'ml', lines: ['ML', 'ENGINEER'] },
-  { id: 'photography', lines: ['ՊՐՈՖԵՍԻՈՆԱԼ', 'ԼՈւՍԱՆԿԱՐԻՉ'] },
-  { id: '3dsmax', lines: ['3D', 'ԴԻԶԱՅՆԵՐ'] },
-  { id: 'web', lines: ['WEB', 'DEVELOPER'] },
+  { slug: 'ml', lines: ['ML', 'ENGINEER'] },
+  { slug: 'photography', lines: ['ՊՐՈՖԵՍԻՈՆԱԼ', 'ԼՈւՍԱՆԿԱՐԻՉ'] },
+  { slug: '3dsmax', lines: ['3D', 'ԴԻԶԱՅՆԵՐ'] },
+  { slug: 'web', lines: ['WEB', 'DEVELOPER'] },
 ];
 
 function AnimatedRole() {
@@ -32,7 +32,7 @@ function AnimatedRole() {
 
   return (
     <h1
-      onClick={() => navigate(`/courses/${role.id}`)}
+      onClick={() => navigate(`/courses/${role.slug}`)}
       className="text-[var(--white)] text-5xl md:text-6xl lg:text-8xl font-black leading-[0.85] tracking-tighter uppercase transition-all duration-400 cursor-pointer hover:scale-[1.02] active:scale-95 pl-8"
       style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >

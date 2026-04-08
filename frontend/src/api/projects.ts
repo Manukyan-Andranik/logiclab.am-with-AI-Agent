@@ -5,6 +5,7 @@ export interface ProjectCreate {
   course_id: number;
   student_id: number;
   title: { en: string; ru?: string; hy?: string };
+  subtitle?: { en: string; ru?: string; hy?: string };
   description: { en: string; ru?: string; hy?: string };
   image_urls?: string[];
   links?: Record<string, string>;
