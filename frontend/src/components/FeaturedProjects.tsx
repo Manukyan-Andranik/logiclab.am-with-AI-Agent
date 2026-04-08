@@ -4,7 +4,7 @@ import { getFeaturedProjects } from "@/api/projects";
 import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 /* =======================
    DOT INDICATORS
@@ -23,10 +23,11 @@ const DotIndicators = ({
       <button
         key={i}
         onClick={() => onSelect(i)}
-        className={`rounded-full transition-all duration-300 ${i === active
+        className={`rounded-full transition-all duration-300 ${
+          i === active
             ? "bg-gold w-6 h-1"
             : "bg-white/20 w-1.5 h-1.5 hover:bg-white/40"
-          }`}
+        }`}
       />
     ))}
   </div>
@@ -38,11 +39,10 @@ const DotIndicators = ({
 const ProjectCover = ({ project }: { project: any }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
 
   const images =
-    project.image_urls?.length > 0
-      ? project.image_urls
-      : ["/placeholder.svg"];
+    project.image_urls?.length > 0 ? project.image_urls : ["/placeholder.svg"];
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -120,8 +120,9 @@ const ProjectCover = ({ project }: { project: any }) => {
 
           <div className="relative">
             <p
-              className={`text-muted-foreground text-[16px] leading-relaxed transition-all duration-500 ${!expanded ? "line-clamp-4" : ""
-                }`}
+              className={`text-muted-foreground text-[16px] leading-relaxed transition-all duration-500 ${
+                !expanded ? "line-clamp-4" : ""
+              }`}
             >
               {description}
             </p>
@@ -134,10 +135,10 @@ const ProjectCover = ({ project }: { project: any }) => {
 
         {description.length > 150 && (
           <button
-            onClick={() => setExpanded(!expanded)}
+            onClick={() => navigate(`/projects/${project.id}`)}
             className="mt-4 text-gold text-[12px] font-black uppercase tracking-widest hover:opacity-80"
           >
-            {expanded ? "Փակել" : "Կարդալ ավելին"} →
+            Կարդալ ավելին →
           </button>
         )}
       </div>
@@ -181,8 +182,9 @@ const ProjectPreview = ({
       />
 
       <div
-        className={`absolute inset-0 bg-black-solid/60 transition-opacity ${isActive ? "opacity-20" : "group-hover:opacity-40"
-          }`}
+        className={`absolute inset-0 bg-black-solid/60 transition-opacity ${
+          isActive ? "opacity-20" : "group-hover:opacity-40"
+        }`}
       />
 
       <div className="absolute inset-0 p-3 flex items-end">
@@ -224,10 +226,9 @@ const FeaturedProjects = () => {
           className="mb-16"
         >
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--primary-alt)] uppercase tracking-tighter">
-            Ուսանողների <span className="text-[var(--white)]">նախագծերը</span>
+            Ուսանողների <span className="text-[var(--white)]">նախագծերից</span>
           </h2>
         </motion.div>
-
 
         {/* GRID */}
         <div className="grid lg:grid-cols-3 gap-8">

@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str = "QxZqJ3GJQ8X8NEdoS3qr6Zltilw"
 
     # Frontend URL
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://logiclab.am"
 
     # Navigation System Configuration
     # Values: "AGENT" (AI-powered navigation) or "TRADITIONAL" (standard navigation)

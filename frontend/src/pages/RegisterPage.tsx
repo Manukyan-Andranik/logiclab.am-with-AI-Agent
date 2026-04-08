@@ -26,7 +26,7 @@ const RegisterPage = () => {
 
   const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
     queryKey: ["courses"],
-    queryFn: getCourses,
+    queryFn: () => getCourses(),
   });
 
   const preselectedCourseId =
