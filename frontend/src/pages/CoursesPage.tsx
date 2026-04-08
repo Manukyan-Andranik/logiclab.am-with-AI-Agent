@@ -75,12 +75,6 @@ const CoursesPage = () => {
             className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-6"
           >
             <div className="max-w-2xl">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-primary-alt" />
-                <span className="text-primary-alt font-display font-bold text-sm uppercase tracking-[0.3em]">
-                  Մասնագիտացումներ
-                </span>
-              </div>
               <h2 className="text-[var(--primary-alt)] font-display text-4xl sm:text-5xl lg:text-6xl font-black  uppercase tracking-tighter leading-none">
                 ԲՈԼՈՐ <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--white)] to-[var(--gray-light)]">
@@ -94,7 +88,7 @@ const CoursesPage = () => {
             </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8"  id="all">
             {courses.map((course, i) => {
               const Icon = iconMap[course.icon_url || "brain"] || Brain;
               return (

@@ -570,6 +570,7 @@ class MaterialResponse(MaterialBase):
 class MaterialAccessCreate(BaseModel):
     student_id: int
     chapter_id: Optional[int] = None
+    lesson_id: Optional[int] = None
 
 class MaterialAccessResponse(BaseModel):
     id: int
@@ -577,6 +578,7 @@ class MaterialAccessResponse(BaseModel):
     accessed_at: Optional[datetime] = None
     student_id: int
     chapter_id: Optional[int] = None
+    lesson_id: Optional[int] = None
     
     class Config:
         from_attributes = True

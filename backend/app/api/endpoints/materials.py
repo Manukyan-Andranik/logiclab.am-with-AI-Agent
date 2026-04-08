@@ -148,21 +148,21 @@ async def get_all_material_access(
     skip: int = 0,
     limit: int = 100,
     student_id: Optional[int] = None,
-    lesson_id: Optional[int] = None,
+    chapter_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Get all material access records (Admin only)."""
     query = db.query(MaterialAccess).options(
         joinedload(MaterialAccess.student).joinedload(Student.user),
-        joinedload(MaterialAccess.lesson)
+        joinedload(MaterialAccess.chapter)
     )
     
     if student_id:
         query = query.filter(MaterialAccess.student_id == student_id)
     
-    if lesson_id:
-        query = query.filter(MaterialAccess.lesson_id == lesson_id)
+    if chapter_id:
+        query = query.filter(MaterialAccess.chapter_id == chapter_id)
     
     total = query.count()
     accesses = query.order_by(MaterialAccess.granted_at.desc()).offset(skip).limit(limit).all()
@@ -175,30 +175,29 @@ async def grant_material_access(
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Grant lesson access to a student (Admin only)"""
-    if not access_data.lesson_id:
-         raise HTTPException(status_code=400, detail="Lesson ID is required")
+    """Grant chapter access to a student (Admin only)"""
+    if not access_data.chapter_id:
+         raise HTTPException(status_code=400, detail="Chapter ID is required")
 
-    lesson = db.query(Lesson).options(joinedload(Lesson.chapter).joinedload(Chapter.course)).filter(Lesson.id == access_data.lesson_id).first()
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
+    chapter = db.query(Chapter).options(joinedload(Chapter.course)).filter(Chapter.id == access_data.chapter_id).first()
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Chapter not found")
     
     student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == access_data.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     
     existing = db.query(MaterialAccess).filter(
-        MaterialAccess.lesson_id == access_data.lesson_id,
+        MaterialAccess.chapter_id == access_data.chapter_id,
         MaterialAccess.student_id == access_data.student_id
     ).first()
     
     if existing:
-        raise HTTPException(status_code=400, detail="Access already granted for this lesson")
+        raise HTTPException(status_code=400, detail="Access already granted for this chapter")
     
     new_access = MaterialAccess(
-        lesson_id=access_data.lesson_id,
-        student_id=access_data.student_id,
-        chapter_id=lesson.chapter_id
+        chapter_id=access_data.chapter_id,
+        student_id=access_data.student_id
     )
     db.add(new_access)
     db.commit()

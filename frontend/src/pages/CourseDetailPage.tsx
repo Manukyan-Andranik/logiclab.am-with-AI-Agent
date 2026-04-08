@@ -111,8 +111,9 @@ const CourseDetailPage = () => {
             <div className="lg:col-span-2 space-y-24">
               {/* About */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <h2 className="font-display text-4xl font-black text-white mb-8 uppercase tracking-tighter">
-                  Դասընթացի <span className="text-primary">մասին</span>
+                <h2 className="font-display text-4xl font-black mb-8 uppercase tracking-tighter">
+                  <span className="text-primary">Դասընթացի</span>{" "}
+                  <span className="text-white">մասին</span>
                 </h2>
                 <p className="text-[var(--gray-light)] opacity-80 text-lg leading-relaxed font-medium whitespace-pre-wrap">
                   {getLocalizedContent(course.description)}
@@ -126,7 +127,7 @@ const CourseDetailPage = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}>
                   <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter">
-                    ԴԱՍԸՆԹԱՑԻ <span className="text-primary-alt">ԾՐԱԳԻՐԸ</span>
+                    <span className="text-primary-alt">ԾՐԱԳԻՐԸ</span>
                   </h2>
                   <Accordion type="single" collapsible className="w-full space-y-6">
                     {curriculum.map((item: any, i: number) => (
@@ -170,38 +171,43 @@ const CourseDetailPage = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                 >
-                  <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter">
+                  <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter italic">
                     ԴԱՍԱԽՈՍՆԵՐ
                   </h2>
-                  <div className="grid sm:grid-cols-2 gap-10">
+                  <div className="grid sm:grid-cols-2 gap-8">
                     {course.instructors.map((instructor) => (
-                      <div key={instructor.id} className="flex flex-col gap-6 p-10 rounded-3xl bg-gray-dark border-2 border-black hover:border-primary transition-all">
+                      <div key={instructor.id} className="group relative flex flex-col gap-4 p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all duration-500">
                         <div className="flex items-center gap-6">
-                          <Avatar className="w-20 h-20 border-4 border-black shadow-2xl">
-                            <AvatarImage src={getMediaUrl(instructor.user.profile_image)} alt={instructor.user.first_name} />
-                            <AvatarFallback className="bg-primary text-black font-black">{instructor.user.first_name[0]}{instructor.user.last_name[0]}</AvatarFallback>
-                          </Avatar>
+                          <div className="w-20 h-20 rounded-2xl overflow-hidden grayscale-[0.5] group-hover:grayscale-0 transition-all duration-500 bg-gray-dark border border-white/10">
+                            {instructor.user.profile_image ? (
+                              <img src={getMediaUrl(instructor.user.profile_image)} alt={instructor.user.first_name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/10">
+                                <Users size={32} />
+                              </div>
+                            )}
+                          </div>
                           <div>
-                            <h3 className="font-black text-xl text-white uppercase tracking-tighter">
-                              {instructor.user.first_name} {instructor.user.last_name}
+                            <h3 className="font-black text-xl text-white uppercase tracking-tighter italic">
+                              {instructor.user.first_name} <br /> {instructor.user.last_name}
                             </h3>
-                            <p className="text-[10px] text-primary-alt font-black uppercase tracking-[0.2em] mt-1">Դասախոս</p>
+                            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">
+                              {instructor.proficiency?.[0] || instructor.skills?.[0] || "Մասնագետ"}
+                            </p>
                           </div>
                         </div>
                         {instructor.bio && (
-                          <p className="text-sm text-[var(--gray-light)] opacity-60 leading-relaxed font-medium">
+                          <p className="text-sm text-gray-light opacity-60 leading-relaxed italic group-hover:opacity-100 transition-opacity">
                             {instructor.bio}
                           </p>
                         )}
-                        {instructor.skills && instructor.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {instructor.skills.map((skill) => (
-                              <span key={skill} className="px-3 py-1.5 rounded-lg bg-black text-white text-[10px] font-black uppercase tracking-widest border border-gray-dark">
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        <div className="flex flex-wrap gap-2 mt-auto">
+                          {instructor.skills?.slice(0, 3).map((skill) => (
+                            <span key={skill} className="px-2 py-1 rounded bg-white/5 text-white/40 text-[9px] font-black uppercase tracking-widest border border-white/5">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -273,7 +279,7 @@ const CourseDetailPage = () => {
       </section>
 
       {/* Other Courses */}
-      <section className="py-24 bg-gray-dark">
+      <section className="py-24 bg-gray">
         <div className="container mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
