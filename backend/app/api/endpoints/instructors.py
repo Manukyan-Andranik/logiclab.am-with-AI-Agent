@@ -135,19 +135,44 @@ async def update_instructor(
             detail="Instructor not found"
         )
     
-    # Update instructor profile
-    instructor_fields = ['bio', 'skills', 'proficiency', 'is_active']
-    for field in instructor_fields:
-        value = getattr(instructor_data, field, None)
-        if value is not None:
-            setattr(instructor, field, value)
+    # Check email uniqueness if it's being changed
+    if instructor_data.email and instructor_data.email != instructor.user.email:
+        existing_user = db.query(UserPersonal).filter(
+            UserPersonal.email == instructor_data.email
+        ).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered by another user"
+            )
+        instructor.user.email = instructor_data.email
+
+    # Update password if provided
+    if instructor_data.password:
+        instructor.user.password_hash = get_password_hash(instructor_data.password)
+    
+    # Update instructor profile fields
+    if instructor_data.bio is not None:
+        instructor.bio = instructor_data.bio
+    if instructor_data.skills is not None:
+        instructor.skills = instructor_data.skills
+    if instructor_data.proficiency is not None:
+        instructor.proficiency = instructor_data.proficiency
+    if instructor_data.is_active is not None:
+        instructor.is_active = instructor_data.is_active
+        instructor.user.is_active = instructor_data.is_active
     
     # Update user personal info
-    user_fields = ['first_name', 'last_name', 'phone', 'profile_image', 'social_links']
-    for field in user_fields:
-        value = getattr(instructor_data, field, None)
-        if value is not None:
-            setattr(instructor.user, field, value)
+    if instructor_data.first_name is not None:
+        instructor.user.first_name = instructor_data.first_name
+    if instructor_data.last_name is not None:
+        instructor.user.last_name = instructor_data.last_name
+    if instructor_data.phone is not None:
+        instructor.user.phone = instructor_data.phone
+    if instructor_data.profile_image is not None:
+        instructor.user.profile_image = instructor_data.profile_image
+    if instructor_data.social_links is not None:
+        instructor.user.social_links = instructor_data.social_links
     
     db.commit()
     db.refresh(instructor)

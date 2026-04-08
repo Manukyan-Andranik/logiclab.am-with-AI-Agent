@@ -53,7 +53,7 @@ class Student(Base):
     __tablename__ = "students"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user_personal.id"), unique=True)
+    user_id = Column(Integer, ForeignKey("user_personal.id", ondelete="CASCADE"), unique=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
     last_chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
     last_lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=True)
@@ -73,7 +73,7 @@ class Instructor(Base):
     __tablename__ = "instructors"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user_personal.id"), unique=True)
+    user_id = Column(Integer, ForeignKey("user_personal.id", ondelete="CASCADE"), unique=True)
     bio = Column(Text)
     skills = Column(JSON, default=[])  # List of skills
     proficiency = Column(JSON, default=[])  # List of technologies

@@ -188,7 +188,9 @@ class InstructorCreate(BaseModel):
 class InstructorUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
+    password: Optional[str] = None
     bio: Optional[str] = None
     skills: Optional[List[str]] = None
     proficiency: Optional[List[str]] = None

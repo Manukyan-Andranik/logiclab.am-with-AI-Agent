@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getInstructors, deleteInstructor, createInstructor, updateInstructor } from "@/api/instructors";
-import { getLocalizedContent } from "@/lib/localization";
+import { uploadFile, getMediaUrl } from "@/api/client";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Button from "../../components/ui/Button";
-import { Plus, Edit2, Trash2, User } from "lucide-react";
-import { useState } from "react";
+import { Plus, Edit2, Trash2, Loader2, Upload, X } from "lucide-react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,8 @@ const AdminInstructors = () => {
   const { toast } = useToast();
   const [isDialogOpen, setIsOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -57,9 +59,15 @@ const AdminInstructors = () => {
         profile_image: data.profile_image,
         ...(data.password ? { password: data.password } : {}),
       };
-      return editingInstructor
-        ? updateInstructor(editingInstructor.id, payload as any)
-        : createInstructor(payload as any);
+      
+      if (editingInstructor) {
+        return updateInstructor(editingInstructor.id, payload as any);
+      } else {
+        if (!data.password) {
+          throw new Error("Password is required for new instructors");
+        }
+        return createInstructor(payload as any);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-instructors"] });
@@ -67,6 +75,13 @@ const AdminInstructors = () => {
       setIsOpen(false);
       resetForm();
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save instructor",
+        variant: "destructive"
+      });
+    }
   });
 
   const deleteMutation = useMutation({
@@ -75,6 +90,13 @@ const AdminInstructors = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-instructors"] });
       toast({ title: "Deleted", description: "Instructor has been removed." });
     },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete instructor",
+        variant: "destructive"
+      });
+    }
   });
 
   const resetForm = () => {
@@ -106,6 +128,30 @@ const AdminInstructors = () => {
       profile_image: instructor.user.profile_image || "",
     });
     setIsOpen(true);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const result = await uploadFile(file);
+      setFormData(prev => ({
+        ...prev,
+        profile_image: result.url
+      }));
+      toast({ title: "Success", description: "Profile image uploaded successfully" });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload image",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   if (isLoading) return <div className="animate-pulse space-y-4 text-foreground"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
@@ -149,16 +195,63 @@ const AdminInstructors = () => {
                 <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
               </div>
 
-              {!editingInstructor && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="password">{editingInstructor ? "New Password (optional)" : "Password"}</Label>
+                <Input id="password" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="profile_image">Profile Image URL</Label>
-                <Input id="profile_image" value={formData.profile_image} onChange={e => setFormData({ ...formData, profile_image: e.target.value })} />
+                <Label>Profile Image</Label>
+                <div className="flex items-center gap-4">
+                  {formData.profile_image && (
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden border">
+                      <img 
+                        src={getMediaUrl(formData.profile_image)} 
+                        alt="Profile Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, profile_image: "" }))}
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        <X size={16} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex-grow">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Upload Profile Image
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-1">
+                  Or paste URL: 
+                  <Input 
+                    className="h-7 text-[10px] mt-1" 
+                    value={formData.profile_image} 
+                    onChange={e => setFormData({ ...formData, profile_image: e.target.value })} 
+                    placeholder="https://..."
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -184,7 +277,7 @@ const AdminInstructors = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button onClick={() => saveMutation.mutate(formData)} disabled={saveMutation.isPending}>
+              <Button onClick={() => saveMutation.mutate(formData)} disabled={saveMutation.isPending || isUploading}>
                 {saveMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
@@ -207,12 +300,12 @@ const AdminInstructors = () => {
               <tr key={instructor.id} className="hover:bg-secondary/20 transition-colors">
                 <td className="px-6 py-4 flex items-center gap-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={instructor.user?.profile_image} />
-                    <AvatarFallback>{instructor.user?.first_name?.[0] || instructor.user.first_name?.[0]}</AvatarFallback>
+                    <AvatarImage src={getMediaUrl(instructor.user?.profile_image)} />
+                    <AvatarFallback>{instructor.user?.first_name?.[0]}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold text-foreground">{instructor.user?.first_name || instructor.user.first_name} {instructor.user?.last_name || instructor.user.last_name}</div>
-                    <div className="text-xs text-muted-foreground">{instructor.user?.email || instructor.user.email}</div>
+                    <div className="font-semibold text-foreground">{instructor.user?.first_name} {instructor.user?.last_name}</div>
+                    <div className="text-xs text-muted-foreground">{instructor.user?.email}</div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -248,10 +341,11 @@ const AdminInstructors = () => {
                     {/* Delete Button */}
                     <button
                       onClick={() => {
-                        if (confirm("Are you sure?")) {
+                        if (confirm("Are you sure? This will permanently delete the instructor account and profile.")) {
                           deleteMutation.mutate(instructor.id);
                         }
                       }}
+                      disabled={deleteMutation.isPending}
                       className="
         h-8 w-8 flex items-center justify-center
         rounded-md
@@ -261,9 +355,10 @@ const AdminInstructors = () => {
         hover:bg-danger
         hover:text-white
         active:scale-95
+        disabled:opacity-50
       "
                     >
-                      <Trash2 size={14} />
+                      {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                     </button>
 
                   </div>
