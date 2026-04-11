@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -10,12 +10,6 @@ class UserRole(str, Enum):
     INSTRUCTOR = "instructor"
 
 class RegistrationStatus(str, Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    COMPLETED = "completed"
-    REJECTED = "rejected"
-
-class StudentStatus(str, Enum):
     PENDING = "pending"
     CONFIRMED = "confirmed"
     COMPLETED = "completed"
@@ -95,14 +89,25 @@ class UserPersonalResponse(UserPersonalBase):
     role: UserRole
     is_active: bool
     created_at: datetime
-    
+
+    @field_validator("social_links", mode="before")
+    @classmethod
+    def coerce_social_links(cls, v: Any) -> Dict[str, str]:
+        if isinstance(v, dict):
+            out: Dict[str, str] = {}
+            for k, val in v.items():
+                out[str(k)] = "" if val is None else str(val)
+            return out
+        return {}
+
     class Config:
         from_attributes = True
 
 # Student Schemas
 class StudentBase(BaseModel):
     course_id: Optional[int] = None
-    status: Optional[StudentStatus] = None
+    # ORM `students.status` column uses RegistrationStatus (not a separate StudentStatus enum).
+    status: Optional[RegistrationStatus] = None
     created_at: Optional[datetime] = None
 
 class StudentResponse(StudentBase):

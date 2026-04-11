@@ -100,13 +100,18 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
             <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">ՕԳՏԱԿԱՐ ՀՂՈՒՄՆԵՐ</h4>
             <ul className="space-y-4 text-[var(--gray-light)] font-semibold">
               <li>
-                <Link to="/about" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
-                  Մեր Մասին
+                <Link to="/" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                  Գլխավոր
                 </Link>
               </li>
               <li>
-                <Link to="/courses" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                <Link to="/courses#all" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
                   Դասընթացներ
+                </Link>
+              </li>
+              <li>
+                <Link to="/about" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                  Մեր Մասին
                 </Link>
               </li>
               <li>

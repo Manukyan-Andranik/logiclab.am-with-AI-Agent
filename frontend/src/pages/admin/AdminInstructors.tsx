@@ -59,7 +59,7 @@ const AdminInstructors = () => {
         profile_image: data.profile_image,
         ...(data.password ? { password: data.password } : {}),
       };
-      
+
       if (editingInstructor) {
         return updateInstructor(editingInstructor.id, payload as any);
       } else {
@@ -205,9 +205,9 @@ const AdminInstructors = () => {
                 <div className="flex items-center gap-4">
                   {formData.profile_image && (
                     <div className="relative w-16 h-16 rounded-full overflow-hidden border">
-                      <img 
-                        src={getMediaUrl(formData.profile_image)} 
-                        alt="Profile Preview" 
+                      <img
+                        src={getMediaUrl(formData.profile_image)}
+                        alt="Profile Preview"
                         className="w-full h-full object-cover"
                       />
                       <button
@@ -244,11 +244,11 @@ const AdminInstructors = () => {
                   </div>
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-1">
-                  Or paste URL: 
-                  <Input 
-                    className="h-7 text-[10px] mt-1" 
-                    value={formData.profile_image} 
-                    onChange={e => setFormData({ ...formData, profile_image: e.target.value })} 
+                  Or paste URL:
+                  <Input
+                    className="h-7 text-[10px] mt-1"
+                    value={formData.profile_image}
+                    onChange={e => setFormData({ ...formData, profile_image: e.target.value })}
                     placeholder="https://..."
                   />
                 </div>
@@ -310,8 +310,10 @@ const AdminInstructors = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-1">
-                    {instructor.skills?.map(skill => (
-                      <Badge key={skill} variant="outline" className="text-[10px] py-0 border-border text-muted-foreground">{skill}</Badge>
+                    {instructor.skills?.map((skill, index) => (
+                      <Badge key={`${instructor.id}-${skill}-${index}`}>
+                        {skill}
+                      </Badge>
                     ))}
                   </div>
                 </td>

@@ -220,7 +220,7 @@ async def get_student_timeline_admin(
     timeline.sort(key=lambda x: x["date"], reverse=True)
     
     return {
-        "student": StudentResponse.from_orm(student),
+        "student": StudentResponse.model_validate(student),
         "timeline": timeline,
         "statistics": {
             "total_registrations": len(registrations),

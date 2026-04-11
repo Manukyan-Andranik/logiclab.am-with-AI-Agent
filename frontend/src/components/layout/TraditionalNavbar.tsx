@@ -30,6 +30,12 @@ function pathBaseAndHash(path: string): { base: string; hashId: string | null } 
   return { base, hashId: path.slice(i + 1) };
 }
 
+/** Match `/courses` and `/courses/` so footer links like `/courses/#all` still highlight nav. */
+function normalizePathname(pathname: string): string {
+  const trimmed = pathname.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
 const TraditionalNavbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -72,11 +78,12 @@ const TraditionalNavbar: React.FC = () => {
 
   const isActive = (path: string) => {
     const { base, hashId } = pathBaseAndHash(path);
+    const here = normalizePathname(location.pathname);
     if (hashId) {
-      if (location.pathname !== base) return false;
+      if (here !== normalizePathname(base)) return false;
       return location.hash === `#${hashId}`;
     }
-    return location.pathname === path;
+    return here === normalizePathname(path);
   };
 
   const isStudentRouteActive = (path: string) => location.pathname === path;
