@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   BrainCircuit, Box, Camera, Zap,
@@ -106,7 +107,20 @@ const SectionLabel = ({ children }: { children: React.ReactNode }) => (
 
 /* ── PAGE ──────────────────────────────────────────────────── */
 
-const AboutPage = () => (
+const AboutPage = () => {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const el = document.querySelector<HTMLElement>(hash);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+  }, [hash]);
+
+  return (
   <div className="bg-[var(--black)] text-[var(--white)] overflow-x-hidden">
 
     {/* ── HERO ─────────────────────────────────────────────── */}
@@ -240,7 +254,7 @@ const AboutPage = () => (
     </section>
 
     {/* ── AUDIENCES ────────────────────────────────────────── */}
-    <section className="py-16 sm:py-24 bg-[var(--gray-dark)]/30]">
+    <section className="py-16 sm:py-24 bg-[var(--gray-dark)]/30">
       <Container>
         <FadeIn className="mb-10 sm:mb-14">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tighter leading-tight">
@@ -277,6 +291,7 @@ const AboutPage = () => (
     </section>
 
   </div>
-);
+  );
+};
 
 export default AboutPage;

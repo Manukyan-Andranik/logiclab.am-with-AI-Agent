@@ -10,8 +10,6 @@ export const useLogic = () => {
   const location = useLocation();
 
   const handleIntent = useCallback((intent: string, courseId?: string | number) => {
-    console.log(`[AI Navigation] Intent: ${intent}, ID: ${courseId}`);
-    
     // We use a small timeout to allow React to finish processing the state update
     // from the chat message before starting the navigation transition.
     setTimeout(() => {
@@ -33,10 +31,10 @@ export const useLogic = () => {
           navigate('/register');
           break;
         case 'instructors':
-          if (location.pathname === '/') {
+          if (location.pathname === '/about') {
             document.getElementById('instructors')?.scrollIntoView({ behavior: 'smooth' });
           } else {
-            navigate('/#instructors');
+            navigate('/about#instructors');
           }
           break;
         case 'projects':
@@ -48,9 +46,9 @@ export const useLogic = () => {
           break;
         case 'success':
           if (location.pathname === '/') {
-            document.getElementById('success')?.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' });
           } else {
-            navigate('/#success');
+            navigate('/#projects');
           }
           break;
         case 'contact':

@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ArrowRight, 
@@ -33,10 +34,21 @@ const iconMap: Record<string, LucideIcon> = {
 const coursesVideo = "https://res.cloudinary.com/dujmbcltl/video/upload/v1772482244/hero-video_mqafze.mp4"
 
 const CoursesPage = () => {
+  const { hash } = useLocation();
   const { data: courses, isLoading } = useQuery({
     queryKey: ["courses"],
     queryFn: () => getCourses(true),
   });
+
+  useEffect(() => {
+    if (!hash) return;
+    const el = document.querySelector<HTMLElement>(hash);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+  }, [hash]);
 
   if (isLoading) {
     return (
@@ -88,7 +100,7 @@ const CoursesPage = () => {
             </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8"  id="all">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {courses.map((course, i) => {
               const Icon = iconMap[course.icon_url || "brain"] || Brain;
               return (

@@ -12,7 +12,7 @@ const AdminLayout = () => {
     const role = localStorage.getItem('role');
     
     if (!token || role !== 'admin') {
-      navigate('/admin/login');
+      navigate('/login?role=admin');
     }
   }, [navigate]);
 

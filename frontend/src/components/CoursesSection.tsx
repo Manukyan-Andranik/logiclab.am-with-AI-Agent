@@ -63,7 +63,7 @@ const CoursesSection = () => {
               transition={{ delay: i * 0.08 }}
             >
               <Link
-                to={`/courses/${course.id}`}
+                to={`/courses/${course.slug ?? course.id}`}
                 className="glass-card rounded-3xl p-8 border-2 border-[var(--black)] hover:border-[var(--primary-alt)] transition-all duration-300 group block h-full bg-[var(--black)]"
               >
                 <div className="flex items-start justify-between mb-8">

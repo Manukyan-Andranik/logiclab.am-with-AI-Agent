@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
 import { NavigationProvider } from "./components/layout/NavigationProvider";
 import Index from "./pages/Index";
@@ -11,7 +11,7 @@ import CourseDetailPage from "./pages/CourseDetailPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import AboutPage from "./pages/AboutPage";
 import RegisterPage from "./pages/RegisterPage";
-import StudentLoginPage from "./pages/StudentLoginPage";
+import LoginPage from "./pages/LoginPage";
 import StudentDashboard from "./pages/StudentDashboard";
 import NotFound from "./pages/NotFound";
 import "@/styles/variables.css";
@@ -21,7 +21,6 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRegistrations from "./pages/admin/AdminRegistrations";
 import AdminCourses from "./pages/admin/AdminCourses";
-import AdminLogin from "./pages/admin/AdminLogin";
 import AdminStudents from "./pages/admin/AdminStudents";
 import AdminProjects from "./pages/admin/AdminProjects";
 import AdminDailyLife from "./pages/admin/AdminDailyLife";
@@ -50,9 +49,9 @@ const App = () => (
               <Route path="/student/dashboard" element={<StudentDashboard />} />
             </Route>
 
-            <Route path="/student/login" element={<StudentLoginPage />} />
-
-            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/student/login" element={<Navigate to="/login?role=student" replace />} />
+            <Route path="/admin/login" element={<Navigate to="/login?role=admin" replace />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>

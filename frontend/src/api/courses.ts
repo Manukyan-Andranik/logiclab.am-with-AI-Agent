@@ -2,9 +2,9 @@ import { apiClient } from './client';
 import { Course, Chapter, Lesson } from './types';
 
 export const getCourses = async (is_active?: boolean): Promise<Course[]> => {
-  const params: Record<string, any> = {};
-  if (is_active !== undefined) {
-    params.is_active = is_active;
+  const params: Record<string, string> = {};
+  if (typeof is_active === 'boolean') {
+    params.is_active = String(is_active);
   }
   return apiClient<Course[]>('/courses/', {
     params,

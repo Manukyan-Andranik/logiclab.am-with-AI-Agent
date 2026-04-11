@@ -7,7 +7,7 @@ import { DailyLife } from "@/api/types";
 import { getMediaUrl } from "@/api/client";
 
 const PLACEHOLDER = "/placeholder.svg";
-const IMAGE_INTERVAL_MS = 4000;
+const IMAGE_INTERVAL_MS = 2000;
 const DESCRIPTION_THRESHOLD = 150;
 
 /* =======================

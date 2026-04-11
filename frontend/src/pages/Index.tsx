@@ -6,7 +6,6 @@ import Container from "@/components/layout/Container";
 import CoursesSection from "@/components/CoursesSection";
 import AboutSection from "@/components/AboutSection";
 import FeaturedProjects from "@/components/FeaturedProjects";
-import InstructorsSection from "@/components/InstructorsSection";
 import ContactSection from "@/components/ContactSection";
 import DailyLifes from "@/components/DailyLifes";
 

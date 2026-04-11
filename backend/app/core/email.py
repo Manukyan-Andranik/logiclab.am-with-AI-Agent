@@ -1,9 +1,7 @@
-# app/core/email.py
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
-from typing import List, Optional
 from .config import settings
 import logging
 
@@ -18,175 +16,116 @@ class EmailService:
         self.from_email = settings.SMTP_FROM_EMAIL
         self.from_name = settings.SMTP_FROM_NAME
 
-    async def send_email(
-        self,
-        to_email: str,
-        subject: str,
-        body: str,
-        html: bool = False
-    ) -> bool:
-        """Send an email asynchronously using aiosmtplib"""
+    def _get_themed_html(self, content: str, action_url: str = None, action_text: str = None) -> str:
+        """
+        Wraps content in the LogicLab base style:
+        - Background: #222
+        - Card: #333
+        - Accent: #FFD700
+        """
+        button_html = f'''
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{action_url}" 
+                   style="background-color: #FFD700; color: #222222; padding: 14px 28px; 
+                          text-decoration: none; border-radius: 8px; font-weight: bold; 
+                          display: inline-block; box-shadow: 4px 4px 0px 0px #000000;">
+                    {action_text}
+                </a>
+            </div>''' if action_url and action_text else ""
+
+        return f"""
+        <!DOCTYPE html>
+        <html lang="hy">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ background-color: #222222; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #ffffff; }}
+                .wrapper {{ background-color: #222222; padding: 40px 20px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #333333; border-radius: 12px; border: 1px solid #222222; overflow: hidden; }}
+                .header {{ background-color: #222222; padding: 25px; text-align: center; border-bottom: 2px solid #FFD700; }}
+                .body-content {{ padding: 40px 30px; line-height: 1.6; font-size: 16px; }}
+                .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #707070; background-color: #222222; }}
+                .gold {{ color: #FFD700; font-weight: bold; }}
+                .credential-box {{ background-color: #222222; border: 1px solid #444; border-radius: 8px; padding: 20px; margin: 20px 0; }}
+                h2 {{ color: #FFD700; margin-top: 0; font-size: 22px; }}
+                p {{ margin: 10px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="wrapper">
+                <div class="container">
+                    <div class="header">
+                        <span style="color: #FFD700; font-size: 24px; font-weight: bold; letter-spacing: 1px;">LOGICLAB</span>
+                    </div>
+                    <div class="body-content">
+                        {content}
+                        {button_html}
+                    </div>
+                    <div class="footer">
+                        © 2026 LogicLab Academy. Բոլոր իրավունքները պաշտպանված են:
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+    async def send_email(self, to_email: str, subject: str, body: str, html: bool = False) -> bool:
         try:
             msg = MIMEMultipart("alternative")
             msg["Subject"] = Header(subject, "utf-8")
             msg["From"] = f"{self.from_name} <{self.from_email}>"
             msg["To"] = to_email
-            
-            if html:
-                part = MIMEText(body, "html", "utf-8")
-            else:
-                part = MIMEText(body, "plain", "utf-8")
-            
-            msg.attach(part)
-            
-            # Determine if we should use SSL or STARTTLS
-            use_tls = self.smtp_port == 465
-            start_tls = self.smtp_port == 587
-            
-            logger.info(f"Attempting to send email to {to_email} via {self.smtp_host}:{self.smtp_port} (User: {self.smtp_user})")
+            msg.attach(MIMEText(body, "html" if html else "plain", "utf-8"))
             
             await aiosmtplib.send(
-                msg,
-                hostname=self.smtp_host,
-                port=self.smtp_port,
-                username=self.smtp_user,
-                password=self.smtp_password,
-                use_tls=use_tls,
-                start_tls=start_tls,
-                timeout=10
+                msg, hostname=self.smtp_host, port=self.smtp_port,
+                username=self.smtp_user, password=self.smtp_password,
+                use_tls=(self.smtp_port == 465), start_tls=(self.smtp_port == 587), timeout=10
             )
-            
-            logger.info(f"Email sent successfully to {to_email}")
             return True
-        except aiosmtplib.SMTPAuthenticationError as e:
-            logger.error(f"SMTP Authentication failed for {self.smtp_user} at {self.smtp_host}: {str(e)}. Please check your SMTP_PASSWORD (if using Gmail, use an App Password).")
-            return False
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {type(e).__name__}: {str(e)}")
+            logger.error(f"Email failed: {str(e)}")
             return False
-    
+
+    # --- Refactored Templates ---
+
     async def send_registration_received(self, to_email: str, student_name: str, course_name: str):
-        """Send registration received email"""
-        subject = "Գրանցումը ստացված է - LogicLab"
-        body = f"""
-        <html>
-            <body style="font-family: sans-serif;">
-                <h2>Շնորհակալություն գրանցման համար, {student_name}!</h2>
-                <p>Մենք ստացել ենք ձեր գրանցման հայտը <strong>{course_name}</strong> դասընթացի համար:</p>
-                <p>Մեր թիմը կուսումնասիրի ձեր հայտը և կկապվի ձեզ հետ մոտ ժամանակներս:</p>
-                <br>
-                <p>Հարգանքներով,<br>LogicLab թիմ</p>
-            </body>
-        </html>
+        content = f"""
+            <h2>Ողջույն, {student_name}</h2>
+            <p>Շնորհակալություն <span class="gold">{course_name}</span> դասընթացին գրանցվելու համար:</p>
+            <p>Մենք ստացել ենք ձեր հայտը: Մեր թիմը կուսումնասիրի այն և կկապվի ձեզ հետ շատ մոտ ժամանակներս:</p>
         """
-        return await self.send_email(to_email, subject, body, html=True)
-    
-    async def send_registration_confirmed(
-        self,
-        to_email: str,
-        student_name: str,
-        course_name: str,
-        login_email: str,
-        temp_password: str
-    ):
-        """Send registration confirmed email with login credentials"""
-        subject = "Գրանցումը հաստատված է - Բարի գալուստ LogicLab!"
-        body = f"""
-        <html>
-            <body style="font-family: sans-serif;">
-                <h2>Շնորհավորում ենք, {student_name}!</h2>
-                <p>Ձեր գրանցումը <strong>{course_name}</strong> դասընթացի համար հաստատված է:</p>
-                <br>
-                <h3>Ձեր մուտքանունն ու գաղտնաբառը:</h3>
+        return await self.send_email(to_email, "Գրանցումը ստացված է - LogicLab", self._get_themed_html(content), html=True)
+
+    async def send_registration_confirmed(self, to_email: str, student_name: str, course_name: str, login_email: str, temp_password: str):
+        content = f"""
+            <h2>Բարի գալուստ LogicLab! 🎉</h2>
+            <p>Ձեր գրանցումը <span class="gold">{course_name}</span> դասընթացի համար հաստատվել է:</p>
+            <div class="credential-box">
                 <p><strong>Email:</strong> {login_email}</p>
-                <p><strong>Ժամանակավոր գաղտնաբառ:</strong> {temp_password}</p>
-                <p>Խնդրում ենք մուտք գործել այստեղ: <a href="{settings.FRONTEND_URL}/student/login">{settings.FRONTEND_URL}/student/login</a></p>
-                <p><em>Խորհուրդ ենք տալիս փոխել գաղտնաբառը առաջին մուտքից հետո:</em></p>
-                <br>
-                <p>Հարգանքներով,<br>LogicLab թիմ</p>
-            </body>
-        </html>
+                <p><strong>Գաղտնաբառ:</strong> <span class="gold">{temp_password}</span></p>
+            </div>
+            <p style="font-size: 13px; color: #aaa;">* Անվտանգության համար խնդրում ենք փոխել գաղտնաբառը առաջին մուտքից հետո:</p>
         """
-        return await self.send_email(to_email, subject, body, html=True)
-    
-    async def send_registration_rejected(self, to_email: str, student_name: str, course_name: str):
-        """Send registration rejected email"""
-        subject = "Տեղեկատվություն գրանցման կարգավիճակի վերաբերյալ - LogicLab"
-        body = f"""
-        <html>
-            <body style="font-family: sans-serif;">
-                <h2>Հարգելի {student_name},</h2>
-                <p>Շնորհակալություն <strong>{course_name}</strong> դասընթացի հանդեպ հետաքրքրություն ցուցաբերելու համար:</p>
-                <p>Ցավոք, այս պահին մենք չենք կարող հաստատել ձեր գրանցումը:</p>
-                <p>Սա կարող է պայմանավորված լինել խմբերի լրացված լինելու կամ այլ պատճառներով:</p>
-                <br>
-                <p>Հարգանքներով,<br>LogicLab թիմ</p>
-            </body>
-        </html>
-        """
-        return await self.send_email(to_email, subject, body, html=True)
-    
-    async def send_course_completed(self, to_email: str, student_name: str, course_name: str):
-        """Send course completion email"""
-        subject = "Շնորհավորում ենք: Դասընթացն ավարտված է - LogicLab"
-        body = f"""
-        <html>
-            <body style="font-family: sans-serif;">
-                <h2>Շնորհավորում ենք, {student_name}! 🎉</h2>
-                <p>Դուք հաջողությամբ ավարտեցիք <strong>{course_name}</strong> դասընթացը:</p>
-                <p>Մենք հպարտ ենք ձեր ձեռքբերումներով:</p>
-                <p>Ձեր սերտիֆիկատը շուտով հասանելի կլինի ձեր անձնական էջում:</p>
-                <br>
-                <p>Հարգանքներով,<br>LogicLab թիմ</p>
-            </body>
-        </html>
-        """
-        return await self.send_email(to_email, subject, body, html=True)
-    
-    async def send_material_access_granted(
-        self,
-        to_email: str,
-        student_name: str,
-        chapter_title: str,
-        course_name: str
-    ):
-        """Send material (chapter) access granted email"""
-        subject = f"Նոր նյութեր են հասանելի - {course_name}"
-        body = f"""
-        <html>
-            <body style="font-family: sans-serif;">
-                <h2>Ողջույն {student_name},</h2>
-                <p>Դասընթացի նոր նյութերը արդեն հասանելի են ձեզ համար:</p>
-                <p><strong>Բաժին:</strong> {chapter_title}</p>
-                <p><strong>Դասընթաց:</strong> {course_name}</p>
-                <p>Մուտք գործեք ձեր էջ՝ նյութերին ծանոթանալու համար: 
-                   <a href="{settings.FRONTEND_URL}/student/materials">{settings.FRONTEND_URL}/student/materials</a>
-                </p>
-                <br>
-                <p>Մաղթում ենք հաջող ուսումնառություն:<br>LogicLab թիմ</p>
-            </body>
-        </html>
-        """
-        return await self.send_email(to_email, subject, body, html=True)
+        url = f"{settings.FRONTEND_URL}/student/login"
+        return await self.send_email(to_email, "Գրանցումը հաստատված է", self._get_themed_html(content, url, "Մուտք Գործել"), html=True)
 
     async def send_password_reset_email(self, to_email: str, username: str, reset_link: str):
-        """Send password reset email"""
-        subject = "Գաղտնաբառի վերականգնման հարցում - LogicLab"
-        body = f"""
-        <html>
-            <body style="font-family: sans-serif;">
-                <h2>Ողջույն {username},</h2>
-                <p>Դուք հարցում եք ուղարկել LogicLab-ի ձեր հաշվի գաղտնաբառը վերականգնելու համար:</p>
-                <p>Խնդրում ենք սեղմել ստորև նշված հղմանը՝ գաղտնաբառը փոխելու համար:</p>
-                <p><a href="{reset_link}">Վերականգնել գաղտնաբառը</a></p>
-                <p>Եթե դուք չեք կատարել այս հարցումը, պարզապես անտեսեք այս հաղորդագրությունը:</p>
-                <br>
-                <p>Հարգանքներով,<br>LogicLab թիմ</p>
-            </body>
-        </html>
+        content = f"""
+            <h2>Գաղտնաբառի վերականգնում</h2>
+            <p>Հարգելի {username}, դուք հարցում եք ուղարկել LogicLab-ի ձեր հաշվի գաղտնաբառը վերականգնելու համար:</p>
+            <p>Սեղմեք ներքևի կոճակին գործողությունը շարունակելու համար:</p>
         """
-        return await self.send_email(to_email, subject, body, html=True)
+        return await self.send_email(to_email, "Գաղտնաբառի վերականգնում", self._get_themed_html(content, reset_link, "Վերականգնել"), html=True)
+
+    async def send_material_access_granted(self, to_email: str, student_name: str, chapter_title: str, course_name: str):
+        content = f"""
+            <h2>Նոր նյութեր են հասանելի</h2>
+            <p>Ողջույն {student_name}, <span class="gold">{course_name}</span> դասընթացի նոր բաժինը արդեն բաց է ձեզ համար:</p>
+            <p><strong>Բաժին:</strong> {chapter_title}</p>
+        """
+        url = f"{settings.FRONTEND_URL}/student/materials"
+        return await self.send_email(to_email, "Նոր ուսումնական նյութեր", self._get_themed_html(content, url, "Դիտել Նյութերը"), html=True)
 
 email_service = EmailService()
-
-

@@ -152,23 +152,25 @@ async def get_my_progress(
         "last_lesson_id": current_student.last_lesson_id
     }
 
-@router.get("/me/lessons/{lesson_id}/materials", response_model=List[dict])
-async def get_my_lesson_materials(
-    lesson_id: int,
+@router.post("/me/materials/chapters/{chapter_id}/mark-accessed")
+async def mark_chapter_accessed(
+    chapter_id: int,
     current_student: Student = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
-    """Get materials only if student has access to lesson"""
+    """Student marks a chapter as accessed"""
+    # Check if student has access to this chapter
     access = db.query(MaterialAccess).filter(
         MaterialAccess.student_id == current_student.id,
-        MaterialAccess.lesson_id == lesson_id
+        MaterialAccess.chapter_id == chapter_id
     ).first()
     
     if not access:
-        raise HTTPException(status_code=403, detail="Access denied to this lesson")
+        raise HTTPException(status_code=403, detail="Access denied to this chapter")
     
-    material = db.query(Material).filter(Material.lesson_id == lesson_id).first()
-    if not material:
-        return []
+    if access.accessed_at is None:
+        access.accessed_at = datetime.utcnow()
+        db.commit()
+        db.refresh(access)
     
-    return material.links
+    return {"message": "Chapter marked as accessed", "accessed_at": access.accessed_at}

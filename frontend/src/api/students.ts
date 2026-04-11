@@ -34,3 +34,9 @@ export const getStudentMe = async (): Promise<Student> => {
 export const getStudentDashboard = async (): Promise<StudentDashboardData> => {
   return apiClient<StudentDashboardData>('/student/dashboard');
 };
+
+export const markChapterAccessed = async (chapterId: number): Promise<any> => {
+  return apiClient(`/student/me/materials/chapters/${chapterId}/mark-accessed`, {
+    method: 'POST'
+  });
+};

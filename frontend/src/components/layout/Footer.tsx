@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Container from './Container';
 import { Bot, Layout } from 'lucide-react';
 import {
@@ -98,10 +99,26 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
           <div className="space-y-6">
             <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">ՕԳՏԱԿԱՐ ՀՂՈՒՄՆԵՐ</h4>
             <ul className="space-y-4 text-[var(--gray-light)] font-semibold">
-              <li><a href="/about" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">Մեր Մասին</a></li>
-              <li><a href="/courses" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">Դասընթացներ</a></li>
-              <li><a href="/#instructors" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">Դասախոսներ</a></li>
-              <li><a href="/#projects" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">Նախագծեր</a></li>
+              <li>
+                <Link to="/about" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                  Մեր Մասին
+                </Link>
+              </li>
+              <li>
+                <Link to="/courses" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                  Դասընթացներ
+                </Link>
+              </li>
+              <li>
+                <Link to="/about#instructors" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                  Դասախոսներ
+                </Link>
+              </li>
+              <li>
+                <Link to="/#projects" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
+                  Նախագծեր
+                </Link>
+              </li>
             </ul>
           </div>
 

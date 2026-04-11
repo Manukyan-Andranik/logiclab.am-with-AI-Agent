@@ -23,17 +23,23 @@ class Settings(BaseSettings):
     
     # CORS
     BACKEND_CORS_ORIGINS: list = [
-        "https://logiclab.am", 
-        "https://www.logiclab.am",
-        "http://localhost:8080", 
-        "http://192.168.1.3:8080", 
-        "http://localhost:8080",
-        "http://127.0.0.1:8080", 
-        "http://192.168.1.6:8080",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ]
+    "https://logiclab.am",
+    "https://www.logiclab.am",
+
+    "http://localhost:3000",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+
+    "http://192.168.1.3:8080",
+    "http://192.168.1.6:8080",
+    "http://192.168.1.7:4173",
+]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

@@ -224,11 +224,11 @@ const RegisterPage = () => {
                   </div>
 
                   <button
-                    disabled={mutation.isLoading}
+                    disabled={mutation.isPending}
                     type="submit"
                     className="w-full bg-gold text-primary-foreground py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
-                    {mutation.isLoading ? "ՈՒՂԱՐԿՎՈՒՄ Է..." : <>Ուղարկել հայտը <Send className="w-5 h-5" /></>}
+                    {mutation.isPending ? "ՈՒՂԱՐԿՎՈՒՄ Է..." : <>Ուղարկել հայտը <Send className="w-5 h-5" /></>}
                   </button>
                 </form>
               </div>
