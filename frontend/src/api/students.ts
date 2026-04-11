@@ -31,12 +31,21 @@ export const getStudentMe = async (): Promise<Student> => {
   return apiClient<Student>('/student/me');
 };
 
+export const updateStudentProfile = async (data: {
+  profile_image?: string | null;
+}): Promise<Student> => {
+  return apiClient<Student>('/student/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+};
+
 export const getStudentDashboard = async (): Promise<StudentDashboardData> => {
   return apiClient<StudentDashboardData>('/student/dashboard');
 };
 
 export const markChapterAccessed = async (chapterId: number): Promise<any> => {
-  return apiClient(`/student/me/materials/chapters/${chapterId}/mark-accessed`, {
+  return apiClient(`/students/me/materials/chapters/${chapterId}/mark-accessed`, {
     method: 'POST'
   });
 };

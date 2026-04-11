@@ -10,7 +10,12 @@ from ...models.models import (
     Student, UserPersonal, MaterialAccess, Chapter, Course, Lesson
 )
 from ...schemas.schemas import (
-    LoginRequest, Token, StudentDashboardResponse, StudentResponse, UserRole
+    LoginRequest,
+    Token,
+    StudentDashboardResponse,
+    StudentResponse,
+    StudentSelfProfileUpdate,
+    UserRole,
 )
 from ..deps import get_current_student
 
@@ -53,10 +58,41 @@ async def student_login(
 
 @router.get("/me", response_model=StudentResponse)
 async def get_student_me(
-    current_student: Student = Depends(get_current_student)
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
 ):
     """Get current student information"""
-    return current_student
+    return (
+        db.query(Student)
+        .options(joinedload(Student.user))
+        .filter(Student.id == current_student.id)
+        .first()
+    )
+
+
+@router.patch("/me/profile", response_model=StudentResponse)
+async def update_student_profile(
+    data: StudentSelfProfileUpdate,
+    current_student: Student = Depends(get_current_student),
+    db: Session = Depends(get_db),
+):
+    """Update the current student's profile (allowed fields only)."""
+    student = (
+        db.query(Student)
+        .options(joinedload(Student.user))
+        .filter(Student.id == current_student.id)
+        .first()
+    )
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    payload = data.model_dump(exclude_unset=True)
+    if "profile_image" in payload:
+        student.user.profile_image = payload["profile_image"] or None
+
+    db.commit()
+    db.refresh(student)
+    return student
 
 @router.get("/dashboard", response_model=StudentDashboardResponse)
 async def get_student_dashboard(
@@ -90,6 +126,7 @@ async def get_student_dashboard(
 
         # Build a structure keyed by chapter_id to aggregate granted lessons
         chapters_map: Dict[int, Dict[str, Any]] = {}
+        granted_lesson_ids: set[int] = set()
 
         for access in material_accesses:
             # Case 1: access granted at lesson level
@@ -150,6 +187,7 @@ async def get_student_dashboard(
                     }
                 )
                 chapter_entry["_lesson_ids"].add(l.id)
+                granted_lesson_ids.add(l.id)
 
         # Finalize materials_list: sort chapters and strip internal helper keys
         materials_list = sorted(
@@ -160,39 +198,37 @@ async def get_student_dashboard(
             ch["lessons"].sort(key=lambda x: x["lesson_order"])
             ch.pop("_lesson_ids", None)
 
-    # Get progress
+    # Get progress: percentage of *granted* lessons opened (not whole course)
     progress = None
     if current_student.course_id:
-        # Total lessons in the course
-        total_lessons = db.query(Lesson).join(Chapter).filter(
-            Chapter.course_id == current_student.course_id
-        ).count()
-        
-        # Get all granted access records that have been accessed
+        total_lessons = len(granted_lesson_ids)
+
         accessed_records = db.query(MaterialAccess).options(
             joinedload(MaterialAccess.chapter).joinedload(Chapter.lessons),
-            joinedload(MaterialAccess.lesson)
+            joinedload(MaterialAccess.lesson),
         ).filter(
             MaterialAccess.student_id == current_student.id,
-            MaterialAccess.accessed_at.isnot(None)
+            MaterialAccess.accessed_at.isnot(None),
         ).all()
-        
-        accessed_lesson_ids = set()
+
+        accessed_lesson_ids: set[int] = set()
         for access in accessed_records:
             if access.lesson_id:
                 accessed_lesson_ids.add(access.lesson_id)
             elif access.chapter_id and access.chapter:
-                # If chapter access is marked as accessed, all lessons in it are considered accessed
                 for lesson in access.chapter.lessons:
                     accessed_lesson_ids.add(lesson.id)
-        
-        accessed_lessons_count = len(accessed_lesson_ids)
-        progress_percentage = (accessed_lessons_count / total_lessons * 100) if total_lessons > 0 else 0
-        
+
+        accessed_granted = accessed_lesson_ids & granted_lesson_ids
+        accessed_lessons_count = len(accessed_granted)
+        progress_percentage = (
+            (accessed_lessons_count / total_lessons * 100) if total_lessons > 0 else 0
+        )
+
         progress = {
             "total_lessons": total_lessons,
             "accessed_lessons": accessed_lessons_count,
-            "percentage": round(progress_percentage, 2)
+            "percentage": round(progress_percentage, 2),
         }
 
     return {

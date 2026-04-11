@@ -13,6 +13,7 @@ import AboutPage from "./pages/AboutPage";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import StudentDashboard from "./pages/StudentDashboard";
+import StudentSettingsPage from "./pages/StudentSettingsPage";
 import NotFound from "./pages/NotFound";
 import "@/styles/variables.css";
 
@@ -47,6 +48,8 @@ const App = () => (
               <Route path="/about" element={<AboutPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/student/dashboard" element={<StudentDashboard />} />
+              <Route path="/student/materials" element={<StudentDashboard />} />
+              <Route path="/student/settings" element={<StudentSettingsPage />} />
             </Route>
 
             <Route path="/login" element={<LoginPage />} />

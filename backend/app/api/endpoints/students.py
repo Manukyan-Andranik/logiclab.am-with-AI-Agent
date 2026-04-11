@@ -116,31 +116,48 @@ async def get_my_progress(
             "progress": None
         }
     
-    # Total lessons in the course
-    total_lessons = db.query(Lesson).join(Chapter).filter(
-        Chapter.course_id == current_student.course_id
-    ).count()
-    
-    # Get all granted access records that have been accessed
+    material_accesses = db.query(MaterialAccess).options(
+        joinedload(MaterialAccess.chapter).joinedload(Chapter.lessons),
+        joinedload(MaterialAccess.lesson).joinedload(Lesson.chapter).joinedload(Chapter.lessons),
+    ).filter(MaterialAccess.student_id == current_student.id).all()
+
+    granted_lesson_ids = set()
+    for access in material_accesses:
+        if access.lesson is not None:
+            chapter = access.lesson.chapter
+            lessons_for_access = [access.lesson]
+        elif access.chapter is not None:
+            chapter = access.chapter
+            lessons_for_access = sorted(chapter.lessons, key=lambda l: l.order_index)
+        else:
+            continue
+        if chapter is None:
+            continue
+        for l in lessons_for_access:
+            granted_lesson_ids.add(l.id)
+
+    total_lessons = len(granted_lesson_ids)
+
     accessed_records = db.query(MaterialAccess).options(
         joinedload(MaterialAccess.chapter).joinedload(Chapter.lessons),
-        joinedload(MaterialAccess.lesson)
+        joinedload(MaterialAccess.lesson),
     ).filter(
         MaterialAccess.student_id == current_student.id,
-        MaterialAccess.accessed_at.isnot(None)
+        MaterialAccess.accessed_at.isnot(None),
     ).all()
-    
+
     accessed_lesson_ids = set()
     for access in accessed_records:
         if access.lesson_id:
             accessed_lesson_ids.add(access.lesson_id)
         elif access.chapter_id and access.chapter:
-            # If chapter access is marked as accessed, all lessons in it are considered accessed
             for lesson in access.chapter.lessons:
                 accessed_lesson_ids.add(lesson.id)
-    
-    accessed_lessons_count = len(accessed_lesson_ids)
-    progress_percentage = (accessed_lessons_count / total_lessons * 100) if total_lessons > 0 else 0
+
+    accessed_lessons_count = len(accessed_lesson_ids & granted_lesson_ids)
+    progress_percentage = (
+        (accessed_lessons_count / total_lessons * 100) if total_lessons > 0 else 0
+    )
     
     return {
         "student_id": current_student.id,
@@ -158,19 +175,28 @@ async def mark_chapter_accessed(
     current_student: Student = Depends(get_current_student),
     db: Session = Depends(get_db)
 ):
-    """Student marks a chapter as accessed"""
-    # Check if student has access to this chapter
-    access = db.query(MaterialAccess).filter(
-        MaterialAccess.student_id == current_student.id,
-        MaterialAccess.chapter_id == chapter_id
-    ).first()
-    
-    if not access:
+    """Student marks a chapter as accessed (all lesson- and chapter-level rows for that chapter)."""
+    accesses = (
+        db.query(MaterialAccess)
+        .filter(
+            MaterialAccess.student_id == current_student.id,
+            MaterialAccess.chapter_id == chapter_id,
+        )
+        .all()
+    )
+
+    if not accesses:
         raise HTTPException(status_code=403, detail="Access denied to this chapter")
-    
-    if access.accessed_at is None:
-        access.accessed_at = datetime.utcnow()
-        db.commit()
+
+    now = datetime.utcnow()
+    for access in accesses:
+        if access.accessed_at is None:
+            access.accessed_at = now
+    db.commit()
+    for access in accesses:
         db.refresh(access)
-    
-    return {"message": "Chapter marked as accessed", "accessed_at": access.accessed_at}
+
+    return {
+        "message": "Chapter marked as accessed",
+        "accessed_at": max(a.accessed_at for a in accesses if a.accessed_at),
+    }

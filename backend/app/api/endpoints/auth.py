@@ -8,7 +8,13 @@ from ...core.config import settings
 from ...core.email import email_service
 from ...models.models import UserPersonal, Student, Registration, Course, Instructor
 from ...schemas.schemas import (
-    LoginRequest, Token, RegisterRequest, UserRole, RegistrationStatus, InstructorCreate
+    LoginRequest,
+    Token,
+    RegisterRequest,
+    UserRole,
+    RegistrationStatus,
+    InstructorCreate,
+    ChangePasswordRequest,
 )
 import secrets
 from ..deps import get_current_user
@@ -213,19 +219,18 @@ async def password_reset_request(email: str, db: Session = Depends(get_db)):
 
 @router.post("/change-password")
 async def change_password(
-    current_password: str,
-    new_password: str,
+    body: ChangePasswordRequest,
     current_user: UserPersonal = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Change user password"""
-    if not verify_password(current_password, current_user.password_hash):
+    """Change password for the authenticated user (JSON body)."""
+    if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect current password"
+            detail="Incorrect current password",
         )
-    
-    current_user.password_hash = get_password_hash(new_password)
+
+    current_user.password_hash = get_password_hash(body.new_password)
     db.commit()
-    
+
     return {"message": "Password changed successfully"}

@@ -41,6 +41,16 @@ export const registerInstructor = async (data: Record<string, string | number | 
   });
 };
 
+export const changePassword = async (data: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ message: string }> => {
+  return apiClient<{ message: string }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
 export const getMe = async (): Promise<Record<string, unknown>> => {
   return apiClient('/students/me');
 };

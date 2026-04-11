@@ -175,33 +175,86 @@ async def grant_material_access(
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Grant chapter access to a student (Admin only)"""
-    if not access_data.chapter_id:
-         raise HTTPException(status_code=400, detail="Chapter ID is required")
+    """Grant chapter-level or lesson-level material access (Admin only)."""
+    if access_data.chapter_id is None and access_data.lesson_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Either chapter_id or lesson_id is required",
+        )
 
-    chapter = db.query(Chapter).options(joinedload(Chapter.course)).filter(Chapter.id == access_data.chapter_id).first()
-    if not chapter:
-        raise HTTPException(status_code=404, detail="Chapter not found")
-    
-    student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == access_data.student_id).first()
+    student = (
+        db.query(Student)
+        .options(joinedload(Student.user))
+        .filter(Student.id == access_data.student_id)
+        .first()
+    )
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    
-    existing = db.query(MaterialAccess).filter(
-        MaterialAccess.chapter_id == access_data.chapter_id,
-        MaterialAccess.student_id == access_data.student_id
-    ).first()
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="Access already granted for this chapter")
-    
-    new_access = MaterialAccess(
-        chapter_id=access_data.chapter_id,
-        student_id=access_data.student_id
-    )
+
+    if access_data.lesson_id is not None:
+        lesson = (
+            db.query(Lesson)
+            .options(joinedload(Lesson.chapter))
+            .filter(Lesson.id == access_data.lesson_id)
+            .first()
+        )
+        if not lesson:
+            raise HTTPException(status_code=404, detail="Lesson not found")
+
+        chapter_id = lesson.chapter_id
+        existing = (
+            db.query(MaterialAccess)
+            .filter(
+                MaterialAccess.student_id == access_data.student_id,
+                MaterialAccess.lesson_id == access_data.lesson_id,
+            )
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="Access already granted for this lesson",
+            )
+
+        new_access = MaterialAccess(
+            chapter_id=chapter_id,
+            lesson_id=access_data.lesson_id,
+            student_id=access_data.student_id,
+        )
+    else:
+        chapter_id = access_data.chapter_id
+        chapter = (
+            db.query(Chapter)
+            .options(joinedload(Chapter.course))
+            .filter(Chapter.id == chapter_id)
+            .first()
+        )
+        if not chapter:
+            raise HTTPException(status_code=404, detail="Chapter not found")
+
+        existing = (
+            db.query(MaterialAccess)
+            .filter(
+                MaterialAccess.chapter_id == chapter_id,
+                MaterialAccess.student_id == access_data.student_id,
+                MaterialAccess.lesson_id.is_(None),
+            )
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="Access already granted for this chapter",
+            )
+
+        new_access = MaterialAccess(
+            chapter_id=chapter_id,
+            student_id=access_data.student_id,
+        )
+
     db.add(new_access)
     db.commit()
-    
+
     return {"message": "Access granted successfully"}
 
 @router.delete("/revoke-access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)

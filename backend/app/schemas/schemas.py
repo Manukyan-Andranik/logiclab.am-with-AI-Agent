@@ -47,6 +47,16 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+class StudentSelfProfileUpdate(BaseModel):
+    profile_image: Optional[str] = Field(None, max_length=500)
+
+
 class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
