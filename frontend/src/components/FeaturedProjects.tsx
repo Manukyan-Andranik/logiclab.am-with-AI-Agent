@@ -5,6 +5,7 @@ import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { getMediaUrl } from "@/api/client";
 
 /* =======================
    DOT INDICATORS
@@ -73,7 +74,7 @@ const ProjectCover = ({ project }: { project: any }) => {
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
-            src={images[currentImageIndex]}
+            src={getMediaUrl(images[currentImageIndex])}
             alt={title}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -176,7 +177,7 @@ const ProjectPreview = ({
         }`}
     >
       <img
-        src={image}
+        src={getMediaUrl(image)}
         alt={title}
         className="absolute inset-0 w-full h-full object-cover grayscale-[0.5] group-hover:grayscale-0 transition-all"
       />

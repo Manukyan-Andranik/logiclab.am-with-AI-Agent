@@ -66,7 +66,7 @@ export const uploadFile = async (file: File): Promise<{ url: string }> => {
 
 export const getMediaUrl = (path?: string) => {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http') || path === '/placeholder.svg') return path;
   // If the path already starts with /api, don't double it
   if (path.startsWith('/api')) return `${BASE_URL.replace('/api', '')}${path}`;
   return `${BASE_URL}${path}`;

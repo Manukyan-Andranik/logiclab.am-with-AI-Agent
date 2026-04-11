@@ -3,29 +3,39 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getStudentDashboard, markChapterAccessed } from "@/api/students";
 import Loader from "@/components/ui/Loader";
-import Button from "@/components/ui/Button";
 import { getMediaUrl } from "@/api/client";
 import {
-  BookOpen,
   CheckCircle,
   Clock,
-  LogOut,
   User,
   FileText,
   ExternalLink,
-  ChevronRight,
+  ChevronDown,
   Layers,
   PlayCircle,
-  Sparkles,
   Award,
-  BookMarked
+  BookMarked,
+  MessageCircle,
+  BookOpen,
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import Container from "@/components/layout/Container";
-import Section from "@/components/layout/Section";
 import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
+
+
+const C = {
+  bg: "#222222",
+  surface: "#2a2a2a",
+  surfaceHover: "#2f2f2f",
+  border: "#333333",
+  borderSubtle: "#2e2e2e",
+  white: "#FFFFFF",
+  textPrimary: "#FFFFFF",
+  textSecondary: "#888888",
+  textMuted: "#555555",
+  gold: "#FFD700",
+  goldBg: "rgba(255,215,0,0.08)",
+  goldBorder: "rgba(255,215,0,0.20)",
+};
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -42,394 +52,255 @@ const StudentDashboard = () => {
 
   const markAccessedMutation = useMutation({
     mutationFn: markChapterAccessed,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["studentDashboard"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["studentDashboard"] }),
   });
 
   const handleToggleChapter = (chapterId: number, isAccessed: boolean) => {
-    if (openChapter === chapterId) {
-      setOpenChapter(null);
-    } else {
-      setOpenChapter(chapterId);
-      if (!isAccessed) {
-        markAccessedMutation.mutate(chapterId);
-      }
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    navigate("/login?role=student");
+    setOpenChapter(openChapter === chapterId ? null : chapterId);
+    if (openChapter !== chapterId && !isAccessed) markAccessedMutation.mutate(chapterId);
   };
 
   const lessonsCount = useMemo(() => {
     if (!data?.materials) return 0;
-    return data.materials.reduce((sum, chapter) => sum + chapter.lessons.length, 0);
+    return data.materials.reduce((sum, ch) => sum + ch.lessons.length, 0);
   }, [data?.materials]);
+
+  const getResourceLabel = (url: string, name: string) => {
+    if (name && name !== "link" && name !== "") return name;
+    const l = url.toLowerCase();
+    if (l.includes("youtube") || l.includes("vimeo") || l.includes(".mp4")) return "Video";
+    if (l.includes("colab")) return "Colab";
+    if (l.includes("github")) return "GitHub";
+    if (l.includes("pdf")) return "PDF";
+    return "Link";
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader size={48} />
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader size={36} />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-center p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="glass-card p-12 rounded-[2rem] max-w-md border-danger/20"
-        >
-          <div className="w-20 h-20 rounded-full bg-danger/10 flex items-center justify-center mx-auto mb-6 text-danger">
-            <User size={40} />
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "1.25rem", padding: "2.5rem", maxWidth: 360, width: "100%", textAlign: "center" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.goldBg, border: `1px solid ${C.goldBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+            <User size={22} color={C.gold} />
           </div>
-          <h1 className="text-2xl font-black text-white mb-4 uppercase tracking-tighter italic">
-            Մուտքի սխալ
-          </h1>
-          <p className="text-gray-light opacity-70 mb-8 font-medium italic">
-            Չհաջողվեց բեռնել ձեր տվյալները: Խնդրում ենք նորից մուտք գործել:
+          <h2 style={{ color: C.textPrimary, fontSize: "1rem", fontWeight: 600, marginBottom: "0.5rem" }}>Մուտքի սխալ</h2>
+          <p style={{ color: C.textSecondary, fontSize: "0.8125rem", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+            Չհաջողվեց բեռնել ձեր տվյալները։ Խնդրում ենք նորից մուտք գործել։
           </p>
-          <Button
-            className="w-full h-14 rounded-xl font-black uppercase tracking-widest bg-primary text-black hover:bg-primary-alt"
+          <button
             onClick={() => navigate("/login?role=student")}
+            style={{ width: "100%", height: 44, background: C.gold, color: C.bg, border: "none", borderRadius: "0.75rem", fontSize: "0.875rem", fontWeight: 700, cursor: "pointer" }}
           >
             Վերադառնալ
-          </Button>
-        </motion.div>
+          </button>
+        </div>
       </div>
     );
   }
 
   const { student, course, progress, materials } = data;
-
-  const avatarSrc = student?.user?.profile_image
-    ? getMediaUrl(student.user.profile_image)
-    : null;
+  const avatarSrc = student?.user?.profile_image ? getMediaUrl(student.user.profile_image) : null;
 
   return (
-    <div className="min-h-screen bg-black selection:bg-primary selection:text-black">
-      {/* HEADER */}
-      <Section className="pt-32 pb-16 bg-gradient-to-b from-gray-dark/50 to-transparent">
-        <Container>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <div className="relative group">
-                <div className="w-20 h-20 rounded-3xl overflow-hidden bg-primary flex items-center justify-center text-black shadow-2xl transition-transform duration-500 group-hover:scale-105 group-hover:rotate-3">
-                  {avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt={student.user.first_name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User size={40} strokeWidth={2.5} />
-                  )}
+    <div style={{ minHeight: "100vh", background: C.bg }}>
+      <header style={{
+        position: "sticky", top: 0, zIndex: 40,
+        background: "rgba(34,34,34,0.92)",
+        backdropFilter: "blur(20px)",
+        borderBottom: `1px solid ${C.border}`,
+      }}>
+        <div style={{ maxWidth: 1040, margin: "0 auto", padding: "0 1.5rem", height: 80, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
+            <div style={{ position: "relative" }}>
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt=""
+                  style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", border: `2.5px solid ${C.gold}` }}
+                />
+              ) : (
+                <div style={{ width: 60, height: 60, borderRadius: "50%", background: C.goldBg, border: `2.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <User size={28} color={C.gold} />
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <h1 className="text-4xl sm:text-5xl font-black text-white uppercase tracking-tighter leading-none italic">
-                  Բարի գալուստ, <br />
-                  <span className="text-primary">{student.user.first_name}</span>
-                </h1>
-              </div>
+              )}
+              <span style={{ position: "absolute", bottom: 2, right: 2, width: 14, height: 14, borderRadius: "50%", background: "#4ade80", border: `2.5px solid ${C.bg}` }} />
+            </div>
+            <div>
+              <p style={{ color: C.textPrimary, fontSize: "1rem", fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
+                {student.user.first_name} {student.user.last_name}
+              </p>
+              <p style={{ color: C.textMuted, fontSize: "0.75rem", margin: 0, fontWeight: 500 }}>Ուսանող</p>
             </div>
           </div>
-        </Container>
-      </Section>
+        </div>
+      </header>
 
-      <Container className="pb-24">
-        {/* STATS (dashboard only) */}
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "2rem 1.5rem 5rem" }}>
+        
+        {/* CSS for Stats Grid - Mobile 2x2, Desktop 4 columns */}
+        <style>{`
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.875rem;
+            margin-bottom: 1.75rem;
+          }
+          @media(min-width: 768px) {
+            .stats-grid {
+              grid-template-columns: repeat(4, 1fr);
+            }
+            .dash-grid {
+              grid-template-columns: 1fr 288px !important;
+            }
+          }
+          .dash-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+          }
+        `}</style>
+
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: "2rem" }}>
+          <h1 style={{ color: C.textPrimary, fontSize: "1.875rem", fontWeight: 700, margin: "0 0 0.25rem", letterSpacing: "-0.025em" }}>
+            Բարի գալուստ, <span style={{ color: C.gold }}>{student.user.first_name}</span>
+          </h1>
+        </motion.div>
+
         {!isMaterialsPage && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="glass-card p-8 rounded-[2rem] border-white/5 flex items-center gap-6 group hover:border-primary/20 transition-all"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-black transition-all duration-500">
-                <Layers size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-light opacity-50 font-black uppercase tracking-[0.2em]">
-                  Բաժիններ
-                </p>
-                <p className="text-3xl font-black text-white tracking-tighter italic">
-                  {materials.length}
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="glass-card p-8 rounded-[2rem] border-white/5 flex items-center gap-6 group hover:border-primary/20 transition-all"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-black transition-all duration-500">
-                <PlayCircle size={24} />
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-light opacity-50 font-black uppercase tracking-[0.2em]">
-                  Դասեր
-                </p>
-                <p className="text-3xl font-black text-white tracking-tighter italic">
-                  {lessonsCount}
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="glass-card p-8 rounded-[2rem] border-white/5 flex items-center gap-6 group hover:border-primary/20 transition-all sm:col-span-2 lg:col-span-1"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-black transition-all duration-500">
-                <CheckCircle size={24} />
-              </div>
-              <div className="flex-grow">
-                <p className="text-[10px] text-gray-light opacity-50 font-black uppercase tracking-[0.2em]">
-                  Առաջընթաց
-                </p>
-                <div className="flex items-baseline justify-between">
-                  <p className="text-3xl font-black text-white tracking-tighter italic">
-                    {progress?.percentage || 0}%
-                  </p>
-                  <p className="text-[10px] font-bold text-primary italic">
-                    {progress?.accessed_lessons || 0} / {progress?.total_lessons || 0}
-                  </p>
+          <motion.div className="stats-grid" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+            {[
+              { icon: <Layers size={16} />, label: "Բաժիններ", value: String(materials.length) },
+              { icon: <PlayCircle size={16} />, label: "Դասեր", value: String(lessonsCount) },
+              { icon: <CheckCircle size={16} />, label: "Ավարտված", value: `${progress?.accessed_lessons ?? 0}/${progress?.total_lessons ?? 0}` },
+              { icon: <Clock size={16} />, label: "Տևողություն", value: `${course?.duration_months ?? 0} ամիս` },
+            ].map((s, i) => (
+              <motion.div
+                key={i}
+                style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "1.25rem", padding: "1.25rem" }}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: "0.625rem", background: C.goldBg, border: `1px solid ${C.goldBorder}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, marginBottom: "0.75rem" }}>
+                  {s.icon}
                 </div>
-              </div>
-            </motion.div>
-          </div>
+                <p style={{ color: C.textPrimary, fontSize: "1.25rem", fontWeight: 800, margin: "0 0 0.125rem" }}>{s.value}</p>
+                <p style={{ color: C.textMuted, fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase" }}>{s.label}</p>
+              </motion.div>
+            ))}
+          </motion.div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-          {/* MAIN CONTENT */}
-          <div className="lg:col-span-2 space-y-12">
-            {/* COURSE INFO CARD (dashboard only) */}
-            {!isMaterialsPage && (
+        <div className="dash-grid">
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {!isMaterialsPage && progress && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="relative overflow-hidden rounded-[2.5rem] bg-gray-dark border border-white/5 p-10 shadow-2xl"
+                transition={{ delay: 0.13 }}
+                style={{
+                  position: "relative", overflow: "hidden", borderRadius: "2.5rem",
+                  background: C.surface, border: `1px solid ${C.border}`, padding: "2.5rem",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)", marginBottom: "1rem"
+                }}
               >
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[100px] -mr-32 -mt-32" />
-
-                <div className="relative space-y-6">
-                  <div className="flex items-center gap-3">
-                    <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] uppercase font-black tracking-widest px-3 py-1">
+                <div style={{ position: "absolute", top: 0, right: 0, width: "256px", height: "256px", background: C.goldBg, borderRadius: "50%", filter: "blur(100px)", marginRight: "-128px", marginTop: "-128px", pointerEvents: "none" }} />
+                
+                <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <div style={{ background: C.goldBg, color: C.gold, border: `1px solid ${C.goldBorder}`, fontSize: "10px", textTransform: "uppercase", fontWeight: 900, padding: "0.25rem 0.75rem", borderRadius: "4px" }}>
                       Ընթացիկ դասընթաց
-                    </Badge>
-                    <div className="h-1 w-12 bg-white/10 rounded-full" />
+                    </div>
                   </div>
 
-                  <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none italic">
+                  <h2 style={{ color: C.textPrimary, fontSize: "clamp(1.75rem, 5vw, 2.5rem)", fontWeight: 900, textTransform: "uppercase", fontStyle: "italic", margin: 0 }}>
                     {course ? getLocalizedContent(course.title) : "Logic Lab Դասընթաց"}
                   </h2>
 
-                  <div className="flex flex-wrap gap-6 text-sm font-bold italic text-gray-light opacity-60 uppercase tracking-tight">
-                    <div className="flex items-center gap-2">
-                      <Clock size={16} className="text-primary" />
-                      {course?.duration_months || 0} Ամիս
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookMarked size={16} className="text-primary" />
-                      {materials.length} Բաժին
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Award size={16} className="text-primary" />
-                      Սերտիֆիկացում
-                    </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", fontSize: "0.8rem", fontWeight: 700, fontStyle: "italic", color: C.textSecondary, textTransform: "uppercase" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><Clock size={14} color={C.gold} /> {course?.duration_months || 0} Ամիս</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><BookMarked size={14} color={C.gold} /> {materials.length} Բաժին</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><Award size={14} color={C.gold} /> Սերտիֆիկացում</div>
                   </div>
 
-                  {progress && (
-                    <div className="pt-6 space-y-4 max-w-md">
-                      <div className="flex justify-between items-end">
-                        <span className="text-xs font-black uppercase tracking-widest text-white/40">Ընդհանուր առաջընթացը</span>
-                        <span className="text-xl font-black text-primary italic">{progress.percentage}%</span>
-                      </div>
-                      <Progress value={progress.percentage} className="h-2 bg-white/5" />
+                  <div style={{ paddingTop: "1rem", maxWidth: "400px", width: "100%", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 900, textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>Առաջընթաց</span>
+                      <span style={{ fontSize: "1.1rem", fontWeight: 900, color: C.gold, fontStyle: "italic" }}>{progress.percentage}%</span>
                     </div>
-                  )}
+                    <div style={{ height: "6px", background: "rgba(255,255,255,0.05)", borderRadius: "99px", overflow: "hidden" }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${progress.percentage}%` }} transition={{ duration: 1 }} style={{ height: "100%", background: C.gold }} />
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
 
-            {/* MATERIALS (materials route only) */}
             {isMaterialsPage && (
-              <div className="space-y-8">
-                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                  <div className="h-8 sm:h-10 w-1 shrink-0 bg-primary rounded-full" />
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tighter italic min-w-0 break-words">
-                    Ուսումնական <span className="text-primary">նյութեր</span>
-                  </h3>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                  <BookMarked size={15} color={C.gold} />
+                  <h2 style={{ color: C.textPrimary, fontSize: "1rem", fontWeight: 600, margin: 0 }}>Ուսումնական նյութեր</h2>
                 </div>
-
-                <div className="space-y-6">
-                  {materials.length > 0 ? (
-                    materials.map((chapter, idx) => (
-                      <div
-                        key={chapter.chapter_id}
-                        className="group"
-                      >
-                        {/* CHAPTER HEADER */}
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          onClick={() => handleToggleChapter(chapter.chapter_id, chapter.is_accessed)}
-                          className={`flex flex-col gap-3 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border-2 cursor-pointer transition-all duration-500 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${openChapter === chapter.chapter_id
-                              ? "bg-primary border-primary text-black"
-                              : "bg-gray-dark border-white/5 text-white hover:border-primary/30"
-                            }`}
-                        >
-                          <div className="flex items-start gap-3 min-w-0 sm:items-center sm:gap-5">
-                            <div
-                              className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black italic shadow-lg transition-colors ${openChapter === chapter.chapter_id
-                                  ? "bg-black text-primary"
-                                  : "bg-white/5 text-primary"
-                                }`}
-                            >
-                              {chapter.is_accessed ? (
-                                <CheckCircle size={18} strokeWidth={3} />
-                              ) : (
-                                (idx + 1).toString().padStart(2, '0')
-                              )}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                  {materials.map((chapter, idx) => (
+                    <motion.div key={chapter.chapter_id} style={{ background: C.surface, border: `1px solid ${openChapter === chapter.chapter_id ? C.goldBorder : C.border}`, borderRadius: "1.125rem", overflow: "hidden" }}>
+                      <button onClick={() => handleToggleChapter(chapter.chapter_id, chapter.is_accessed)} style={{ width: "100%", display: "flex", alignItems: "center", gap: "0.875rem", padding: "1rem 1.25rem", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}>
+                        <div style={{ flexShrink: 0, width: 36, height: 36, borderRadius: "0.625rem", background: chapter.is_accessed ? C.gold : C.goldBg, border: `1px solid ${chapter.is_accessed ? C.gold : C.goldBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {chapter.is_accessed ? <CheckCircle size={16} color={C.bg} strokeWidth={2.5} /> : <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: C.gold }}>{(idx + 1).toString().padStart(2, "0")}</span>}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ color: C.textPrimary, fontSize: "0.875rem", fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chapter.chapter_title}</p>
+                          <p style={{ color: C.textMuted, fontSize: "0.75rem", margin: 0 }}>{chapter.lessons.length} դաս</p>
+                        </div>
+                        <ChevronDown size={15} color={C.textMuted} style={{ transition: "transform .25s", transform: openChapter === chapter.chapter_id ? "rotate(180deg)" : "none" }} />
+                      </button>
+                      <AnimatePresence>
+                        {openChapter === chapter.chapter_id && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
+                            <div style={{ borderTop: `1px solid ${C.borderSubtle}`, padding: "0.5rem 0" }}>
+                              {chapter.lessons.map((lesson, lIdx) => (
+                                <div key={lesson.lesson_id} style={{ padding: "0.75rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                  <div style={{ display: "flex", gap: "0.75rem" }}>
+                                    <span style={{ fontSize: "0.7rem", fontWeight: 600, color: C.textMuted }}>{(lIdx + 1).toString().padStart(2, "0")}</span>
+                                    <span style={{ color: "#ccc", fontSize: "0.8rem" }}>{lesson.lesson_title}</span>
+                                  </div>
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", paddingLeft: "1.5rem" }}>
+                                    {lesson.resource_links.map((link, linkIdx) => (
+                                      <a key={linkIdx} href={link.url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.3rem 0.6rem", background: C.goldBg, border: `1px solid ${C.goldBorder}`, borderRadius: "0.5rem", color: C.gold, fontSize: "0.65rem", fontWeight: 700, textDecoration: "none" }}>
+                                        {getResourceLabel(link.url, link.name)} <ExternalLink size={9} />
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-
-                            <h4 className="font-black text-base sm:text-lg md:text-xl uppercase tracking-tight italic min-w-0 flex-1 break-words leading-snug">
-                              {chapter.chapter_title}
-                            </h4>
-                          </div>
-
-                          <div className="flex items-center justify-end gap-3 shrink-0 sm:gap-4 pl-12 sm:pl-0">
-                            <Badge
-                              variant="secondary"
-                              className={`text-[10px] uppercase font-black tracking-widest px-3 py-1 ${openChapter === chapter.chapter_id
-                                  ? "bg-black/20 text-black"
-                                  : "bg-black text-primary"
-                                }`}
-                            >
-                              {chapter.lessons.length} Դաս
-                            </Badge>
-                            <ChevronRight
-                              size={20}
-                              className={`shrink-0 transition-transform duration-500 ${openChapter === chapter.chapter_id ? "rotate-90" : ""
-                                }`}
-                            />
-                          </div>
-                        </motion.div>
-
-                        {/* LESSONS LIST */}
-                        <AnimatePresence>
-                          {openChapter === chapter.chapter_id && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="pt-3 sm:pt-4 pb-2 px-2 sm:px-4 space-y-2 sm:space-y-3">
-                                {chapter.lessons.map((lesson, lIdx) => (
-                                  <motion.div
-                                    key={lesson.lesson_id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: lIdx * 0.05 }}
-                                    className="flex flex-col gap-3 p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 group/item hover:bg-white/10 hover:border-primary/20 transition-all italic sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                                  >
-                                    <div className="flex items-start gap-3 min-w-0 sm:items-center sm:gap-4 sm:flex-1 sm:min-w-0">
-                                      <span className="text-[10px] font-black text-white/20 group-hover/item:text-primary/40 transition-colors shrink-0 pt-0.5 sm:pt-0">
-                                        {(lIdx + 1).toString().padStart(2, '0')}
-                                      </span>
-                                      <span className="text-sm font-bold text-white/80 group-hover/item:text-white transition-colors min-w-0 flex-1 break-words leading-snug">
-                                        {lesson.lesson_title}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2 w-full sm:flex-row sm:flex-wrap sm:gap-2 sm:justify-end sm:w-auto sm:max-w-none">
-                                      {lesson.resource_links.map((link, linkIdx) => {
-                                        const getLabel = (url: string, name: string) => {
-                                          if (name && name !== "link" && name !== "") return name;
-                                          const lowerUrl = url.toLowerCase();
-                                          if (lowerUrl.includes("youtube") || lowerUrl.includes("vimeo") || lowerUrl.includes(".mp4")) return "Video";
-                                          if (lowerUrl.includes("colab")) return "Colab";
-                                          if (lowerUrl.includes("github")) return "GitHub";
-                                          if (lowerUrl.includes("pdf")) return "PDF";
-                                          return "Resource";
-                                        };
-
-                                        return (
-                                          <a
-                                            key={linkIdx}
-                                            href={link.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex w-full min-h-11 sm:min-h-0 sm:h-8 sm:w-auto items-center justify-center gap-2 px-4 py-2.5 sm:py-0 rounded-xl sm:rounded-lg bg-black text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-black transition-all border border-primary/20 active:scale-[0.98]"
-                                          >
-                                            {getLabel(link.url, link.name)}
-                                            <ExternalLink size={10} className="shrink-0" />
-                                          </a>
-                                        );
-                                      })}
-                                    </div>
-                                  </motion.div>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-20 rounded-[3rem] border-2 border-dashed border-white/5 text-center bg-gray-dark/30">
-                      <FileText size={48} className="mx-auto mb-6 text-white/10" />
-                      <p className="text-gray-light opacity-40 font-black uppercase tracking-widest text-sm italic">
-                        Ուսումնական նյութեր դեռևս չկան
-                      </p>
-                    </div>
-                  )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* SIDEBAR */}
-          <div className="space-y-8">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 }}
-              className="relative overflow-hidden rounded-[2.5rem] bg-primary p-8 text-black group"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
-
-              <div className="relative space-y-4">
-                <h3 className="text-2xl font-black uppercase tracking-tighter leading-none italic">
-                  Օգնության <br /> կարիք ունե՞ք
-                </h3>
-                <p className="text-sm font-bold italic opacity-80 leading-relaxed">
-                  Եթե ունեք հարցեր դասընթացի կամ նյութերի վերաբերյալ, դիմեք մեր աջակցման թիմին:
-                </p>
-                <Button
-                  onClick={() => navigate("/#contact")}
-                  className="w-full h-12 bg-[var(--gray-dark)] text-white hover:bg-white hover:text-black rounded-xl font-black uppercase tracking-widest text-[10px] transition-all"
-                >
-                  Կապ մեզ հետ
-                </Button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} style={{ background: C.gold, borderRadius: "1.25rem", padding: "1.5rem" }}>
+              <div style={{ width: 40, height: 40, borderRadius: "0.75rem", background: "rgba(0,0,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1rem" }}>
+                <MessageCircle size={20} color={C.bg} />
               </div>
+              <h3 style={{ color: C.bg, fontSize: "1rem", fontWeight: 800, margin: "0 0 0.5rem" }}>Օգնության կարիք ունե՞ք</h3>
+              <p style={{ color: "rgba(34,34,34,0.7)", fontSize: "0.8rem", fontWeight: 600, lineHeight: 1.4, marginBottom: "1.25rem" }}>Եթե ունեք հարցեր, դիմեք մեր թիմին:</p>
+              <button onClick={() => navigate("/#contact")} style={{ width: "100%", height: 44, background: C.bg, color: C.gold, border: "none", borderRadius: "0.75rem", fontSize: "0.85rem", fontWeight: 800, cursor: "pointer" }}>Կապ մեզ հետ</button>
             </motion.div>
           </div>
         </div>
-      </Container>
+      </div>
     </div>
   );
 };
