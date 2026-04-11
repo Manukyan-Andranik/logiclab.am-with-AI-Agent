@@ -31,9 +31,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { BookOpen, GraduationCap, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { BookOpen, GraduationCap, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Trash2, History, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
 
 const AdminStudents = () => {
   const queryClient = useQueryClient();
@@ -97,6 +98,20 @@ const AdminStudents = () => {
     },
   });
 
+  const revokeAllAccessMutation = useMutation({
+    mutationFn: async () => {
+      if (!accessData?.data) return;
+      // Sequential deletion to avoid race conditions and overwhelming the server
+      for (const access of accessData.data) {
+        await revokeLessonAccess(access.id);
+      }
+    },
+    onSuccess: () => {
+      refetchAccess();
+      toast({ title: "Success", description: "All access revoked." });
+    },
+  });
+
   const deleteStudentMutation = useMutation({
     mutationFn: (studentId: number) => deleteStudent(studentId),
     onSuccess: () => {
@@ -122,19 +137,20 @@ const AdminStudents = () => {
     setIsProgressOpen(true);
   };
 
-  const hasAccess = (chapterId?: number, lessonId?: number) => {
-    if (!accessData?.data) return false;
-    return accessData.data.some((a: any) =>
+  const getAccessRecord = (chapterId?: number, lessonId?: number) => {
+    if (!accessData?.data) return null;
+    return accessData.data.find((a: any) =>
       (lessonId && a.lesson_id === lessonId) || (!lessonId && chapterId && a.chapter_id === chapterId && !a.lesson_id)
     );
   };
 
-  const getAccessId = (chapterId?: number, lessonId?: number) => {
-    if (!accessData?.data) return null;
-    const access = accessData.data.find((a: any) =>
-      (lessonId && a.lesson_id === lessonId) || (!lessonId && chapterId && a.chapter_id === chapterId && !a.lesson_id)
-    );
-    return access?.id;
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "Never";
+    try {
+      return format(new Date(dateString), "MMM d, yyyy HH:mm");
+    } catch (e) {
+      return "Invalid Date";
+    }
   };
 
   if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
@@ -217,7 +233,7 @@ const AdminStudents = () => {
       </div>
 
       <Dialog open={isProgressOpen} onOpenChange={setIsProgressOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               <GraduationCap className="text-primary" />
@@ -228,14 +244,21 @@ const AdminStudents = () => {
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <div className="space-y-4">
               <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Set Current Position</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-secondary/10 border border-border">
                 <div className="space-y-2">
-                  <Label>Current Chapter</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider opacity-70">Current Chapter</Label>
                   <Select
                     value={selectedStudent?.last_chapter_id?.toString()}
-                    onValueChange={(val) => progressMutation.mutate({ chapter_id: parseInt(val) })}
+                    onValueChange={(val) => {
+                      const chapterId = parseInt(val);
+                      const firstLesson = curriculumData?.curriculum.find((c: any) => c.chapter.id === chapterId)?.lessons[0];
+                      progressMutation.mutate({ 
+                        chapter_id: chapterId,
+                        lesson_id: firstLesson?.id
+                      });
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Select Chapter" />
                     </SelectTrigger>
                     <SelectContent>
@@ -248,12 +271,12 @@ const AdminStudents = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Current Lesson</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider opacity-70">Current Lesson</Label>
                   <Select
                     value={selectedStudent?.last_lesson_id?.toString()}
                     onValueChange={(val) => progressMutation.mutate({ lesson_id: parseInt(val) })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Select Lesson" />
                     </SelectTrigger>
                     <SelectContent>
@@ -271,52 +294,167 @@ const AdminStudents = () => {
             </div>
 
             <div className="space-y-4 pt-6 border-t border-border">
-              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Access Management</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Access Management</h3>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tighter">
+                    {accessData?.total || 0} active permissions
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-[10px] font-black uppercase tracking-widest text-destructive hover:bg-destructive/10 gap-1.5"
+                    onClick={() => {
+                      if (confirm("Revoke all access for this student?")) {
+                        revokeAllAccessMutation.mutate();
+                      }
+                    }}
+                  >
+                    <Trash size={12} />
+                    Revoke All
+                  </Button>
+                </div>
+              </div>
 
-              <Tabs defaultValue="lessons" className="space-y-4">
+              <Tabs defaultValue="curriculum" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-1 h-auto p-1 bg-secondary/20">
+                  <TabsTrigger value="curriculum" className="py-2 text-xs uppercase font-bold tracking-widest">
+                    Course Curriculum & Access
+                  </TabsTrigger>
+                </TabsList>
 
-                <TabsContent value="lessons" className="space-y-4">
-                  {curriculumData?.curriculum.map((chapter: any) => (
-                    <div
-                      key={chapter.chapter.id}
-                      className="space-y-2 border border-white p-4">
-                      <h4 className="text-xs font-semibold text-primary-alt px-1">{chapter.chapter.title}</h4>
-                      {chapter.lessons.map((lesson: any) => {
-                        const accessId = getAccessId(undefined, lesson.id);
-                        const isGranted = !!accessId;
+                <TabsContent value="curriculum" className="space-y-6">
+                  {curriculumData?.curriculum.map((chapter: any) => {
+                    const chapterAccess = getAccessRecord(chapter.chapter.id, undefined);
+                    const isChapterGranted = !!chapterAccess;
 
-                        return (
-                          <div key={lesson.id} className="flex items-center justify-between p-2 pl-4 rounded-lg bg-secondary/10 border border-border/50">
-                            <div className="flex items-center gap-2">
-                              {isGranted && <ShieldCheck className="text-emerald-500" size={14} />}
-                              <span className="text-xs">{lesson.title}</span>
+                    return (
+                      <div
+                        key={chapter.chapter.id}
+                        className="space-y-3 rounded-xl border border-border bg-card/50 overflow-hidden"
+                      >
+                        <div className="bg-secondary/30 px-4 py-3 flex items-center justify-between border-b border-border">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                              {chapter.chapter.order_index}
                             </div>
-                            {isGranted ? (
+                            <h4 className="text-sm font-bold text-foreground uppercase tracking-tight italic">
+                              {chapter.chapter.title}
+                            </h4>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            {isChapterGranted && (
+                              <div className="text-[10px] text-right">
+                                <div className="text-muted-foreground font-bold uppercase tracking-tighter opacity-50">Granted on</div>
+                                <div className="text-foreground font-black tracking-tighter">{formatDate(chapterAccess.granted_at)}</div>
+                              </div>
+                            )}
+
+                            {isChapterGranted ? (
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-2 text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
-                                onClick={() => revokeAccessMutation.mutate(accessId)}
+                                className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-destructive hover:text-destructive hover:bg-destructive/10 gap-2 border border-destructive/20"
+                                onClick={() => revokeAccessMutation.mutate(chapterAccess.id)}
                               >
-                                <XCircle size={12} />
+                                <XCircle size={14} />
                                 Revoke
                               </Button>
                             ) : (
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-[10px] text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
-                                onClick={() => grantLessonMutation.mutate(lesson.id)}
+                                variant="outline"
+                                className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10 gap-2 border-primary/30"
+                                onClick={() => grantChapterMutation.mutate(chapter.chapter.id)}
                               >
-                                <CheckCircle2 size={12} />
+                                <ShieldCheck size={14} />
                                 Grant
                               </Button>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ))}
+                        </div>
+
+                        <div className="p-3 space-y-2 bg-background/30">
+                          {chapter.lessons.map((lesson: any) => {
+                            const lessonAccess = getAccessRecord(undefined, lesson.id);
+                            const isLessonGranted = !!lessonAccess;
+                            const isEffectivelyGranted = isChapterGranted || isLessonGranted;
+                            const accessedAt = lessonAccess?.accessed_at || (isChapterGranted ? chapterAccess.accessed_at : null);
+
+                            return (
+                              <div 
+                                key={lesson.id} 
+                                className={`flex items-center justify-between p-2 pl-4 rounded-lg border transition-all duration-200 ${
+                                  isEffectivelyGranted 
+                                    ? "bg-emerald-500/5 border-emerald-500/20" 
+                                    : "bg-secondary/5 border-border/50 opacity-70"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {isEffectivelyGranted ? (
+                                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                      <CheckCircle2 className="text-emerald-500" size={12} />
+                                    </div>
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full bg-secondary/50 flex items-center justify-center">
+                                      <XCircle className="text-muted-foreground/30" size={12} />
+                                    </div>
+                                  )}
+                                  <div className="flex flex-col">
+                                    <span className={`text-[11px] font-bold uppercase tracking-tight ${isEffectivelyGranted ? "text-foreground" : "text-muted-foreground"}`}>
+                                      {lesson.title}
+                                    </span>
+                                    {accessedAt && (
+                                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                                        <History size={10} />
+                                        Last accessed: {formatDate(accessedAt)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {isChapterGranted && isLessonGranted && (
+                                    <Badge variant="outline" className="text-[8px] h-4 px-1 opacity-50">Duplicate Access</Badge>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {isChapterGranted ? (
+                                    <span className="text-[9px] font-black uppercase text-emerald-500/60 pr-2 tracking-tighter italic">
+                                      Chapter Access
+                                    </span>
+                                  ) : isLessonGranted ? (
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-[9px] text-right">
+                                        <div className="text-muted-foreground opacity-50 uppercase font-bold tracking-tighter">Granted</div>
+                                        <div className="text-foreground font-black tracking-tighter">{formatDate(lessonAccess.granted_at)}</div>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                        onClick={() => revokeAccessMutation.mutate(lessonAccess.id)}
+                                      >
+                                        Revoke
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
+                                      onClick={() => grantLessonMutation.mutate(lesson.id)}
+                                    >
+                                      Grant
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </TabsContent>
               </Tabs>
             </div>
@@ -369,4 +507,3 @@ const AdminStudents = () => {
 };
 
 export default AdminStudents;
-
