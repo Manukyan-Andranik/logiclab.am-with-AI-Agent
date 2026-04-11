@@ -12,7 +12,7 @@ from ...core.security import get_password_hash
 from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
     Lesson, Chapter, Course, EmailLog, Instructor, Project,
-    Enrollment, Certificate
+    Enrollment, Certificate, RegistrationStatus as DbRegistrationStatus,
 )
 from ...schemas.schemas import (
     StudentResponse, StudentUpdate, UserRole,
@@ -38,16 +38,16 @@ async def admin_dashboard(
     total_students = db.query(Student).count()
     total_registrations = db.query(Registration).count()
     pending_registrations = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.PENDING
+        Registration.status == DbRegistrationStatus.PENDING
     ).count()
     confirmed_registrations = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.CONFIRMED
+        Registration.status == DbRegistrationStatus.CONFIRMED
     ).count()
     completed_registrations = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.COMPLETED
+        Registration.status == DbRegistrationStatus.COMPLETED
     ).count()
     rejected_registrations = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.REJECTED
+        Registration.status == DbRegistrationStatus.REJECTED
     ).count()
     
     total_projects = db.query(Project).count()
@@ -71,24 +71,30 @@ async def admin_dashboard(
             "is_active": c.is_active,
             "pending_count": db.query(Registration).filter(
                 Registration.course_id == c.id,
-                Registration.status == RegistrationStatus.PENDING
+                Registration.status == DbRegistrationStatus.PENDING,
             ).count(),
             "confirmed_count": db.query(Registration).filter(
                 Registration.course_id == c.id,
-                Registration.status == RegistrationStatus.CONFIRMED
+                Registration.status == DbRegistrationStatus.CONFIRMED,
             ).count(),
             "rejected_count": db.query(Registration).filter(
                 Registration.course_id == c.id,
-                Registration.status == RegistrationStatus.REJECTED
+                Registration.status == DbRegistrationStatus.REJECTED,
             ).count(),
             "completed_count": db.query(Registration).filter(
                 Registration.course_id == c.id,
-                Registration.status == RegistrationStatus.COMPLETED
+                Registration.status == DbRegistrationStatus.COMPLETED,
             ).count(),
             "instructor": ", ".join(
-                i.user.first_name + " " + i.user.last_name
+                (
+                    f"{(i.user.first_name or '').strip()} {(i.user.last_name or '').strip()}".strip()
+                    if i.user
+                    else "—"
+                )
                 for i in c.instructors
-            ) if c.instructors else "—",
+            )
+            if c.instructors
+            else "—",
         })
     
     return {
@@ -748,16 +754,16 @@ async def get_registration_statistics_admin(
     """Get registration statistics overview (Admin only)"""
     total = db.query(Registration).count()
     pending = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.PENDING
+        Registration.status == DbRegistrationStatus.PENDING
     ).count()
     confirmed = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.CONFIRMED
+        Registration.status == DbRegistrationStatus.CONFIRMED
     ).count()
     completed = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.COMPLETED
+        Registration.status == DbRegistrationStatus.COMPLETED
     ).count()
     rejected = db.query(Registration).filter(
-        Registration.status == RegistrationStatus.REJECTED
+        Registration.status == DbRegistrationStatus.REJECTED
     ).count()
     
     return {

@@ -149,34 +149,49 @@ const AdminDailyLife = () => {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    try {
-      const uploadedUrls: string[] = [];
+    const uploadedUrls: string[] = [];
+    const failures: string[] = [];
 
-      // Upload all selected files sequentially to be more robust
-      for (let i = 0; i < files.length; i++) {
-        const result = await uploadFile(files[i]);
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      try {
+        const result = await uploadFile(f);
         uploadedUrls.push(result.url);
+      } catch (err: unknown) {
+        const label = f.name?.trim() || `Image ${i + 1}`;
+        const msg = err instanceof Error ? err.message : String(err);
+        failures.push(`${label}: ${msg}`);
       }
+    }
 
+    if (uploadedUrls.length > 0) {
       setFormData(prev => ({
         ...prev,
         image_urls: [...prev.image_urls, ...uploadedUrls]
       }));
+    }
 
-      toast({ 
-        title: "Success", 
-        description: `${uploadedUrls.length} image(s) uploaded successfully` 
-      });
-    } catch (error: any) {
+    if (failures.length === 0) {
       toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload some images",
+        title: "Success",
+        description: `${uploadedUrls.length} image(s) uploaded successfully`
+      });
+    } else if (uploadedUrls.length > 0) {
+      toast({
+        title: "Partial upload",
+        description: `${uploadedUrls.length} ok, ${failures.length} failed. ${failures.slice(0, 2).join("; ")}${failures.length > 2 ? "…" : ""}`,
         variant: "destructive"
       });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    } else {
+      toast({
+        title: "Upload failed",
+        description: failures.slice(0, 3).join("; ") || "Could not upload images",
+        variant: "destructive"
+      });
     }
+
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

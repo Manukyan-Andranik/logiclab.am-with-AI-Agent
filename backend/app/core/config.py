@@ -73,6 +73,10 @@ class Settings(BaseSettings):
         ".webp",
         ".heic",
         ".heif",
+        ".avif",
+        ".bmp",
+        ".tif",
+        ".tiff",
         ".mp4",
         ".zip",
     }

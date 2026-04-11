@@ -1,7 +1,7 @@
 # app/api/endpoints/visits.py
 from fastapi import APIRouter, Depends, Request, status, Query, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract, distinct
+from sqlalchemy import func, distinct, cast, Date
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
@@ -11,6 +11,23 @@ from ...schemas.schemas import VisitResponse, VisitCreate, VisitSummaryResponse,
 from ..deps import get_current_admin # Assuming admin access for summary, but not for tracking
 
 router = APIRouter()
+
+
+def _visits_query(db: Session, start_date: Optional[datetime], end_date: Optional[datetime]):
+    """Fresh query each time — reusing one Query after .with_entities() breaks subsequent filters."""
+    q = db.query(Visit)
+    if start_date is not None:
+        q = q.filter(Visit.timestamp >= start_date)
+    if end_date is not None:
+        q = q.filter(Visit.timestamp <= end_date)
+    return q
+
+
+def _agg_label(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
 
 @router.post("/visits/track", status_code=status.HTTP_201_CREATED, response_model=VisitResponse)
 async def track_visit(
@@ -61,58 +78,75 @@ async def get_visit_summary(
     Get a summary of website visit statistics (Admin only).
     Filters by date range if provided.
     """
-    base_query = db.query(Visit)
+    total_visits = _visits_query(db, start_date, end_date).count()
 
-    if start_date:
-        base_query = base_query.filter(Visit.timestamp >= start_date)
-    if end_date:
-        base_query = base_query.filter(Visit.timestamp <= end_date)
+    unique_visitors = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(func.count(distinct(Visit.ip_address)))
+        .scalar()
+        or 0
+    )
 
-    total_visits = base_query.count()
-    
-    # Calculate unique visitors
-    unique_visitors = base_query.with_entities(func.count(distinct(Visit.ip_address))).scalar() or 0
-
-    # Calculate bot and human visits
-    bot_visits = base_query.filter(Visit.is_bot == True).count()
+    bot_visits = _visits_query(db, start_date, end_date).filter(Visit.is_bot == True).count()
     human_visits = total_visits - bot_visits
 
-    # Calculate mobile/desktop visits (very basic heuristic from user agent)
-    mobile_visits = base_query.filter(
-        (Visit.user_agent.ilike('%mobi%')) | 
-        (Visit.user_agent.ilike('%android%')) | 
-        (Visit.user_agent.ilike('%iphone%')) | 
-        (Visit.user_agent.ilike('%ipad%')) |
-        (Visit.user_agent.ilike('%windows phone%'))
-    ).count()
-    desktop_visits = total_visits - mobile_visits # Simplified: anything not mobile is desktop
+    mobile_visits = (
+        _visits_query(db, start_date, end_date)
+        .filter(
+            (Visit.user_agent.ilike("%mobi%"))
+            | (Visit.user_agent.ilike("%android%"))
+            | (Visit.user_agent.ilike("%iphone%"))
+            | (Visit.user_agent.ilike("%ipad%"))
+            | (Visit.user_agent.ilike("%windows phone%"))
+        )
+        .count()
+    )
+    desktop_visits = total_visits - mobile_visits
 
-    # Visits over time (daily aggregation)
-    visits_over_time = base_query.with_entities(
-        func.date(Visit.timestamp).label("label"),
-        func.count(Visit.id).label("count")
-    ).group_by(func.date(Visit.timestamp)).order_by(func.date(Visit.timestamp)).all()
-    visits_over_time_data = [VisitAggregationItem(label=str(v.label), count=v.count) for v in visits_over_time]
+    day_col = cast(Visit.timestamp, Date)
+    visits_over_time = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(day_col.label("label"), func.count(Visit.id).label("count"))
+        .group_by(day_col)
+        .order_by(day_col)
+        .all()
+    )
+    visits_over_time_data = [
+        VisitAggregationItem(label=_agg_label(v.label), count=v.count) for v in visits_over_time
+    ]
 
-    # Visits by page
-    visits_by_page = base_query.with_entities(
-        Visit.page_url.label("label"),
-        func.count(Visit.id).label("count")
-    ).group_by(Visit.page_url).order_by(func.count(Visit.id).desc()).limit(10).all()
-    visits_by_page_data = [VisitAggregationItem(label=v.label, count=v.count) for v in visits_by_page]
+    visits_by_page = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(Visit.page_url.label("label"), func.count(Visit.id).label("count"))
+        .group_by(Visit.page_url)
+        .order_by(func.count(Visit.id).desc())
+        .limit(10)
+        .all()
+    )
+    visits_by_page_data = [
+        VisitAggregationItem(label=_agg_label(v.label), count=v.count) for v in visits_by_page
+    ]
 
-    # Visits by country
-    visits_by_country = base_query.with_entities(
-        Visit.country.label("label"),
-        func.count(Visit.id).label("count")
-    ).filter(Visit.country.isnot(None)).group_by(Visit.country).order_by(func.count(Visit.id).desc()).limit(10).all()
-    visits_by_country_data = [VisitAggregationItem(label=v.label, count=v.count) for v in visits_by_country]
+    visits_by_country = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(Visit.country.label("label"), func.count(Visit.id).label("count"))
+        .filter(Visit.country.isnot(None))
+        .group_by(Visit.country)
+        .order_by(func.count(Visit.id).desc())
+        .limit(10)
+        .all()
+    )
+    visits_by_country_data = [
+        VisitAggregationItem(label=_agg_label(v.label), count=v.count) for v in visits_by_country
+    ]
 
-    # Visits by browser (simplified, extracts browser from user agent)
-    visits_by_browser_raw = base_query.with_entities(
-        Visit.user_agent.label("user_agent"),
-        func.count(Visit.id).label("count")
-    ).group_by(Visit.user_agent).order_by(func.count(Visit.id).desc()).all()
+    visits_by_browser_raw = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(Visit.user_agent.label("user_agent"), func.count(Visit.id).label("count"))
+        .group_by(Visit.user_agent)
+        .order_by(func.count(Visit.id).desc())
+        .all()
+    )
     
     browser_counts = {}
     for v in visits_by_browser_raw:
@@ -131,7 +165,9 @@ async def get_visit_summary(
         
         browser_counts[browser_name] = browser_counts.get(browser_name, 0) + v.count
     
-    visits_by_browser_data = [VisitAggregationItem(label=name, count=count) for name, count in browser_counts.items()]
+    visits_by_browser_data = [
+        VisitAggregationItem(label=name, count=count) for name, count in browser_counts.items()
+    ]
     visits_by_browser_data.sort(key=lambda x: x.count, reverse=True)
 
 
@@ -157,18 +193,16 @@ async def get_visits_by_path(
     current_admin = Depends(get_current_admin)
 ):
     """Get visits grouped by page path (Admin only)"""
-    query = db.query(Visit)
-    if start_date:
-        query = query.filter(Visit.timestamp >= start_date)
-    if end_date:
-        query = query.filter(Visit.timestamp <= end_date)
-    
-    visits_by_path = query.with_entities(
-        Visit.page_url.label("label"),
-        func.count(Visit.id).label("count")
-    ).group_by(Visit.page_url).order_by(func.count(Visit.id).desc()).limit(limit).all()
-    
-    return [VisitAggregationItem(label=item.label, count=item.count) for item in visits_by_path]
+    q = _visits_query(db, start_date, end_date)
+    visits_by_path = (
+        q.with_entities(Visit.page_url.label("label"), func.count(Visit.id).label("count"))
+        .group_by(Visit.page_url)
+        .order_by(func.count(Visit.id).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [VisitAggregationItem(label=_agg_label(item.label), count=item.count) for item in visits_by_path]
 
 @router.get("/visits/stats/by-date", response_model=List[VisitAggregationItem])
 async def get_visits_by_date(
@@ -178,18 +212,16 @@ async def get_visits_by_date(
     current_admin = Depends(get_current_admin)
 ):
     """Get visits grouped by date (Admin only)"""
-    query = db.query(Visit)
-    if start_date:
-        query = query.filter(Visit.timestamp >= start_date)
-    if end_date:
-        query = query.filter(Visit.timestamp <= end_date)
-    
-    visits_by_date = query.with_entities(
-        func.date(Visit.timestamp).label("label"),
-        func.count(Visit.id).label("count")
-    ).group_by(func.date(Visit.timestamp)).order_by(func.date(Visit.timestamp)).all()
-    
-    return [VisitAggregationItem(label=str(item.label), count=item.count) for item in visits_by_date]
+    day_col = cast(Visit.timestamp, Date)
+    visits_by_date = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(day_col.label("label"), func.count(Visit.id).label("count"))
+        .group_by(day_col)
+        .order_by(day_col)
+        .all()
+    )
+
+    return [VisitAggregationItem(label=_agg_label(item.label), count=item.count) for item in visits_by_date]
 
 @router.get("/visits", response_model=VisitListResponse)
 async def get_visits(

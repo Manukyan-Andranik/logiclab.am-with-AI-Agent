@@ -544,7 +544,51 @@ class DailyLifeResponse(BaseModel):
     published_date: datetime
     is_published: bool
     created_at: datetime
-    
+
+    @field_validator("title", "description", mode="before")
+    @classmethod
+    def _coerce_i18n_dict(cls, v: Any) -> Dict[str, str]:
+        if v is None:
+            return {}
+        if isinstance(v, str):
+            return {"en": v}
+        if isinstance(v, dict):
+            return {str(k): "" if val is None else str(val) for k, val in v.items()}
+        return {}
+
+    @field_validator("subtitle", mode="before")
+    @classmethod
+    def _coerce_subtitle(cls, v: Any) -> Optional[Dict[str, str]]:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return {"en": s} if s else None
+        if isinstance(v, dict):
+            out = {str(k): "" if val is None else str(val) for k, val in v.items()}
+            return out or None
+        return None
+
+    @field_validator("image_urls", mode="before")
+    @classmethod
+    def _coerce_image_urls(cls, v: Any) -> List[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [v] if v.strip() else []
+        if isinstance(v, list):
+            return [str(x) for x in v if x is not None and str(x).strip()]
+        if isinstance(v, dict):
+            return [str(x) for x in v.values() if x is not None and str(x).strip()]
+        return []
+
+    @field_validator("published_date", "created_at", mode="before")
+    @classmethod
+    def _coerce_datetimes(cls, v: Any) -> datetime:
+        if v is None:
+            return datetime.utcnow()
+        return v
+
     class Config:
         from_attributes = True
 # Material Schemas
