@@ -4,6 +4,11 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from ...core.database import get_db
+from ...core.cloudinary import (
+    delete_cloudinary_by_url,
+    delete_cloudinary_urls,
+    delete_removed_cloudinary_urls,
+)
 from ...models.models import DailyLife
 from ...schemas.schemas import DailyLifeCreate, DailyLifeUpdate, DailyLifeResponse
 from ..deps import get_current_admin
@@ -127,9 +132,15 @@ async def update_daily_life(
             detail="Story not found"
         )
     
-    # Update fields
-    update_data = story_data.dict(exclude_unset=True)
-    
+    update_data = story_data.model_dump(exclude_unset=True)
+
+    if "image_urls" in update_data and update_data["image_urls"] is not None:
+        delete_removed_cloudinary_urls(story.image_urls or [], update_data["image_urls"])
+    if "video_url" in update_data:
+        old_v, new_v = story.video_url, update_data["video_url"]
+        if old_v and old_v != new_v:
+            delete_cloudinary_by_url(old_v)
+
     for field, value in update_data.items():
         if value is not None:
             setattr(story, field, value)
@@ -152,7 +163,10 @@ async def delete_daily_life(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Daily life story not found"
         )
-    
+
+    delete_cloudinary_urls(story.image_urls or [])
+    delete_cloudinary_by_url(story.video_url)
+
     db.delete(story)
     db.commit()
     return None

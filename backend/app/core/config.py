@@ -64,7 +64,18 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "uploads"
     MAX_UPLOAD_SIZE: int = 25 * 1024 * 1024  # 10MB
-    ALLOWED_EXTENSIONS: set = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".mp4", ".zip"}
+    ALLOWED_EXTENSIONS: set = {
+        ".pdf",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".heic",
+        ".heif",
+        ".mp4",
+        ".zip",
+    }
     
     # Default Images
     DEFAULT_PROFILE_IMAGE: str = "https://res.cloudinary.com/dujmbcltl/image/upload/v1744535080/default_photo_adby1l.png"

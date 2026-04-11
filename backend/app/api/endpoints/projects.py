@@ -1,13 +1,17 @@
 # app/api/endpoints/projects.py
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ...core.database import get_db
+from ...core.cloudinary import delete_cloudinary_urls, delete_removed_cloudinary_urls
 from ...models.models import Project, Course, Student
 from ...schemas.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 from ..deps import get_current_admin
 from ...core.cloudinary import upload_image
 from ...core.config import settings
+from ...core.image_webp import raster_image_to_webp
 
 router = APIRouter()
 
@@ -16,8 +20,25 @@ async def upload_project_image(
     file: UploadFile = File(...),
     current_admin = Depends(get_current_admin)
 ):
-    """Upload an image to Cloudinary (Admin only)"""
-    url = upload_image(file.file, folder="projects")
+    """Upload an image to Cloudinary as WebP (Admin only)."""
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Allowed image types: jpg, jpeg, png, gif, webp, heic, heif",
+        )
+    raw = await file.read()
+    if len(raw) > settings.MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large",
+        )
+    try:
+        webp_buf = raster_image_to_webp(raw)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    url = upload_image(webp_buf, folder="projects")
     if not url:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -167,9 +188,11 @@ async def update_project(
             detail="Project not found"
         )
     
-    # Update fields
-    update_data = project_data.dict(exclude_unset=True)
-    
+    update_data = project_data.model_dump(exclude_unset=True)
+
+    if "image_urls" in update_data and update_data["image_urls"] is not None:
+        delete_removed_cloudinary_urls(project.image_urls or [], update_data["image_urls"])
+
     # Handle multilingual fields explicitly to ensure they are dicts
     if 'title' in update_data and update_data['title']:
         update_data['title'] = update_data['title']
@@ -200,7 +223,9 @@ async def delete_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-    
+
+    delete_cloudinary_urls(project.image_urls or [])
+
     db.delete(project)
     db.commit()
     return None

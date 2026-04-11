@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 
 from ...core.database import get_db
+from ...core.cloudinary import delete_cloudinary_by_url
 from ...core.security import verify_password, create_access_token
 from ...core.config import settings
 from ...models.models import (
@@ -88,7 +89,12 @@ async def update_student_profile(
 
     payload = data.model_dump(exclude_unset=True)
     if "profile_image" in payload:
-        student.user.profile_image = payload["profile_image"] or None
+        old_img = student.user.profile_image
+        new_img = payload["profile_image"]
+        new_stored = new_img if new_img else None
+        if old_img and old_img != new_stored:
+            delete_cloudinary_by_url(old_img)
+        student.user.profile_image = new_stored
 
     db.commit()
     db.refresh(student)

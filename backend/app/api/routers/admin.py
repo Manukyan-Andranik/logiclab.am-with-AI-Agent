@@ -6,6 +6,7 @@ import secrets
 from sqlalchemy import or_
 
 from ...core.database import get_db
+from ...core.cloudinary import delete_cloudinary_by_url, delete_cloudinary_urls
 from ...core.email import email_service
 from ...core.security import get_password_hash
 from ...models.models import (
@@ -246,7 +247,14 @@ async def update_student_admin(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found"
         )
-    
+
+    _upd = student_data.model_dump(exclude_unset=True)
+    if student.user and "profile_image" in _upd:
+        _old_pi = student.user.profile_image
+        _new_pi = _upd["profile_image"]
+        if _old_pi and _old_pi != _new_pi:
+            delete_cloudinary_by_url(_old_pi)
+
     # Update Student specific fields
     student_fields = ['course_id', 'last_chapter_id', 'last_lesson_id']
     for field in student_fields:
@@ -301,7 +309,10 @@ async def delete_student_admin(
             )
         
         user_id = student.user_id
-        
+
+        for proj in db.query(Project).filter(Project.student_id == student_id).all():
+            delete_cloudinary_urls(proj.image_urls or [])
+
         # Delete related records to avoid foreign key violations
         # Order matters! Delete from tables with foreign keys first
         db.query(Registration).filter(Registration.student_id == student_id).delete(synchronize_session=False)
@@ -312,11 +323,12 @@ async def delete_student_admin(
 
         # Finally delete the student record
         db.delete(student)
-        
+
         # Also delete the user account
         if user_id:
             user = db.query(UserPersonal).filter(UserPersonal.id == user_id).first()
             if user:
+                delete_cloudinary_by_url(user.profile_image)
                 db.delete(user)
         
         db.commit()

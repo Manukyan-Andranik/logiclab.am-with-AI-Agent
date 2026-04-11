@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ...core.database import get_db
+from ...core.cloudinary import delete_cloudinary_by_url
 from ...core.security import get_password_hash
 from ...models.models import Instructor, UserPersonal, Course, CourseInstructor
 from ...schemas.schemas import (
@@ -170,7 +171,11 @@ async def update_instructor(
     if instructor_data.phone is not None:
         instructor.user.phone = instructor_data.phone
     if instructor_data.profile_image is not None:
-        instructor.user.profile_image = instructor_data.profile_image
+        old_img = instructor.user.profile_image
+        new_img = instructor_data.profile_image
+        if old_img and old_img != new_img:
+            delete_cloudinary_by_url(old_img)
+        instructor.user.profile_image = new_img
     if instructor_data.social_links is not None:
         instructor.user.social_links = instructor_data.social_links
     
@@ -196,6 +201,7 @@ async def delete_instructor(
     # Delete user account (will cascade to instructor profile)
     user = db.query(UserPersonal).filter(UserPersonal.id == instructor.user_id).first()
     if user:
+        delete_cloudinary_by_url(user.profile_image)
         db.delete(user)
     
     db.commit()
