@@ -1,4 +1,5 @@
 # app/api/endpoints/contact_messages.py
+import html
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -8,6 +9,18 @@ from pydantic import BaseModel
 from ...core.database import get_db
 from ...core.email import email_service
 from ...core.config import settings
+from ...core.email_theme import (
+    BG,
+    BORDER,
+    CARD,
+    CARD_BORDER,
+    FG,
+    GOLD,
+    INNER,
+    MUTED,
+    ON_GOLD,
+    SUBTLE,
+)
 from ...models.models import ContactMessage
 from ...schemas.schemas import (
     ContactMessageResponse,
@@ -28,211 +41,194 @@ async def send_contact_emails(body: ContactFormBody):
     """Background task to send admin and user emails"""
     print(f"Sending contact form emails for {body.email}")
 
-    # ─── Shared Styles ────────────────────────────────────────────────────────
-    BASE_STYLES = """
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap');
+    safe_name = html.escape(body.name.strip())
+    safe_email = html.escape(body.email.strip())
+    safe_phone = html.escape(body.phone.strip()) if body.phone else ""
+    safe_message = html.escape(body.message).replace("\n", "<br>")
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background-color: #1a1a1a;
-            font-family: 'DM Sans', sans-serif;
-            color: #ccc;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .wrapper {
-            max-width: 620px;
-            margin: 40px auto;
-            background: #222;
-            border-radius: 4px;
-            overflow: hidden;
-            border: 1px solid #2e2e2e;
-            box-shadow: 0 8px 60px rgba(0,0,0,0.5);
-        }
-
-        /* ── Header ── */
-        .header {
-            background: linear-gradient(135deg, #222 0%, #2a2a2a 100%);
-            border-bottom: 3px solid #FFD700;
-            padding: 40px 48px 36px;
-            position: relative;
-            overflow: hidden;
-        }
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -60px; right: -60px;
-            width: 200px; height: 200px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,215,0,0.08) 0%, transparent 70%);
-        }
-        .logo {
-            font-family: 'DM Sans', sans-serif;
-            font-size: 28px;
-            font-weight: 800;
-            color: #FFD700;
-            letter-spacing: 0;
-            text-transform: none;
-            display: inline-block;
-            line-height: 1.2;
-        }
-        .logo span {
-            color: #ffffff;
-            text-decoration: underline;
-            text-underline-offset: 5px;
-            text-decoration-color: #ffffff;
-            text-decoration-thickness: 3px;
-        }
-        .header-tagline {
-            font-size: 11px;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            color: #666;
-            margin-top: 6px;
-        }
-
-        /* ── Body ── */
-        .body {
-            padding: 48px;
-        }
-        .section-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 22px;
-            color: #FFD700;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #2e2e2e;
-        }
-        p {
-            font-size: 15px;
-            line-height: 1.8;
-            color: #aaa;
-            margin-bottom: 12px;
-        }
-
-        /* ── Field Rows (Admin) ── */
-        .field-row {
-            display: flex;
-            gap: 0;
-            margin-bottom: 2px;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-        .field-label {
-            background: #FFD700;
-            color: #222;
-            font-size: 11px;
-            font-weight: 500;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            padding: 12px 18px;
-            min-width: 120px;
-            display: flex;
-            align-items: center;
-        }
-        .field-value {
-            background: #2a2a2a;
-            color: #ddd;
-            font-size: 14px;
-            padding: 12px 20px;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            border-left: 2px solid #333;
-        }
-
-        /* ── Message Box ── */
-        .message-box {
-            background: #2a2a2a;
-            border-left: 3px solid #FFD700;
-            border-radius: 0 2px 2px 0;
-            padding: 20px 24px;
-            margin-top: 24px;
-            font-size: 14px;
-            line-height: 1.9;
-            color: #bbb;
-        }
-        .message-label {
-            font-size: 10px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: #FFC000;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-
-        /* ── Confirmation Card ── */
-        .confirm-icon {
-            width: 64px; height: 64px;
-            background: linear-gradient(135deg, #FFD700, #FFC000);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 28px;
-            font-size: 28px;
-            line-height: 64px;
-            text-align: center;
-        }
-        .confirm-name {
-            font-family: 'Playfair Display', serif;
-            font-size: 28px;
-            color: #fff;
-            margin-bottom: 8px;
-        }
-        .confirm-name span { color: #FFD700; }
-        .confirm-text {
-            font-size: 15px;
-            color: #888;
-            line-height: 1.9;
-            max-width: 460px;
-        }
-        .divider {
-            height: 1px;
-            background: linear-gradient(to right, transparent, #333, transparent);
-            margin: 36px 0;
-        }
-        .signature {
-            font-size: 13px;
-            color: #555;
-        }
-        .signature strong {
-            color: #FFC000;
-            font-weight: 500;
-        }
-
-        /* ── Footer ── */
-        .footer {
-            background: #1c1c1c;
-            border-top: 1px solid #2a2a2a;
-            padding: 24px 48px;
-            text-align: center;
-        }
-        .footer p {
-            font-size: 11px;
-            color: #444;
-            letter-spacing: 1px;
+    # Colors from frontend/src/index.css :root (via email_theme)
+    BASE_STYLES = f"""
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
             margin: 0;
-        }
-        .footer a { color: #FFD700; text-decoration: none; }
-
-        /* ── Badge ── */
-        .badge {
+            padding: 24px 12px;
+            background-color: {BG};
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: {MUTED};
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
+        }}
+        .wrapper {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: {CARD};
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid {CARD_BORDER};
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+        }}
+        .header {{
+            background: {BG};
+            border-bottom: 3px solid {GOLD};
+            padding: 28px 32px 26px;
+        }}
+        .logo {{
+            font-size: 24px;
+            font-weight: 700;
+            color: {GOLD};
+            letter-spacing: -0.02em;
+        }}
+        .logo span {{ color: {FG}; }}
+        .header-tagline {{
+            font-size: 13px;
+            color: {MUTED};
+            margin-top: 8px;
+            font-weight: 500;
+        }}
+        .body {{ padding: 32px; color: {FG}; }}
+        .badge {{
             display: inline-block;
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid rgba(255, 215, 0, 0.25);
-            color: #FFD700;
-            font-size: 10px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            padding: 4px 12px;
-            border-radius: 2px;
+            background: rgba(255, 215, 0, 0.12);
+            color: {GOLD};
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 999px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 215, 0, 0.35);
+        }}
+        .section-title {{
+            font-size: 20px;
+            font-weight: 700;
+            color: {GOLD};
             margin-bottom: 20px;
-        }
+            padding-bottom: 12px;
+            border-bottom: 1px solid {BORDER};
+        }}
+        p {{
+            font-size: 15px;
+            line-height: 1.65;
+            color: {MUTED};
+            margin: 0 0 12px;
+        }}
+        .field-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid {BORDER};
+        }}
+        .field-table td {{
+            padding: 14px 16px;
+            font-size: 15px;
+            vertical-align: top;
+        }}
+        .field-label {{
+            width: 112px;
+            background: {GOLD};
+            color: {ON_GOLD};
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid {BORDER};
+        }}
+        .field-value {{
+            background: {INNER};
+            color: {FG};
+            font-weight: 500;
+            border-bottom: 1px solid {BORDER};
+            word-break: break-word;
+        }}
+        .field-table tr:last-child .field-label,
+        .field-table tr:last-child .field-value {{ border-bottom: none; }}
+        .message-box {{
+            background: {INNER};
+            border: 1px solid {BORDER};
+            border-left: 4px solid {GOLD};
+            border-radius: 0 8px 8px 0;
+            padding: 20px 20px 20px 22px;
+            margin-top: 20px;
+        }}
+        .message-label {{
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: {GOLD};
+            margin-bottom: 12px;
+        }}
+        .message-text {{
+            font-size: 15px;
+            line-height: 1.7;
+            color: {MUTED};
+        }}
+        .confirm-icon-wrap {{ text-align: center; margin-bottom: 24px; }}
+        .icon-circle {{
+            display: inline-block;
+            width: 56px;
+            height: 56px;
+            line-height: 56px;
+            background: {GOLD};
+            color: {ON_GOLD};
+            border-radius: 50%;
+            font-size: 26px;
+            font-weight: 700;
+        }}
+        .confirm-name {{
+            font-size: 22px;
+            font-weight: 700;
+            color: {FG};
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }}
+        .confirm-name span {{ color: {GOLD}; }}
+        .confirm-text {{
+            font-size: 15px;
+            color: {MUTED};
+            line-height: 1.65;
+        }}
+        .hint-en {{
+            font-size: 14px;
+            color: {SUBTLE};
+            font-style: italic;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px dashed {BORDER};
+        }}
+        .divider {{
+            height: 1px;
+            background: linear-gradient(to right, transparent, {BORDER}, transparent);
+            margin: 28px 0;
+        }}
+        .signature {{
+            font-size: 14px;
+            color: {MUTED};
+        }}
+        .signature strong {{ color: {GOLD}; font-weight: 600; }}
+        .footer {{
+            background: {BG};
+            border-top: 1px solid {BORDER};
+            padding: 20px 32px;
+            text-align: center;
+        }}
+        .footer p {{
+            font-size: 13px;
+            color: {SUBTLE};
+            margin: 0;
+            line-height: 1.5;
+        }}
+        .footer a {{
+            color: {GOLD};
+            font-weight: 600;
+            text-decoration: none;
+        }}
     """
 
     # ─── Admin Email ──────────────────────────────────────────────────────────
     admin_email = settings.ADMIN_EMAIL or settings.SMTP_FROM_EMAIL
-    subject = f"New Contact Form Submission from {body.name}"
+    subject = f"New message from {body.name.strip()} — LogicLab contact"
 
     email_body = f"""
     <!DOCTYPE html>
@@ -240,49 +236,43 @@ async def send_contact_emails(body: ContactFormBody):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Contact Submission</title>
+        <title>New contact message</title>
         <style>{BASE_STYLES}</style>
     </head>
     <body>
         <div class="wrapper">
-
-            <!-- Header -->
             <div class="header">
-                <div class="logo">Logic <span>Lab</span></div>
-                <div class="header-tagline">Contact Form Notification</div>
+                <div class="logo">Logic<span>Lab</span></div>
+                <div class="header-tagline">Someone reached out through the website</div>
             </div>
-
-            <!-- Body -->
             <div class="body">
-                <div class="badge">&#9679;&nbsp; New Submission</div>
-                <div class="section-title">Contact Form Submission</div>
-
-                <!-- Fields -->
-                <div class="field-row">
-                    <div class="field-label">Name</div>
-                    <div class="field-value">{body.name}</div>
-                </div>
-                <div class="field-row">
-                    <div class="field-label">Email</div>
-                    <div class="field-value">{body.email}</div>
-                </div>
-                <div class="field-row">
-                    <div class="field-label">Phone</div>
-                    <div class="field-value">{body.phone or 'Not provided'}</div>
-                </div>
-
-                <!-- Message -->
+                <div class="badge">New contact message</div>
+                <div class="section-title">Reply from your inbox</div>
+                <p style="margin-bottom:20px;color:{MUTED};font-size:14px;">
+                    You can reply directly to <strong style="color:{FG};">{safe_email}</strong> — it will go to the visitor.
+                </p>
+                <table class="field-table" role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td class="field-label">Name</td>
+                        <td class="field-value">{safe_name}</td>
+                    </tr>
+                    <tr>
+                        <td class="field-label">Email</td>
+                        <td class="field-value">{safe_email}</td>
+                    </tr>
+                    <tr>
+                        <td class="field-label">Phone</td>
+                        <td class="field-value">{safe_phone or "Not provided"}</td>
+                    </tr>
+                </table>
                 <div class="message-box">
-                    <div class="message-label">Message</div>
-                    {body.message}
+                    <div class="message-label">Their message</div>
+                    <div class="message-text">{safe_message}</div>
                 </div>
             </div>
-
-            <!-- Footer -->
             <div class="footer">
-                <p>&copy; 2024 LogicLab &mdash; <a href="https://www.logiclab.am/">logiclab.am</a></p>
+                <p>&copy; 2026 LogicLab &mdash; <a href="https://www.logiclab.am/">logiclab.am</a></p>
             </div>
-
         </div>
     </body>
     </html>
@@ -295,8 +285,8 @@ async def send_contact_emails(body: ContactFormBody):
         html=True
     )
 
-    # ─── User Confirmation Email ───────────────────────────────────────────────
-    user_subject = "Շնորհակալություն LogicLab-ի հետ կապ հաստատելու համար"
+    # ─── User confirmation (we received your message) ─────────────────────────
+    user_subject = "Ձեր հաղորդագրությունը հասել է LogicLab — Շնորհակալություն"
 
     user_body = f"""
     <!DOCTYPE html>
@@ -305,63 +295,41 @@ async def send_contact_emails(body: ContactFormBody):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Շնորհակալություն</title>
-        <style>
-            {BASE_STYLES}
-            .confirm-icon-wrap {{
-                text-align: center;
-                margin-bottom: 32px;
-            }}
-            .icon-circle {{
-                display: inline-block;
-                width: 72px; height: 72px;
-                background: linear-gradient(135deg, #FFD700, #FFC000);
-                border-radius: 50%;
-                font-size: 32px;
-                line-height: 72px;
-                text-align: center;
-            }}
-        </style>
+        <style>{BASE_STYLES}</style>
     </head>
     <body>
         <div class="wrapper">
-
-            <!-- Header -->
             <div class="header">
-                <div class="logo">Logic <span>Lab</span></div>
-                <div class="header-tagline">Հաստատման նամակ</div>
+                <div class="logo">Logic<span>Lab</span></div>
+                <div class="header-tagline">Մենք ստացել ենք ձեր նամակը</div>
             </div>
-
-            <!-- Body -->
             <div class="body">
-
                 <div class="confirm-icon-wrap">
-                    <div class="icon-circle">✓</div>
+                    <div class="icon-circle">&#10003;</div>
                 </div>
-
-                <div class="confirm-name">Շնորհակալություն,<br><span>{body.name}!</span></div>
-
-                <div class="divider"></div>
-
+                <div class="confirm-name">Շնորհակալություն, <span>{safe_name}</span></div>
                 <p class="confirm-text">
-                    Մենք ստացել ենք ձեր հաղորդագրությունը և կպատասխանենք ձեզ
-                    հնարավորինս սեղմ ժամկետներում: Ձեր հարցումը մեզ համար
-                    կարևոր է, և մենք անպայման կդիտարկենք այն:
+                    Ձեր հաղորդագրությունը հաջողությամբ հասել է մեզ։ Մեր թիմը կկարդա այն և
+                    կկապնվի ձեզ հետ սովորաբար 1–2 աշխատանքային օրվա ընթացքում։
+                    Եթե հարցը շտապ է, կարող եք նշել դա նամակում — մենք կփորձենք արձագանքել ավելի շուտ։
                 </p>
-
+                <p class="hint-en">
+                    English: We have received your message. Our team will read it and get back to you
+                    within about 1–2 business days. Thank you for contacting LogicLab.
+                </p>
                 <div class="divider"></div>
-
                 <div class="signature">
                     Հարգանքներով,<br>
                     <strong>LogicLab թիմ</strong>
                 </div>
-
             </div>
-
-            <!-- Footer -->
             <div class="footer">
-                <p>&copy; 2024 LogicLab &mdash; <a href="https://www.logiclab.am/">logiclab.am</a></p>
+                <p>
+                    <a href="https://www.logiclab.am/">logiclab.am</a>
+                    &nbsp;&middot;&nbsp;
+                    Սա ավտոմատ հաղորդագրություն է, պատասխանելու կարիք չկա։
+                </p>
             </div>
-
         </div>
     </body>
     </html>

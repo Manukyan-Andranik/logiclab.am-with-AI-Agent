@@ -1,11 +1,39 @@
-import aiosmtplib
+import html
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
+from typing import Optional
+
+import aiosmtplib
+
 from .config import settings
-import logging
+from .email_theme import (
+    BG,
+    BORDER,
+    CARD,
+    CARD_BORDER,
+    FG,
+    GOLD,
+    GOLD_ALT,
+    INNER,
+    MUTED,
+    ON_GOLD,
+    SUBTLE,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _h(text: str) -> str:
+    """Escape text for HTML body."""
+    return html.escape(text or "", quote=False)
+
+
+def _attr(url: str) -> str:
+    """Escape for use in HTML attributes (e.g. href)."""
+    return html.escape(url or "", quote=True)
+
 
 class EmailService:
     def __init__(self):
@@ -16,59 +44,53 @@ class EmailService:
         self.from_email = settings.SMTP_FROM_EMAIL
         self.from_name = settings.SMTP_FROM_NAME
 
-    def _get_themed_html(self, content: str, action_url: str = None, action_text: str = None) -> str:
-        """
-        Wraps content in the LogicLab base style:
-        - Background: #222
-        - Card: #333
-        - Accent: #FFD700
-        """
-        button_html = f'''
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="{action_url}" 
-                   style="background-color: #FFD700; color: #222222; padding: 14px 28px; 
-                          text-decoration: none; border-radius: 8px; font-weight: bold; 
-                          display: inline-block; box-shadow: 4px 4px 0px 0px #000000;">
-                    {action_text}
-                </a>
-            </div>''' if action_url and action_text else ""
+    def _get_themed_html(
+        self,
+        content: str,
+        action_url: Optional[str] = None,
+        action_text: Optional[str] = None,
+    ) -> str:
+        """Simple light layout: readable in Gmail/Outlook, minimal markup."""
+        button_block = ""
+        if action_url and action_text:
+            button_block = f"""
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;">
+              <tr>
+                <td style="border-radius:8px;background:{GOLD};box-shadow:4px 4px 0 0 {GOLD_ALT};">
+                  <a href="{_attr(action_url)}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:700;color:{ON_GOLD};text-decoration:none;font-family:inherit;">{_h(action_text)}</a>
+                </td>
+              </tr>
+            </table>"""
 
-        return f"""
-        <!DOCTYPE html>
-        <html lang="hy">
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ background-color: #222222; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #ffffff; }}
-                .wrapper {{ background-color: #222222; padding: 40px 20px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: #333333; border-radius: 12px; border: 1px solid #222222; overflow: hidden; }}
-                .header {{ background-color: #222222; padding: 25px; text-align: center; border-bottom: 2px solid #FFD700; }}
-                .body-content {{ padding: 40px 30px; line-height: 1.6; font-size: 16px; }}
-                .footer {{ padding: 20px; text-align: center; font-size: 12px; color: #707070; background-color: #222222; }}
-                .gold {{ color: #FFD700; font-weight: bold; }}
-                .credential-box {{ background-color: #222222; border: 1px solid #444; border-radius: 8px; padding: 20px; margin: 20px 0; }}
-                h2 {{ color: #FFD700; margin-top: 0; font-size: 22px; }}
-                p {{ margin: 10px 0; }}
-            </style>
-        </head>
-        <body>
-            <div class="wrapper">
-                <div class="container">
-                    <div class="header">
-                        <span style="color: #FFD700; font-size: 24px; font-weight: bold; letter-spacing: 1px;">LOGICLAB</span>
-                    </div>
-                    <div class="body-content">
-                        {content}
-                        {button_html}
-                    </div>
-                    <div class="footer">
-                        © 2026 LogicLab Academy. Բոլոր իրավունքները պաշտպանված են:
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        return f"""<!DOCTYPE html>
+<html lang="hy">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogicLab</title>
+</head>
+<body style="margin:0;padding:20px 12px;background-color:{BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:16px;line-height:1.55;color:{MUTED};">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:560px;margin:0 auto;">
+    <tr>
+      <td style="background:{CARD};border-radius:12px;border:1px solid {CARD_BORDER};overflow:hidden;">
+        <div style="padding:18px 22px;background:{BG};border-bottom:3px solid {GOLD};">
+          <span style="font-size:19px;font-weight:700;color:{GOLD};letter-spacing:0.02em;">LogicLab</span>
+        </div>
+        <div style="padding:22px 22px 26px;color:{FG};">
+{content}
+{button_block}
+        </div>
+        <div style="padding:14px 22px;background:{BG};border-top:1px solid {BORDER};font-size:13px;color:{MUTED};text-align:center;line-height:1.5;">
+          © 2026 LogicLab · <a href="https://www.logiclab.am" style="color:{GOLD};text-decoration:none;font-weight:600;">logiclab.am</a>
+        </div>
+      </td>
+    </tr>
+  </table>
+  <p style="max-width:560px;margin:14px auto 0;text-align:center;font-size:12px;color:{SUBTLE};line-height:1.4;">
+    Այս նամակը ուղարկվել է ավտոմատ կերպով LogicLab կրթական հարթակի կողմից։
+  </p>
+</body>
+</html>"""
 
     async def send_email(self, to_email: str, subject: str, body: str, html: bool = False) -> bool:
         try:
@@ -77,55 +99,114 @@ class EmailService:
             msg["From"] = f"{self.from_name} <{self.from_email}>"
             msg["To"] = to_email
             msg.attach(MIMEText(body, "html" if html else "plain", "utf-8"))
-            
+
             await aiosmtplib.send(
-                msg, hostname=self.smtp_host, port=self.smtp_port,
-                username=self.smtp_user, password=self.smtp_password,
-                use_tls=(self.smtp_port == 465), start_tls=(self.smtp_port == 587), timeout=10
+                msg,
+                hostname=self.smtp_host,
+                port=self.smtp_port,
+                username=self.smtp_user,
+                password=self.smtp_password,
+                use_tls=(self.smtp_port == 465),
+                start_tls=(self.smtp_port == 587),
+                timeout=10,
             )
             return True
         except Exception as e:
-            logger.error(f"Email failed: {str(e)}")
+            logger.error("Email failed: %s", str(e))
             return False
 
-    # --- Refactored Templates ---
-
     async def send_registration_received(self, to_email: str, student_name: str, course_name: str):
-        content = f"""
-            <h2>Ողջույն, {student_name}</h2>
-            <p>Շնորհակալություն <span class="gold">{course_name}</span> դասընթացին գրանցվելու համար:</p>
-            <p>Մենք ստացել ենք ձեր հայտը: Մեր թիմը կուսումնասիրի այն և կկապվի ձեզ հետ շատ մոտ ժամանակներս:</p>
-        """
-        return await self.send_email(to_email, "Գրանցումը ստացված է - LogicLab", self._get_themed_html(content), html=True)
+        sn, cn = _h(student_name), _h(course_name)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Ողջույն, {sn} 👋</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ուրախ ենք տեղեկացնել, որ <strong style="color:{GOLD};">{cn}</strong> դասընթացի ձեր հայտը հաջողությամբ ստացվել է։</p>
+          <p style="margin:0;color:{MUTED};">Մեր մասնագետն արդեն ուսումնասիրում է այն և կկապվի Ձեզ հետ մոտ ժամանակներս՝ մանրամասները քննարկելու համար։</p>"""
+        return await self.send_email(
+            to_email,
+            "Ձեր հայտը ստացված է — LogicLab",
+            self._get_themed_html(content),
+            html=True,
+        )
 
-    async def send_registration_confirmed(self, to_email: str, student_name: str, course_name: str, login_email: str, temp_password: str):
-        content = f"""
-            <h2>Բարի գալուստ LogicLab! 🎉</h2>
-            <p>Ձեր գրանցումը <span class="gold">{course_name}</span> դասընթացի համար հաստատվել է:</p>
-            <div class="credential-box">
-                <p><strong>Email:</strong> {login_email}</p>
-                <p><strong>Գաղտնաբառ:</strong> <span class="gold">{temp_password}</span></p>
-            </div>
-            <p style="font-size: 13px; color: #aaa;">* Անվտանգության համար խնդրում ենք փոխել գաղտնաբառը առաջին մուտքից հետո:</p>
-        """
+    async def send_registration_confirmed(
+        self,
+        to_email: str,
+        student_name: str,
+        course_name: str,
+        login_email: str,
+        temp_password: str,
+    ):
+        sn, cn = _h(student_name), _h(course_name)
+        le, pw = _h(login_email), _h(temp_password)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Բարի գալուստ LogicLab ընտանիք ✨</p>
+          <p style="margin:0 0 16px;color:{MUTED};">Ձեր մասնակցությունը <strong style="color:{GOLD};">{cn}</strong> դասընթացին հաստատված է։ Ահա Ձեր մուտքային տվյալները՝ անձնական էջ մուտք գործելու համար.</p>
+          <div style="background:{INNER};border:1px solid {BORDER};border-radius:8px;padding:16px 18px;margin:0 0 14px;">
+            <p style="margin:0 0 8px;font-size:15px;color:{FG};"><strong style="color:{GOLD};">Էլ. հասցե՝</strong> {le}</p>
+            <p style="margin:0;font-size:15px;color:{FG};"><strong style="color:{GOLD};">Ժամանակավոր գաղտնաբառ՝</strong> <code style="background:{CARD};padding:2px 8px;border-radius:4px;font-size:14px;color:{GOLD};border:1px solid {BORDER};">{pw}</code></p>
+          </div>
+          <p style="margin:0;font-size:14px;color:{SUBTLE};">💡 Անվտանգության նկատառումներից ելնելով՝ խնդրում ենք փոխել գաղտնաբառը առաջին մուտքից հետո։</p>"""
         url = f"{settings.FRONTEND_URL}/student/login"
-        return await self.send_email(to_email, "Գրանցումը հաստատված է", self._get_themed_html(content, url, "Մուտք Գործել"), html=True)
+        return await self.send_email(
+            to_email,
+            "Գրանցումը հաստատված է — LogicLab",
+            self._get_themed_html(content, url, "Մուտք գործել կաբինետ"),
+            html=True,
+        )
+
+    async def send_course_completed(self, to_email: str, student_name: str, course_name: str):
+        sn, cn = _h(student_name), _h(course_name)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Շնորհավորում ենք, {sn} 🎓</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Դուք հաջողությամբ ավարտեցիք <strong style="color:{GOLD};">{cn}</strong> դասընթացը։</p>
+          <p style="margin:0;color:{MUTED};">Սա հիանալի ձեռքբերում է։ Մենք հպարտ ենք Ձեր գրանցած արդյունքներով և մաղթում ենք մասնագիտական նորանոր վերելքներ։</p>"""
+        return await self.send_email(
+            to_email,
+            "Շնորհավորում ենք ավարտելու կապակցությամբ — LogicLab",
+            self._get_themed_html(content),
+            html=True,
+        )
+
+    async def send_registration_rejected(self, to_email: str, student_name: str, course_name: str):
+        sn, cn = _h(student_name), _h(course_name)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Ողջույն, {sn}</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Շնորհակալություն <strong style="color:{GOLD};">{cn}</strong> դասընթացի նկատմամբ հետաքրքրության համար։</p>
+          <p style="margin:0;color:{MUTED};">Ցավոք, այս պահին տեղերի սահմանափակ լինելու պատճառով չենք կարող հաստատել Ձեր հայտը։ Մենք անպայման կպահենք Ձեր տվյալները և առաջինը կտեղեկացնենք հաջորդ փուլի մեկնարկի մասին։</p>"""
+        return await self.send_email(
+            to_email,
+            "Տեղեկություն գրանցման վերաբերյալ — LogicLab",
+            self._get_themed_html(content),
+            html=True,
+        )
 
     async def send_password_reset_email(self, to_email: str, username: str, reset_link: str):
-        content = f"""
-            <h2>Գաղտնաբառի վերականգնում</h2>
-            <p>Հարգելի {username}, դուք հարցում եք ուղարկել LogicLab-ի ձեր հաշվի գաղտնաբառը վերականգնելու համար:</p>
-            <p>Սեղմեք ներքևի կոճակին գործողությունը շարունակելու համար:</p>
-        """
-        return await self.send_email(to_email, "Գաղտնաբառի վերականգնում", self._get_themed_html(content, reset_link, "Վերականգնել"), html=True)
+        un = _h(username)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Գաղտնաբառի վերականգնում 🔐</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Հարգելի {un}, ստացվել է Ձեր LogicLab հաշվի գաղտնաբառը փոխելու հարցում։</p>
+          <p style="margin:0;color:{MUTED};">Եթե դա Դուք եք, սեղմեք ստորև նշված կոճակին։ Հղումը վավեր է սահմանափակ ժամանակով։</p>"""
+        return await self.send_email(
+            to_email,
+            "Գաղտնաբառի վերականգնում — LogicLab",
+            self._get_themed_html(content, reset_link, "Սահմանել նոր գաղտնաբառ"),
+            html=True,
+        )
 
-    async def send_material_access_granted(self, to_email: str, student_name: str, chapter_title: str, course_name: str):
-        content = f"""
-            <h2>Նոր նյութեր են հասանելի</h2>
-            <p>Ողջույն {student_name}, <span class="gold">{course_name}</span> դասընթացի նոր բաժինը արդեն բաց է ձեզ համար:</p>
-            <p><strong>Բաժին:</strong> {chapter_title}</p>
-        """
+    async def send_material_access_granted(
+        self,
+        to_email: str,
+        student_name: str,
+        chapter_title: str,
+        course_name: str,
+    ):
+        sn, ch, cn = _h(student_name), _h(chapter_title), _h(course_name)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Նոր ուսումնական նյութեր 📚</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ողջույն {sn}։ <strong style="color:{GOLD};">{cn}</strong> դասընթացում արդեն հասանելի է նոր բաժինը.</p>
+          <p style="margin:0;color:{MUTED};"><strong style="color:{GOLD};">Թեմա՝</strong> {ch}</p>
+          <p style="margin:10px 0 0;color:{MUTED};">Ժամանակն է անցնել նոր գիտելիքների ձեռքբերմանը։</p>"""
         url = f"{settings.FRONTEND_URL}/student/materials"
-        return await self.send_email(to_email, "Նոր ուսումնական նյութեր", self._get_themed_html(content, url, "Դիտել Նյութերը"), html=True)
+        return await self.send_email(
+            to_email,
+            "Նոր նյութեր են հասանելի — LogicLab",
+            self._get_themed_html(content, url, "Անցնել դասին"),
+            html=True,
+        )
+
 
 email_service = EmailService()

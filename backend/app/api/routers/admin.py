@@ -22,6 +22,12 @@ from ..deps import get_current_admin, get_current_student
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
+
+def _registration_status_to_db(s: RegistrationStatus) -> DbRegistrationStatus:
+    """Map API/schema enum to SQLAlchemy model enum (same string values, different Python types)."""
+    return DbRegistrationStatus(s.value)
+
+
 @router.get("/dashboard")
 async def admin_dashboard(
     db: Session = Depends(get_db),
@@ -521,23 +527,35 @@ async def update_registration_status_admin(
         )
     
     old_status = registration.status
-    new_status = status_data.status
-    
+    new_status = _registration_status_to_db(status_data.status)
+
     # Prevent invalid status transitions
-    if old_status == RegistrationStatus.COMPLETED and new_status != RegistrationStatus.COMPLETED:
+    if old_status == DbRegistrationStatus.COMPLETED and new_status != DbRegistrationStatus.COMPLETED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot change status of completed registration"
         )
-    
-    # Update status
+
+    student = registration.student
+    user = student.user if student else None
+    course = registration.course
+
+    if not student or not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration is missing a linked student or user account",
+        )
+
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration is missing a linked course",
+        )
+
+    # Update status (must use DB enum, not Pydantic enum — avoids ORM/PostgreSQL errors)
     registration.status = new_status
     db.commit()
-    
-    # Get student and course info
-    student = registration.student
-    user = student.user
-    course = registration.course
+
     student_name = f"{user.first_name} {user.last_name}"
     
     # Fix: Safely handle course title
@@ -550,11 +568,11 @@ async def update_registration_status_admin(
     email_sent = False
     temp_password = None
     
-    if new_status == RegistrationStatus.CONFIRMED:
+    if new_status == DbRegistrationStatus.CONFIRMED:
         # Activate student account and send credentials
         user.is_active = True
         student.course_id = registration.course_id
-        student.status = RegistrationStatus.CONFIRMED  # Sync status
+        student.status = DbRegistrationStatus.CONFIRMED
         
         # Generate temporary password if not already set properly
         temp_password = secrets.token_urlsafe(12)
@@ -570,14 +588,14 @@ async def update_registration_status_admin(
             temp_password=temp_password
         )
     
-    elif new_status == RegistrationStatus.COMPLETED:
+    elif new_status == DbRegistrationStatus.COMPLETED:
         email_sent = await email_service.send_course_completed(
             to_email=user.email,
             student_name=student_name,
             course_name=course_name
         )
     
-    elif new_status == RegistrationStatus.REJECTED:
+    elif new_status == DbRegistrationStatus.REJECTED:
         email_sent = await email_service.send_registration_rejected(
             to_email=user.email,
             student_name=student_name,
@@ -601,7 +619,7 @@ async def update_registration_status_admin(
         "old_status": old_status.value,
         "new_status": new_status.value,
         "email_sent": email_sent,
-        "temp_password": temp_password if new_status == RegistrationStatus.CONFIRMED else None
+        "temp_password": temp_password if new_status == DbRegistrationStatus.CONFIRMED else None
     }
 
 @router.delete("/registrations/{registration_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -682,7 +700,8 @@ async def bulk_update_registration_status_admin(
     """Bulk update registration statuses (Admin only)"""
     updated = []
     failed = []
-    
+    db_new_status = _registration_status_to_db(new_status)
+
     for reg_id in registration_ids:
         try:
             registration = db.query(Registration).options(
@@ -699,15 +718,17 @@ async def bulk_update_registration_status_admin(
             
             # Update status
             old_status = registration.status
-            registration.status = new_status
+            registration.status = db_new_status
             
             # Handle confirmed status
-            if new_status == RegistrationStatus.CONFIRMED:
+            if db_new_status == DbRegistrationStatus.CONFIRMED:
                 student = registration.student
-                user = student.user
+                user = student.user if student else None
+                if not student or not user:
+                    raise ValueError("Missing student or user for this registration")
                 user.is_active = True
                 student.course_id = registration.course_id
-                student.status = RegistrationStatus.CONFIRMED  # Sync student status
+                student.status = DbRegistrationStatus.CONFIRMED
                 
                 temp_password = secrets.token_urlsafe(12)
                 user.password_hash = get_password_hash(temp_password)
@@ -730,7 +751,7 @@ async def bulk_update_registration_status_admin(
             updated.append({
                 "registration_id": reg_id,
                 "old_status": old_status.value,
-                "new_status": new_status.value
+                "new_status": db_new_status.value
             })
         
         except Exception as e:
