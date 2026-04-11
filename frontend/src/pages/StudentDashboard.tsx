@@ -176,8 +176,8 @@ const StudentDashboard = () => {
         {!isMaterialsPage && (
           <motion.div className="stats-grid" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             {[
-              { icon: <Layers size={16} />, label: "Բաժիններ", value: String(materials.length) },
-              { icon: <PlayCircle size={16} />, label: "Դասեր", value: String(lessonsCount) },
+              { icon: <Layers size={16} />, label: "Դաս", value: String(progress?.total_lessons ?? 0) },
+              { icon: <PlayCircle size={16} />, label: "Գլուխնե", value: String(progress?.total_chapters ?? 0) },
               { icon: <CheckCircle size={16} />, label: "Ավարտված", value: `${progress?.accessed_lessons ?? 0}/${progress?.total_lessons ?? 0}` },
               { icon: <Clock size={16} />, label: "Տևողություն", value: `${course?.duration_months ?? 0} ամիս` },
             ].map((s, i) => (
@@ -223,7 +223,7 @@ const StudentDashboard = () => {
 
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", fontSize: "0.8rem", fontWeight: 700, fontStyle: "italic", color: C.textSecondary, textTransform: "uppercase" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><Clock size={14} color={C.gold} /> {course?.duration_months || 0} Ամիս</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><BookMarked size={14} color={C.gold} /> {materials.length} Բաժին</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><BookMarked size={14} color={C.gold} /> {materials.length} Գլուխ</div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}><Award size={14} color={C.gold} /> Սերտիֆիկացում</div>
                   </div>
 

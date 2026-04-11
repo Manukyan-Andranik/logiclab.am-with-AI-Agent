@@ -204,10 +204,16 @@ async def get_student_dashboard(
             ch["lessons"].sort(key=lambda x: x["lesson_order"])
             ch.pop("_lesson_ids", None)
 
-    # Get progress: percentage of *granted* lessons opened (not whole course)
+    # Get progress: percentage of *granted* lessons against *all* course lessons
     progress = None
     if current_student.course_id:
-        total_lessons = len(granted_lesson_ids)
+        # All course lessons
+        total_course_lessons = db.query(Lesson).join(Chapter).filter(Chapter.course_id == current_student.course_id).count()
+        # All course chapters
+        total_course_chapters = db.query(Chapter).filter(Chapter.course_id == current_student.course_id).count()
+        
+        # Available (granted) lessons
+        available_lessons_count = len(granted_lesson_ids)
 
         accessed_records = db.query(MaterialAccess).options(
             joinedload(MaterialAccess.chapter).joinedload(Chapter.lessons),
@@ -215,28 +221,42 @@ async def get_student_dashboard(
         ).filter(
             MaterialAccess.student_id == current_student.id,
             MaterialAccess.accessed_at.isnot(None),
+            MaterialAccess.chapter_id.in_(db.query(Chapter.id).filter(Chapter.course_id == current_student.course_id))
         ).all()
 
         accessed_lesson_ids: set[int] = set()
+        accessed_chapter_ids: set[int] = set()
         for access in accessed_records:
+            if access.chapter_id:
+                accessed_chapter_ids.add(access.chapter_id)
+            
             if access.lesson_id:
                 accessed_lesson_ids.add(access.lesson_id)
+                # Also add the chapter of this lesson to accessed chapters
+                if access.lesson:
+                    accessed_chapter_ids.add(access.lesson.chapter_id)
             elif access.chapter_id and access.chapter:
                 for lesson in access.chapter.lessons:
                     accessed_lesson_ids.add(lesson.id)
 
         accessed_granted = accessed_lesson_ids & granted_lesson_ids
         accessed_lessons_count = len(accessed_granted)
+        accessed_chapters_count = len(accessed_chapter_ids)
+        
+        # Percentage = available lessons / all course lessons
         progress_percentage = (
-            (accessed_lessons_count / total_lessons * 100) if total_lessons > 0 else 0
+            (available_lessons_count / total_course_lessons * 100) if total_course_lessons > 0 else 0
         )
 
         progress = {
-            "total_lessons": total_lessons,
+            "total_lessons": total_course_lessons,
+            "total_chapters": total_course_chapters,
+            "available_lessons": available_lessons_count,
             "accessed_lessons": accessed_lessons_count,
+            "accessed_chapters": accessed_chapters_count,
             "percentage": round(progress_percentage, 2),
         }
-
+        print(progress)
     return {
         "student": current_student,
         "course": course,

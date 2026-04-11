@@ -5,6 +5,8 @@ export interface StudentDashboardData {
   student: Student;
   course?: any;
   progress?: {
+    total_chapters: number;
+    accessed_chapters: number;
     total_lessons: number;
     accessed_lessons: number;
     percentage: number;
