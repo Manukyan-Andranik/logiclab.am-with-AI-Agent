@@ -17,8 +17,8 @@ export interface ChatResponse {
   learning_path?: string[];
 }
 
-// Logic API is currently on /logic/chat which is matched by FastAPI root_path stripping
-const API_BASE_URL = BASE_URL.replace('/api', '');
+// Logic API is under the main API prefix
+const API_BASE_URL = BASE_URL;
 
 export const logicApi = {
   chat: async (message: string, history: Message[]): Promise<ChatResponse> => {

@@ -25,8 +25,8 @@ export const apiClient = async <T>(endpoint: string, options: FetchOptions = {})
   const token = localStorage.getItem('token');
   const headers = new Headers(fetchOptions.headers || {});
   
-  // Only set application/json if not sending FormData
-  if (!(fetchOptions.body instanceof FormData)) {
+  // Only set application/json if sending a body and not sending FormData
+  if (fetchOptions.body && !(fetchOptions.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
   

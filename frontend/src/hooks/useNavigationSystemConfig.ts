@@ -7,7 +7,7 @@ interface NavigationConfig {
   navigation_system: NavigationSystemType;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 /**
  * Hook to fetch and cache the navigation system configuration from the backend.
@@ -24,9 +24,7 @@ export const useNavigationSystemConfig = () => {
         // Try to fetch from backend API
         const response = await fetch(`${API_URL}/config/navigation`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: {},
         });
 
         if (response.ok) {

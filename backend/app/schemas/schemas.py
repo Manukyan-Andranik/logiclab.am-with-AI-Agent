@@ -497,6 +497,24 @@ class ProjectUpdate(BaseModel):
     is_featured: Optional[bool] = None
     is_published: Optional[bool] = None
 
+    @field_validator("title", "description", mode="before")
+    @classmethod
+    def _coerce_multilingual(cls, v: Any) -> Optional[MultilingualText]:
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return MultilingualText(**v)
+        return v
+
+    @field_validator("subtitle", mode="before")
+    @classmethod
+    def _coerce_subtitle(cls, v: Any) -> Optional[MultilingualText]:
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return MultilingualText(**v)
+        return v
+
 class ProjectResponse(BaseModel):
     id: int
     course_id: int
@@ -512,6 +530,30 @@ class ProjectResponse(BaseModel):
     student: StudentResponse
     course: CourseResponse
     
+    @field_validator("title", "description", mode="before")
+    @classmethod
+    def _coerce_i18n_dict(cls, v: Any) -> Dict[str, str]:
+        if v is None:
+            return {}
+        if isinstance(v, str):
+            return {"en": v}
+        if isinstance(v, dict):
+            return {str(k): "" if val is None else str(val) for k, val in v.items()}
+        return {}
+
+    @field_validator("subtitle", mode="before")
+    @classmethod
+    def _coerce_subtitle(cls, v: Any) -> Optional[Dict[str, str]]:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            s = v.strip()
+            return {"en": s} if s else None
+        if isinstance(v, dict):
+            out = {str(k): "" if val is None else str(val) for k, val in v.items()}
+            return out or None
+        return None
+
     class Config:
         from_attributes = True
 
