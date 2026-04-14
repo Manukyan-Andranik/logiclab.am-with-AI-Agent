@@ -27,7 +27,11 @@ async def upload_project_image(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Allowed image types: jpg, jpeg, png, gif, webp, heic, heif",
         )
+    
+    # Reset cursor in case it was read elsewhere (though unlikely here, it's safer)
+    await file.seek(0)
     raw = await file.read()
+    
     if len(raw) > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

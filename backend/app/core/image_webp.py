@@ -40,6 +40,8 @@ def raster_image_to_webp(data: bytes, *, quality: int = 85) -> BytesIO:
             out.seek(0)
             return out
     except UnidentifiedImageError as e:
-        raise ValueError("Unrecognized image format") from e
+        # Debugging: show the first 16 bytes in hex to see if it's really an image or something else (like an error page)
+        header = data[:16].hex()
+        raise ValueError(f"Unrecognized image format (header: {header})") from e
     except Exception as e:
         raise ValueError(f"Could not process image: {e}") from e
