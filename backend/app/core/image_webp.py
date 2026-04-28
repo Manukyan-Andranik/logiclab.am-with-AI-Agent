@@ -5,11 +5,9 @@ from PIL import Image, UnidentifiedImageError
 
 try:
     from pillow_heif import register_heif_opener
-
-    register_heif_opener()
 except ImportError:
     # HEIC/HEIF uploads require: pip install pillow-heif
-    pass
+    register_heif_opener = None
 
 
 def raster_image_to_webp(data: bytes, *, quality: int = 85) -> BytesIO:
@@ -23,6 +21,13 @@ def raster_image_to_webp(data: bytes, *, quality: int = 85) -> BytesIO:
     """
     if not data:
         raise ValueError("Empty image file")
+
+    # Ensure HEIF is registered if available
+    if register_heif_opener:
+        try:
+            register_heif_opener()
+        except Exception:
+            pass
 
     try:
         with Image.open(BytesIO(data)) as im:

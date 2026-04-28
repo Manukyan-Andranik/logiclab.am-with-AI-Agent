@@ -70,10 +70,10 @@ const Hero: React.FC = () => {
             Ստեղծիր ապագան այսօր։ Միացիր LogicLab-ին և տիրապետիր աշխարհի ամենապահանջված մասնագիտություններին
           </p>
 
-          <div className=" flex-col sm:row gap-6">
+          <div className="flex flex-col sm:flex-row gap-6">
             <button
               onClick={() => (window.location.href = "/register")}
-              className="text-[var(--white)] pl-0 pr-10 py-4 rounded-2xl font-black text-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-[var(--transition)] flex items-center justify-center gap-4 group"
+              className="text-[var(--white)] pl-0 pr-10 py-4 rounded-2xl font-black text-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-4 group"
             >
               Գրանցվել հիմա
               <ArrowRight className="group-hover:translate-x-2 transition-transform" />

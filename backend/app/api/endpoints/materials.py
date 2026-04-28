@@ -46,7 +46,7 @@ async def get_lesson_material(
         }
     return material
 
-@router.post("/", response_model=MaterialResponse)
+@router.post("", response_model=MaterialResponse)
 async def create_material(
     data: MaterialCreate,
     db: Session = Depends(get_db),
@@ -119,7 +119,7 @@ async def update_material(
                 detail={"message": "One or more material links are invalid", "invalid_links": invalid_links},
             )
 
-        material.links = [link.dict() for link in data.links]
+        material.links = [link.model_dump() for link in data.links]
     
     db.commit()
     db.refresh(material)

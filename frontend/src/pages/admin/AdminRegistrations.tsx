@@ -77,7 +77,8 @@ const AdminRegistrations = () => {
       </div>
 
       <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm min-w-[640px]">
           <thead className="bg-secondary/50 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
             <tr>
               <th className="px-6 py-4">Student</th>
@@ -141,6 +142,7 @@ const AdminRegistrations = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Delete Registration Confirmation Dialog */}

@@ -20,7 +20,8 @@ const AdminMessages = () => {
       </div>
 
       <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm min-w-[560px]">
           <thead className="bg-secondary/50 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
             <tr>
               <th className="px-6 py-4">Sender</th>
@@ -51,6 +52,7 @@ const AdminMessages = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

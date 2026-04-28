@@ -397,7 +397,7 @@ const AdminCourses = () => {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button variant="primary" className="gap-2 bg-primary/10 text-white hover:bg-primary/20 text">
+            <Button variant="primary" className="gap-2">
               <Plus size={18} />
               Add Course
             </Button>
@@ -646,7 +646,7 @@ const AdminCourses = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="w-full border-dashed border border-gray-dark text-xs gap-2 text-black"
+                              className="w-full border-dashed border border-gray-dark text-xs gap-2 text-muted-foreground"
                               onClick={() => handleAddLesson(item.chapter.id, item.lessons?.length || 0)}
                             >
                               <Plus size={12} /> Add Lesson
@@ -786,11 +786,11 @@ const AdminCourses = () => {
               </div>
               <div className="absolute top-4 right-4 flex gap-2 transition-opacity">
                 
-                <Button size="icon" variant="secondary" className="h-8 w-8 bg-teal" onClick={() => handleEdit(course)}>
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[#17a2b8] hover:bg-[#138496] text-white" onClick={() => handleEdit(course)}>
                   <Edit2 size={14} />
                 </Button>
-                
-                <Button size="icon" variant="secondary" className="h-8 w-8 bg-danger" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
+
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[#dc3545] hover:bg-[#c82333] text-white" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
                   <Trash2 size={14} />
                 </Button>
               </div>

@@ -33,7 +33,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-black transition-[var(--transition)] overflow-x-hidden relative">
+    <div className="min-h-screen flex flex-col bg-black transition-all duration-300 overflow-x-hidden relative">
       <ScrollToTop />
       
       <AnimatePresence mode="wait">

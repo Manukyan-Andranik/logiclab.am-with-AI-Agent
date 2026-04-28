@@ -286,7 +286,8 @@ const AdminInstructors = () => {
       </div>
 
       <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm min-w-[560px]">
           <thead className="bg-secondary/50 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
             <tr>
               <th className="px-6 py-4">Instructor</th>
@@ -328,15 +329,8 @@ const AdminInstructors = () => {
                     {/* Edit Button */}
                     <button
                       onClick={() => handleEdit(instructor)}
-                      className=" h-8 w-8 flex items-center justify-center
-                                  rounded-md
-                                  bg-teal/10
-                                  text-[var(--teal)]
-                                  transition-all duration-200
-                                  hover:bg-teal
-                                  hover:text-white
-                                  active:scale-95
-                                ">
+                      className="h-8 w-8 flex items-center justify-center rounded-md bg-[#17a2b8]/10 text-[#17a2b8] transition-all duration-200 hover:bg-[#17a2b8] hover:text-white active:scale-95"
+                    >
                       <Edit2 size={14} />
                     </button>
 
@@ -348,17 +342,7 @@ const AdminInstructors = () => {
                         }
                       }}
                       disabled={deleteMutation.isPending}
-                      className="
-        h-8 w-8 flex items-center justify-center
-        rounded-md
-        bg-danger/10
-        text-[var(--danger)]
-        transition-all duration-200
-        hover:bg-danger
-        hover:text-white
-        active:scale-95
-        disabled:opacity-50
-      "
+                      className="h-8 w-8 flex items-center justify-center rounded-md bg-[#dc3545]/10 text-[#dc3545] transition-all duration-200 hover:bg-[#dc3545] hover:text-white active:scale-95 disabled:opacity-50"
                     >
                       {deleteMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                     </button>
@@ -369,6 +353,7 @@ const AdminInstructors = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
