@@ -53,8 +53,8 @@ const App = () => (
             </Route>
 
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/student/login" element={<Navigate to="/login?role=student" replace />} />
-            <Route path="/admin/login" element={<Navigate to="/login?role=admin" replace />} />
+            <Route path="/student/login" element={<Navigate to="/login" replace />} />
+            <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
