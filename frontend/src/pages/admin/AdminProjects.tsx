@@ -218,10 +218,15 @@ const AdminProjects = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const s = formData.subtitle;
+    const hasSubtitle = !!(s?.en || s?.ru || s?.hy);
     if (editingProject) {
-      updateMutation.mutate({ id: editingProject.id, data: formData });
+      updateMutation.mutate({
+        id: editingProject.id,
+        data: { ...formData, subtitle: hasSubtitle ? s : null },
+      });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate({ ...formData, subtitle: hasSubtitle ? s : undefined });
     }
   };
 

@@ -112,7 +112,8 @@ const ProjectDetailPage = () => {
 
   const links = project.links as { demo?: string; github?: string; colab?: string } | null;
 
-  const projectImages = project.image_urls
+  const projectImages = project.image_urls;
+  const subtitle = getLocalizedContent(project.subtitle);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -122,9 +123,9 @@ const ProjectDetailPage = () => {
           <h1 className="text-3xl font-black uppercase tracking-tighter">
             {getLocalizedContent(project.title)}
           </h1>
-          {project.subtitle && (
+          {subtitle && (
             <p className="text-xl font-bold text-primary uppercase tracking-tight">
-              {getLocalizedContent(project.subtitle)}
+              {subtitle}
             </p>
           )}
           <p className="text-[var(--gray-light)]">{getLocalizedContent(project.description)}</p>
