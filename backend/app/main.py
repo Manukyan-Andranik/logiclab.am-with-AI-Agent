@@ -51,8 +51,8 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="Educational platform API for LogicLab",
     root_path="/api",  
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,
+    redoc_url=None,
     openapi_url="/openapi.json"
 )
 

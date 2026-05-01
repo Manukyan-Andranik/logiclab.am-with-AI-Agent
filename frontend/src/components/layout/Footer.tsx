@@ -161,8 +161,8 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
             © 2026 LOGIC LAB ACADEMY. ALL RIGHTS RESERVED.
           </p>
           <div className="flex gap-8 text-xs font-mono uppercase tracking-widest opacity-40">
-            <a href="#" className="hover:text-primary-alt hover:opacity-100 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-primary-alt hover:opacity-100 transition-colors">Terms of Service</a>
+            <Link to="/privacy-policy" className="hover:text-primary-alt hover:opacity-100 transition-colors">Privacy Policy</Link>
+            <Link to="/terms-of-service" className="hover:text-primary-alt hover:opacity-100 transition-colors">Terms of Service</Link>
           </div>
         </div>
       </Container>

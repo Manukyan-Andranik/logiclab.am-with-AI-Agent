@@ -1,13 +1,92 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { getProject } from "@/api/projects";
 import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaGithub } from "react-icons/fa";
-import { ArrowLeft, ExternalLink} from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// --- Lightbox ---
+const Lightbox = ({
+  images,
+  index,
+  onClose,
+}: {
+  images: string[];
+  index: number;
+  onClose: () => void;
+}) => {
+  const [current, setCurrent] = useState(index);
+
+  const prev = useCallback(() => setCurrent((i) => (i - 1 + images.length) % images.length), [images.length]);
+  const next = useCallback(() => setCurrent((i) => (i + 1) % images.length), [images.length]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, prev, next]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <button
+        className="absolute top-5 right-5 text-white/60 hover:text-white transition-colors"
+        onClick={onClose}
+      >
+        <X size={28} />
+      </button>
+
+      <span className="absolute top-5 left-1/2 -translate-x-1/2 text-white/40 text-xs font-black uppercase tracking-widest">
+        {current + 1} / {images.length}
+      </span>
+
+      {images.length > 1 && (
+        <button
+          className="absolute left-4 text-white/50 hover:text-white transition-colors p-2"
+          onClick={(e) => { e.stopPropagation(); prev(); }}
+        >
+          <ArrowLeft size={32} />
+        </button>
+      )}
+
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={current}
+          src={images[current]}
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.97 }}
+          transition={{ duration: 0.2 }}
+          className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </AnimatePresence>
+
+      {images.length > 1 && (
+        <button
+          className="absolute right-4 text-white/50 hover:text-white transition-colors p-2"
+          onClick={(e) => { e.stopPropagation(); next(); }}
+        >
+          <ArrowRight size={32} />
+        </button>
+      )}
+    </motion.div>
+  );
+};
+
 // --- ImageGallery Component ---
 interface ImageGalleryProps {
   images: string[];
@@ -15,6 +94,7 @@ interface ImageGalleryProps {
 
 export const ImageGallery = ({ images }: ImageGalleryProps) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
     <div className="flex flex-col gap-4 mt-8">
@@ -22,7 +102,7 @@ export const ImageGallery = ({ images }: ImageGalleryProps) => {
         className="text-primary font-bold uppercase text-xs mb-2"
         onClick={() => setIsOpen(!isOpen)}
       >
-        {isOpen ? "Փակել պատկերասրահը" : "Բացել պատկերասրահը"}
+        {isOpen ? "Փակել" : "Բացել"}
       </button>
 
       <AnimatePresence>
@@ -38,6 +118,7 @@ export const ImageGallery = ({ images }: ImageGalleryProps) => {
                 key={index}
                 className="relative w-full h-full overflow-hidden rounded-2xl cursor-pointer"
                 whileHover={{ scale: 1.05 }}
+                onClick={() => setLightboxIndex(index)}
               >
                 <img
                   src={img}
@@ -47,6 +128,16 @@ export const ImageGallery = ({ images }: ImageGalleryProps) => {
               </motion.div>
             ))}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <Lightbox
+            images={images}
+            index={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -95,7 +186,7 @@ const ProjectDetailPage = () => {
             to="/"
             className="text-primary font-black uppercase text-xs tracking-widest hover:underline flex items-center justify-center gap-2"
           >
-            <ArrowLeft size={20} /> Վերադառնալ գլխավոր էջ
+            <ArrowLeft size={20} /> Գլխավոր էջ
           </Link>
         </div>
       </div>
@@ -113,7 +204,9 @@ const ProjectDetailPage = () => {
   const links = project.links as { demo?: string; github?: string; colab?: string } | null;
 
   const projectImages = project.image_urls;
-  const subtitle = getLocalizedContent(project.subtitle);
+  const subtitle = project.subtitle
+    ? (project.subtitle.hy || project.subtitle.en || "")
+    : "";
 
   return (
     <div className="min-h-screen bg-black text-white">

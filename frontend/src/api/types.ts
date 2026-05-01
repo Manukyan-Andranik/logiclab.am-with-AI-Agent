@@ -74,7 +74,7 @@ export type Instructor = {
 export type Project = {
   id: number;
   title: LocalizedText;
-  subtitle?: LocalizedText;
+  subtitle?: LocalizedText | null;
   description: LocalizedText;
   image_urls: string[];
   course_id: number;
