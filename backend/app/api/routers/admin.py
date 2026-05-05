@@ -13,6 +13,7 @@ from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
     Lesson, Chapter, Course, EmailLog, Instructor, Project,
     Enrollment, Certificate, RegistrationStatus as DbRegistrationStatus,
+    EnrollmentStatus as DbEnrollmentStatus,
 )
 from ...schemas.schemas import (
     StudentResponse, StudentUpdate, StudentAdminCreate, UserRole,
@@ -497,6 +498,109 @@ async def mark_material_accessed_admin(
         "message": "Material (chapter) access granted",
         "access_id": material_access.id
     }
+
+@router.get("/students/{student_id}/enrollments")
+async def get_student_enrollments_admin(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Get all course enrollments for a student (Admin only)"""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    enrollments = db.query(Enrollment).options(
+        joinedload(Enrollment.course)
+    ).filter(Enrollment.student_id == student_id).all()
+
+    return {
+        "data": [
+            {
+                "id": e.id,
+                "course_id": e.course_id,
+                "course_title": e.course.title if e.course else None,
+                "status": e.status.value,
+                "enrolled_date": e.enrolled_date,
+                "is_completed": e.is_completed,
+                "progress": e.progress,
+            }
+            for e in enrollments
+        ],
+        "total": len(enrollments),
+    }
+
+
+@router.post("/students/{student_id}/enrollments")
+async def add_student_enrollment_admin(
+    student_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Enroll a student in a course (Admin only)"""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    course_id = body.get("course_id")
+    if not course_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="course_id required")
+
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    existing = db.query(Enrollment).filter(
+        Enrollment.student_id == student_id,
+        Enrollment.course_id == course_id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student is already enrolled in this course")
+
+    enrollment = Enrollment(
+        student_id=student_id,
+        course_id=course_id,
+        status=DbEnrollmentStatus.ACTIVE,
+        enrolled_date=datetime.now(timezone.utc),
+    )
+    db.add(enrollment)
+
+    # Set student.course_id if not already set (backward compat)
+    if not student.course_id:
+        student.course_id = course_id
+
+    db.commit()
+    db.refresh(enrollment)
+
+    return {
+        "id": enrollment.id,
+        "course_id": enrollment.course_id,
+        "course_title": course.title,
+        "status": enrollment.status.value,
+        "enrolled_date": enrollment.enrolled_date,
+    }
+
+
+@router.delete("/students/{student_id}/enrollments/{enrollment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_student_enrollment_admin(
+    student_id: int,
+    enrollment_id: int,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Remove a course enrollment from a student (Admin only)"""
+    enrollment = db.query(Enrollment).filter(
+        Enrollment.id == enrollment_id,
+        Enrollment.student_id == student_id
+    ).first()
+    if not enrollment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+
+    db.delete(enrollment)
+    db.commit()
+    return None
+
 
 @router.delete("/students/access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_student_access_admin(

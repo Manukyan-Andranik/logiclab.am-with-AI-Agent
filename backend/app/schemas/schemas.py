@@ -169,9 +169,7 @@ class CourseResponse(BaseModel):
 
 class StudentDashboardResponse(BaseModel):
     student: StudentResponse
-    course: Optional[CourseResponse] = None
-    progress: Optional[Dict[str, Any]] = None
-    materials: List[Dict[str, Any]] = []
+    courses: List[Dict[str, Any]] = []
 
     class Config:
         from_attributes = True

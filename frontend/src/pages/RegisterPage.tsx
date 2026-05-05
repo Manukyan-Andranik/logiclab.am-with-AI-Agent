@@ -25,8 +25,8 @@ const RegisterPage = () => {
   const { toast } = useToast();
 
   const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
-    queryKey: ["courses"],
-    queryFn: () => getCourses(),
+    queryKey: ["courses", true],
+    queryFn: () => getCourses(true),
   });
 
   const preselectedCourseId =
@@ -121,7 +121,8 @@ const RegisterPage = () => {
           }}
         />
         <Container>
-          <div className="relative z-10 py-20 grid lg:grid-cols-2 gap-12 items-start">
+          <div className="relative z-10 py-20 grid lg:grid-cols-2 gap-20 items-start">
+
             <div className="space-y-8 lg:pt-10">
               <FadeIn delay={0.1}>
                 <h1 className="text-gold text-6xl sm:text-7xl lg:text-[110px] font-black uppercase leading-[0.85] tracking-tighter">

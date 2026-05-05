@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List, Optional, Union
 from ...core.database import get_db
-from ...models.models import Course, CourseInstructor, Instructor, Chapter, Lesson
+from ...models.models import Course, CourseInstructor, Instructor, Chapter, Lesson, Material, MaterialAccess
 from ...schemas.schemas import (
     CourseCreate, CourseUpdate, CourseResponse,
     ChapterCreate, ChapterUpdate, ChapterResponse,
-    LessonCreate, LessonUpdate, LessonResponse
+    LessonCreate, LessonUpdate, LessonResponse,
+    UserRole
 )
-from ..deps import get_current_admin
+from ..deps import get_current_admin, get_current_user_optional
 
 router = APIRouter()
 
@@ -143,16 +144,27 @@ async def delete_chapter(
 @router.get("/{course_id_or_slug}/curriculum")
 async def get_course_curriculum(
     course_id_or_slug: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_optional)
 ):
     """Get complete course curriculum (chapters with lessons)"""
+    query = db.query(Course)
     if course_id_or_slug.isdigit():
-        course = db.query(Course).filter(Course.id == int(course_id_or_slug)).first()
+        query = query.filter(Course.id == int(course_id_or_slug))
     else:
-        course = db.query(Course).filter(Course.slug == course_id_or_slug).first()
+        query = query.filter(Course.slug == course_id_or_slug)
+        
+    # If not admin, only show active courses
+    if not current_user or current_user.role != UserRole.ADMIN:
+        query = query.filter(Course.is_active == True)
+        
+    course = query.first()
         
     if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
     
     chapters = db.query(Chapter).filter(Chapter.course_id == course.id).order_by(Chapter.order_index).all()
     
@@ -173,17 +185,27 @@ async def get_course_curriculum(
 @router.get("/{course_id_or_slug}/chapters", response_model=List[ChapterResponse])
 async def get_course_chapters(
     course_id_or_slug: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_optional)
 ):
     """Get all chapters for a course"""
     query = db.query(Course)
     if course_id_or_slug.isdigit():
-        course = query.filter(Course.id == int(course_id_or_slug)).first()
+        query = query.filter(Course.id == int(course_id_or_slug))
     else:
-        course = query.filter(Course.slug == course_id_or_slug).first()
+        query = query.filter(Course.slug == course_id_or_slug)
+        
+    # If not admin, only show active courses
+    if not current_user or current_user.role != UserRole.ADMIN:
+        query = query.filter(Course.is_active == True)
+        
+    course = query.first()
     
     if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
     
     return db.query(Chapter).filter(Chapter.course_id == course.id).order_by(Chapter.order_index).all()
 
@@ -217,7 +239,8 @@ async def create_chapter(
 @router.get("/{course_id_or_slug}", response_model=CourseResponse)
 async def get_course(
     course_id_or_slug: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_optional)
 ):
     """Get single course by ID or slug"""
     query = db.query(Course).options(
@@ -225,9 +248,15 @@ async def get_course(
     )
     
     if course_id_or_slug.isdigit():
-        course = query.filter(Course.id == int(course_id_or_slug)).first()
+        query = query.filter(Course.id == int(course_id_or_slug))
     else:
-        course = query.filter(Course.slug == course_id_or_slug).first()
+        query = query.filter(Course.slug == course_id_or_slug)
+    
+    # If not admin, only show active courses
+    if not current_user or current_user.role != UserRole.ADMIN:
+        query = query.filter(Course.is_active == True)
+        
+    course = query.first()
     
     if not course:
         raise HTTPException(
@@ -242,12 +271,16 @@ async def get_courses(
     skip: int = 0,
     limit: int = 100,
     is_active: Optional[bool] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_optional)
 ):
     """Get all courses (public endpoint)"""
     query = db.query(Course).options(joinedload(Course.instructors).joinedload(Instructor.user))
     
-    if is_active is not None:
+    # If not admin, force is_active=True
+    if not current_user or current_user.role != UserRole.ADMIN:
+        query = query.filter(Course.is_active == True)
+    elif is_active is not None:
         query = query.filter(Course.is_active == is_active)
     
     query = query.order_by(Course.order_index)

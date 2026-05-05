@@ -160,6 +160,23 @@ export const getStudentTimeline = async (studentId: number): Promise<any> => {
 };
 
 // Student and Registration deletion
+export const getStudentEnrollments = async (studentId: number): Promise<any> => {
+  return apiClient(`/admin/students/${studentId}/enrollments`);
+};
+
+export const addStudentEnrollment = async (studentId: number, courseId: number): Promise<any> => {
+  return apiClient(`/admin/students/${studentId}/enrollments`, {
+    method: 'POST',
+    body: JSON.stringify({ course_id: courseId })
+  });
+};
+
+export const removeStudentEnrollment = async (studentId: number, enrollmentId: number): Promise<void> => {
+  return apiClient(`/admin/students/${studentId}/enrollments/${enrollmentId}`, {
+    method: 'DELETE'
+  });
+};
+
 export const deleteStudent = async (studentId: number): Promise<void> => {
   return apiClient(`/admin/students/${studentId}`, {
     method: 'DELETE'

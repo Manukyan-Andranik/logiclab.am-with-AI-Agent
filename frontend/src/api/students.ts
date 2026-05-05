@@ -1,28 +1,46 @@
 import { apiClient } from './client';
 import { Student } from './types';
 
+export interface CourseMaterial {
+  chapter_id: number;
+  chapter_title: string;
+  chapter_order: number;
+  is_accessed: boolean;
+  lessons: Array<{
+    lesson_id: number;
+    lesson_title: string;
+    lesson_order: number;
+    resource_links: Array<{ name: string; url: string }>;
+  }>;
+}
+
+export interface CourseProgress {
+  total_chapters: number;
+  accessed_chapters: number;
+  total_lessons: number;
+  available_lessons: number;
+  accessed_lessons: number;
+  percentage: number;
+}
+
+export interface EnrolledCourse {
+  course_id: number;
+  course: {
+    id: number;
+    title: any;
+    slug?: string;
+    icon_url?: string;
+    duration_months?: number;
+  };
+  enrollment_id: number | null;
+  enrollment_status: string;
+  progress: CourseProgress;
+  materials: CourseMaterial[];
+}
+
 export interface StudentDashboardData {
   student: Student;
-  course?: any;
-  progress?: {
-    total_chapters: number;
-    accessed_chapters: number;
-    total_lessons: number;
-    accessed_lessons: number;
-    percentage: number;
-  };
-  materials: Array<{
-    chapter_id: number;
-    chapter_title: string;
-    chapter_order: number;
-    is_accessed: boolean;
-    lessons: Array<{
-      lesson_id: number;
-      lesson_title: string;
-      lesson_order: number;
-      resource_links: Array<{ name: string; url: string }>;
-    }>;
-  }>;
+  courses: EnrolledCourse[];
 }
 
 export const getStudent = async (id: number): Promise<Student> => {

@@ -47,6 +47,27 @@ async def get_current_user(
     
     return user
 
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+) -> Optional[UserPersonal]:
+    """Get current authenticated user or None if not authenticated"""
+    if not credentials:
+        return None
+    
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    
+    if payload is None:
+        return None
+    
+    email: str = payload.get("sub")
+    if email is None:
+        return None
+    
+    user = db.query(UserPersonal).filter(UserPersonal.email == email).first()
+    return user
+
 async def get_current_admin(
     current_user: UserPersonal = Depends(get_current_user)
 ) -> UserPersonal:

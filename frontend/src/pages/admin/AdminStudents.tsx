@@ -10,6 +10,9 @@ import {
   toggleStudentActive,
   getStudentTimeline,
   adminResetStudentPassword,
+  getStudentEnrollments,
+  addStudentEnrollment,
+  removeStudentEnrollment,
 } from "@/api/admin";
 import { createStudent } from "@/api/auth";
 import { getCourses } from "@/api/courses";
@@ -96,9 +99,12 @@ const AdminStudents = () => {
   });
 
   // Account tab state
-  const [newCourseId, setNewCourseId] = useState<string>("");
+  const [newEnrollCourseId, setNewEnrollCourseId] = useState<string>("");
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Access tab state
+  const [selectedAccessCourseId, setSelectedAccessCourseId] = useState<string>("");
 
   // Create student dialog state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -126,15 +132,23 @@ const AdminStudents = () => {
     queryFn: () => getCourses(),
   });
 
+  const accessCourseId = selectedAccessCourseId ? parseInt(selectedAccessCourseId) : null;
+
   const { data: curriculumData } = useQuery({
-    queryKey: ["curriculum", selectedStudent?.course_id],
-    queryFn: () => getCourseCurriculum(selectedStudent.course_id),
-    enabled: !!selectedStudent?.course_id,
+    queryKey: ["curriculum", accessCourseId],
+    queryFn: () => getCourseCurriculum(accessCourseId!),
+    enabled: !!accessCourseId,
   });
 
   const { data: accessData, refetch: refetchAccess } = useQuery({
     queryKey: ["student-access", selectedStudent?.id],
     queryFn: () => getStudentLessonAccess(selectedStudent.id),
+    enabled: !!selectedStudent?.id && isManageOpen,
+  });
+
+  const { data: enrollmentsData, refetch: refetchEnrollments } = useQuery({
+    queryKey: ["student-enrollments", selectedStudent?.id],
+    queryFn: () => getStudentEnrollments(selectedStudent.id),
     enabled: !!selectedStudent?.id && isManageOpen,
   });
 
@@ -255,6 +269,29 @@ const AdminStudents = () => {
     },
   });
 
+  const addEnrollmentMutation = useMutation({
+    mutationFn: (courseId: number) => addStudentEnrollment(selectedStudent.id, courseId),
+    onSuccess: () => {
+      refetchEnrollments();
+      setNewEnrollCourseId("");
+      toast({ title: "Enrolled", description: "Student enrolled in course." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to enroll student", variant: "destructive" });
+    },
+  });
+
+  const removeEnrollmentMutation = useMutation({
+    mutationFn: (enrollmentId: number) => removeStudentEnrollment(selectedStudent.id, enrollmentId),
+    onSuccess: () => {
+      refetchEnrollments();
+      toast({ title: "Removed", description: "Enrollment removed." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to remove enrollment", variant: "destructive" });
+    },
+  });
+
   const createStudentMutation = useMutation({
     mutationFn: () =>
       createStudent({
@@ -290,9 +327,10 @@ const AdminStudents = () => {
       city: student.user?.city || "",
       country: student.user?.country || "",
     });
-    setNewCourseId(student.course_id?.toString() || "");
+    setNewEnrollCourseId("");
     setNewPassword("");
     setShowNewPassword(false);
+    setSelectedAccessCourseId(student.course_id?.toString() || "");
     setIsManageOpen(true);
   };
 
@@ -304,16 +342,6 @@ const AdminStudents = () => {
       phone: editForm.phone || undefined,
       city: editForm.city || undefined,
       country: editForm.country || undefined,
-    });
-  };
-
-  const handleSaveCourse = () => {
-    if (!newCourseId) return;
-    updateStudentMutation.mutate({
-      first_name: selectedStudent.user?.first_name,
-      last_name: selectedStudent.user?.last_name,
-      email: selectedStudent.user?.email,
-      course_id: parseInt(newCourseId),
     });
   };
 
@@ -773,51 +801,69 @@ const AdminStudents = () => {
                   </div>
                 </div>
 
-                {/* Course assignment */}
+                {/* Enrollment manager */}
                 <div className="space-y-3 p-4 rounded-xl bg-secondary/10 border border-border">
                   <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
-                    Course Assignment
+                    Course Enrollments
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Currently:{" "}
-                    <span className="text-foreground font-semibold">
-                      {selectedStudent?.course?.title?.en || "Unassigned"}
-                    </span>
-                  </div>
-                  <div className="flex items-end gap-3">
-                    <div className="flex-1 space-y-2">
+
+                  {/* Current enrollments list */}
+                  {enrollmentsData?.data?.length > 0 ? (
+                    <div className="space-y-2">
+                      {enrollmentsData.data.map((enrollment: any) => (
+                        <div key={enrollment.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-border">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-foreground truncate">
+                              {enrollment.course_title?.en || `Course #${enrollment.course_id}`}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1 uppercase">{enrollment.status}</Badge>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                            onClick={() => removeEnrollmentMutation.mutate(enrollment.id)}
+                            disabled={removeEnrollmentMutation.isPending}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic">No course enrollments.</div>
+                  )}
+
+                  {/* Add enrollment */}
+                  <div className="flex items-end gap-2 pt-1">
+                    <div className="flex-1 space-y-1.5">
                       <Label className="text-xs font-bold uppercase tracking-wider opacity-70">
-                        Assign to Course
+                        Add Course
                       </Label>
-                      <Select
-                        value={newCourseId}
-                        onValueChange={setNewCourseId}
-                      >
+                      <Select value={newEnrollCourseId} onValueChange={setNewEnrollCourseId}>
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select a course" />
                         </SelectTrigger>
                         <SelectContent>
-                          {(courses || []).map((course: any) => (
-                            <SelectItem
-                              key={course.id}
-                              value={course.id.toString()}
-                            >
-                              {course.title?.en}
-                            </SelectItem>
-                          ))}
+                          {(courses || [])
+                            .filter((c: any) => !enrollmentsData?.data?.some((e: any) => e.course_id === c.id))
+                            .map((course: any) => (
+                              <SelectItem key={course.id} value={course.id.toString()}>
+                                {course.title?.en}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <Button
                       size="sm"
-                      onClick={handleSaveCourse}
-                      disabled={
-                        !newCourseId ||
-                        newCourseId === selectedStudent?.course_id?.toString() ||
-                        updateStudentMutation.isPending
-                      }
+                      onClick={() => addEnrollmentMutation.mutate(parseInt(newEnrollCourseId))}
+                      disabled={!newEnrollCourseId || addEnrollmentMutation.isPending}
+                      className="shrink-0"
                     >
-                      Assign
+                      Enroll
                     </Button>
                   </div>
                 </div>
@@ -915,6 +961,23 @@ const AdminStudents = () => {
                       Revoke All
                     </Button>
                   </div>
+                </div>
+
+                {/* Course selector for access management */}
+                <div className="flex items-center gap-3">
+                  <Label className="text-xs font-bold uppercase tracking-wider opacity-70 shrink-0">Course</Label>
+                  <Select value={selectedAccessCourseId} onValueChange={setSelectedAccessCourseId}>
+                    <SelectTrigger className="bg-background flex-1">
+                      <SelectValue placeholder="Select a course to manage access" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(courses || []).map((course: any) => (
+                        <SelectItem key={course.id} value={course.id.toString()}>
+                          {course.title?.en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-6">
@@ -1093,9 +1156,9 @@ const AdminStudents = () => {
                     );
                   })}
 
-                  {!selectedStudent?.course_id && (
+                  {!selectedAccessCourseId && (
                     <div className="text-sm text-muted-foreground italic p-4 rounded-xl border border-border bg-secondary/10">
-                      No course assigned. Assign a course from the Account tab to manage access.
+                      Select a course above to manage chapter and lesson access.
                     </div>
                   )}
                 </div>
