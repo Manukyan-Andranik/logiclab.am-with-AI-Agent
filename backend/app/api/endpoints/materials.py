@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from ...core.database import get_db
 from ...core.email import email_service
 from ...models.models import (
@@ -41,8 +41,8 @@ async def get_lesson_material(
             "chapter_id": lesson.chapter_id,
             "lesson_id": lesson_id,
             "links": [],
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
         }
     return material
 

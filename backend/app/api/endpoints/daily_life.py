@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from ...core.database import get_db
 from ...core.cloudinary import (
     delete_cloudinary_by_url,
@@ -108,7 +108,7 @@ async def create_daily_life(
         image_urls=story_data.image_urls or [],
         video_url=story_data.video_url,
         is_published=story_data.is_published,
-        published_date=datetime.utcnow()  # Set published date when story is created
+        published_date=datetime.now(timezone.utc)  # Set published date when story is created
     )
     db.add(new_story)
     db.commit()

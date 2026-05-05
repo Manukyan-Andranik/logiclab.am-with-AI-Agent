@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...core.database import get_db
 from ...models.models import Enrollment, Student, Course, Certificate # Import models
@@ -139,7 +139,7 @@ async def update_enrollment(
     if enrollment_data.progress == 100:
         enrollment.is_completed = True
         if not enrollment.completed_date:
-            enrollment.completed_date = datetime.utcnow()
+            enrollment.completed_date = datetime.now(timezone.utc)
     elif enrollment_data.progress is not None and enrollment_data.progress < 100:
         enrollment.is_completed = False
         enrollment.completed_date = None # Clear completed date if progress is not 100

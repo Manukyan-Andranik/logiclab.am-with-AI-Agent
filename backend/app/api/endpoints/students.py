@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from ...core.database import get_db
 from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
@@ -13,7 +13,7 @@ from ..deps import get_current_admin, get_current_student
 
 router = APIRouter()
 
-@router.get("/students/{student_id}", response_model=StudentResponse)
+@router.get("/{student_id}", response_model=StudentResponse)
 async def get_student_info(
     student_id: int,
     db: Session = Depends(get_db)
@@ -23,10 +23,10 @@ async def get_student_info(
         joinedload(Student.user),
         joinedload(Student.course)
     ).filter(Student.id == student_id).first()
-    
+
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
-    
+
     return student
 
 @router.get("/me", response_model=StudentResponse)
@@ -188,10 +188,24 @@ async def mark_chapter_accessed(
     if not accesses:
         raise HTTPException(status_code=403, detail="Access denied to this chapter")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for access in accesses:
         if access.accessed_at is None:
             access.accessed_at = now
+
+    # Auto-update student's current position to this chapter
+    student = db.query(Student).filter(Student.id == current_student.id).first()
+    if student:
+        student.last_chapter_id = chapter_id
+        first_lesson = (
+            db.query(Lesson)
+            .filter(Lesson.chapter_id == chapter_id)
+            .order_by(Lesson.order_index)
+            .first()
+        )
+        if first_lesson:
+            student.last_lesson_id = first_lesson.id
+
     db.commit()
     for access in accesses:
         db.refresh(access)

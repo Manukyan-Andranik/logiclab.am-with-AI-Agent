@@ -71,7 +71,7 @@ async def update_lesson(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     
-    update_data = lesson_data.dict(exclude_unset=True)
+    update_data = lesson_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(lesson, field, value)
     
@@ -116,7 +116,7 @@ async def update_chapter(
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
     
-    update_data = chapter_data.dict(exclude_unset=True)
+    update_data = chapter_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(chapter, field, value)
     
@@ -160,8 +160,8 @@ async def get_course_curriculum(
     for chapter in chapters:
         lessons = db.query(Lesson).filter(Lesson.chapter_id == chapter.id).order_by(Lesson.order_index).all()
         curriculum.append({
-            "chapter": ChapterResponse.from_orm(chapter),
-            "lessons": [LessonResponse.from_orm(lesson) for lesson in lessons]
+            "chapter": ChapterResponse.model_validate(chapter),
+            "lessons": [LessonResponse.model_validate(lesson) for lesson in lessons]
         })
     
     return {

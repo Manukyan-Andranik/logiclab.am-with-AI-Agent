@@ -177,7 +177,7 @@ const StudentDashboard = () => {
           <motion.div className="stats-grid" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             {[
               { icon: <Layers size={16} />, label: "Դաս", value: String(progress?.total_lessons ?? 0) },
-              { icon: <PlayCircle size={16} />, label: "Գլուխնե", value: String(progress?.total_chapters ?? 0) },
+              { icon: <PlayCircle size={16} />, label: "Գլուխներ", value: String(progress?.total_chapters ?? 0) },
               { icon: <CheckCircle size={16} />, label: "Ավարտված", value: `${progress?.accessed_lessons ?? 0}/${progress?.total_lessons ?? 0}` },
               { icon: <Clock size={16} />, label: "Տևողություն", value: `${course?.duration_months ?? 0} ամիս` },
             ].map((s, i) => (

@@ -204,7 +204,7 @@ async def get_student_dashboard(
             ch["lessons"].sort(key=lambda x: x["lesson_order"])
             ch.pop("_lesson_ids", None)
 
-    # Get progress: percentage of *granted* lessons against *all* course lessons
+    # Get progress: percentage of *accessed* lessons against *all* course lessons
     progress = None
     if current_student.course_id:
         # All course lessons
@@ -242,10 +242,10 @@ async def get_student_dashboard(
         accessed_granted = accessed_lesson_ids & granted_lesson_ids
         accessed_lessons_count = len(accessed_granted)
         accessed_chapters_count = len(accessed_chapter_ids)
-        
-        # Percentage = available lessons / all course lessons
+
+        # Percentage = lessons the student has actually accessed / all course lessons
         progress_percentage = (
-            (available_lessons_count / total_course_lessons * 100) if total_course_lessons > 0 else 0
+            (accessed_lessons_count / total_course_lessons * 100) if total_course_lessons > 0 else 0
         )
 
         progress = {
@@ -256,7 +256,6 @@ async def get_student_dashboard(
             "accessed_chapters": accessed_chapters_count,
             "percentage": round(progress_percentage, 2),
         }
-        print(progress)
     return {
         "student": current_student,
         "course": course,

@@ -122,6 +122,43 @@ export const assignChapterToStudent = async (studentId: number, chapterId: numbe
   });
 };
 
+export const updateAdminStudent = async (
+  studentId: number,
+  data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    country?: string;
+    profile_image?: string;
+    course_id?: number;
+    is_active?: boolean;
+  }
+): Promise<any> => {
+  return apiClient(`/admin/students/${studentId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+};
+
+export const toggleStudentActive = async (studentId: number): Promise<any> => {
+  return apiClient(`/admin/students/${studentId}/toggle-active`, {
+    method: 'PATCH',
+  });
+};
+
+export const adminResetStudentPassword = async (studentId: number, newPassword: string): Promise<{ message: string }> => {
+  return apiClient(`/admin/students/${studentId}/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+};
+
+export const getStudentTimeline = async (studentId: number): Promise<any> => {
+  return apiClient(`/admin/students/${studentId}/timeline`);
+};
+
 // Student and Registration deletion
 export const deleteStudent = async (studentId: number): Promise<void> => {
   return apiClient(`/admin/students/${studentId}`, {

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, validator
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 # Enums
@@ -628,7 +628,7 @@ class DailyLifeResponse(BaseModel):
     @classmethod
     def _coerce_datetimes(cls, v: Any) -> datetime:
         if v is None:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
         return v
 
     class Config:

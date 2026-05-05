@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import secrets
 from sqlalchemy import or_
 
@@ -15,7 +15,7 @@ from ...models.models import (
     Enrollment, Certificate, RegistrationStatus as DbRegistrationStatus,
 )
 from ...schemas.schemas import (
-    StudentResponse, StudentUpdate, UserRole,
+    StudentResponse, StudentUpdate, StudentAdminCreate, UserRole,
     RegistrationResponse, RegistrationUpdate, RegistrationStatus, RegisterRequest, RegistrationListResponse
 )
 from ..deps import get_current_admin, get_current_student
@@ -155,6 +155,48 @@ async def get_all_students_admin(
     
     students = query.offset(skip).limit(limit).all()
     return students
+
+@router.post("/create-student")
+async def create_student_admin(
+    data: StudentAdminCreate,
+    db: Session = Depends(get_db),
+    current_admin=Depends(get_current_admin),
+):
+    """Create a student account directly (Admin only). Returns temp password."""
+    existing = db.query(UserPersonal).filter(UserPersonal.email == data.email).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    course = db.query(Course).filter(Course.id == data.course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    temp_password = secrets.token_urlsafe(12)
+    user = UserPersonal(
+        first_name=data.first_name,
+        last_name=data.last_name,
+        email=data.email,
+        password_hash=get_password_hash(temp_password),
+        role=UserRole.STUDENT,
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+
+    student = Student(
+        user_id=user.id,
+        course_id=data.course_id,
+        status=DbRegistrationStatus.CONFIRMED,
+    )
+    db.add(student)
+    db.commit()
+    db.refresh(student)
+
+    return {"student_id": student.id, "temp_password": temp_password}
+
 
 @router.get("/students/{student_id}", response_model=StudentResponse)
 async def get_student_admin(
@@ -305,6 +347,31 @@ async def toggle_student_active_admin(
     db.refresh(student)
     return student
 
+@router.post("/students/{student_id}/reset-password")
+async def reset_student_password_admin(
+    student_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin),
+):
+    """Set a new password for a student (Admin only)"""
+    new_password = body.get("new_password", "").strip()
+    if len(new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters",
+        )
+
+    student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    if not student.user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student user account not found")
+
+    student.user.password_hash = get_password_hash(new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
 @router.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_student_admin(
     student_id: int,
@@ -412,7 +479,7 @@ async def mark_material_accessed_admin(
 
     if existing:
         if existing.accessed_at is None:
-            existing.accessed_at = datetime.utcnow()
+            existing.accessed_at = datetime.now(timezone.utc)
             db.commit()
         return {"message": "Access updated", "access_id": existing.id}
 
@@ -420,7 +487,7 @@ async def mark_material_accessed_admin(
     material_access = MaterialAccess(
         chapter_id=chapter_id,
         student_id=student_id,
-        accessed_at=datetime.utcnow()
+        accessed_at=datetime.now(timezone.utc)
     )
     db.add(material_access)
     db.commit()
