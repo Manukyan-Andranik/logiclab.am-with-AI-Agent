@@ -130,8 +130,8 @@ class Chapter(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     # Relationships
     course = relationship("Course", back_populates="chapters")
-    lessons = relationship("Lesson", back_populates="chapter", cascade="all, delete-orphan")
-    materials = relationship("Material", back_populates="chapter")
+    lessons = relationship("Lesson", back_populates="chapter", cascade="all, delete-orphan", passive_deletes=True)
+    materials = relationship("Material", back_populates="chapter", cascade="all, delete-orphan", passive_deletes=True)
     material_access = relationship(
         "MaterialAccess",
         back_populates="chapter",
@@ -152,7 +152,7 @@ class Lesson(Base):
     
     # Relationships
     chapter = relationship("Chapter", back_populates="lessons")
-    materials = relationship("Material", back_populates="lesson", uselist=False)
+    materials = relationship("Material", back_populates="lesson", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
     material_access = relationship(
         "MaterialAccess",
         back_populates="lesson",

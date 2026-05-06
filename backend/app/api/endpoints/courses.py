@@ -136,9 +136,22 @@ async def delete_chapter(
     current_admin = Depends(get_current_admin)
 ):
     """Delete chapter (Admin only)"""
-    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+    chapter = db.query(Chapter).options(joinedload(Chapter.lessons)).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
+
+    lesson_ids = [l.id for l in chapter.lessons]
+
+    db.execute(
+        text("UPDATE students SET last_chapter_id = NULL WHERE last_chapter_id = :id"),
+        {"id": chapter_id}
+    )
+    if lesson_ids:
+        db.execute(
+            text("UPDATE students SET last_lesson_id = NULL WHERE last_lesson_id = ANY(:ids)"),
+            {"ids": lesson_ids}
+        )
+
     db.delete(chapter)
     db.commit()
     return None
