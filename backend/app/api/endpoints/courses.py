@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import List, Optional, Union
 from ...core.database import get_db
 from ...models.models import Course, CourseInstructor, Instructor, Chapter, Lesson, Material, MaterialAccess
@@ -90,6 +90,10 @@ async def delete_lesson(
     lesson = db.query(Lesson).filter(Lesson.id == lesson_id).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
+    db.execute(
+        text("UPDATE students SET last_lesson_id = NULL WHERE last_lesson_id = :id"),
+        {"id": lesson_id}
+    )
     db.delete(lesson)
     db.commit()
     return None
