@@ -361,6 +361,19 @@ class VisitAggregationItem(BaseModel):
     label: str # e.g., date, page_url, country, browser
     count: int
 
+class VisitorBreakdownItem(BaseModel):
+    ip_address: str
+    count: int
+    first_seen: datetime
+    last_seen: datetime
+    user_agent: Optional[str] = None
+
+class RecentVisitItem(BaseModel):
+    timestamp: datetime
+    page_url: str
+    ip_address: str
+    is_bot: Optional[bool] = False
+
 class VisitSummaryResponse(BaseModel):
     total_visits: int
     unique_visitors: int
@@ -368,10 +381,15 @@ class VisitSummaryResponse(BaseModel):
     desktop_visits: int
     bot_visits: int
     human_visits: int
+    avg_visits_per_unique: float
     visits_over_time: List[VisitAggregationItem]
+    visits_by_week: List[VisitAggregationItem]
+    visits_by_month: List[VisitAggregationItem]
     visits_by_page: List[VisitAggregationItem]
     visits_by_country: List[VisitAggregationItem]
     visits_by_browser: List[VisitAggregationItem]
+    visits_per_unique: List[VisitorBreakdownItem]
+    recent_visits: List[RecentVisitItem]
 
 class VisitListResponse(BaseModel):
     data: List[VisitResponse]

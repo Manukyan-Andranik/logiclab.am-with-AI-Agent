@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, BookOpen, UserCheck, MessageSquare,
-  LogOut, Settings, Briefcase, Heart, Menu, X,
+  LogOut, Settings, Briefcase, Heart, Menu, X, Activity,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -14,6 +14,7 @@ const menuItems = [
   { label: "Daily Life",    href: "/admin/daily-life",     icon: Heart },
   { label: "Instructors",   href: "/admin/instructors",    icon: Users },
   { label: "Messages",      href: "/admin/messages",       icon: MessageSquare },
+  { label: "Visits",        href: "/admin/visits",         icon: Activity },
 ];
 
 interface SidebarNavProps {

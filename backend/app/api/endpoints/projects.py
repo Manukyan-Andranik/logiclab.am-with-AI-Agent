@@ -158,12 +158,19 @@ async def create_project(
             detail="Student not found"
         )
     
+    # Normalize subtitle: drop if all language values are empty
+    subtitle_value = None
+    if project_data.subtitle:
+        sub_dict = project_data.subtitle.dict()
+        if any((sub_dict.get(k) or "").strip() for k in ("en", "ru", "hy")):
+            subtitle_value = sub_dict
+
     # Create project
     new_project = Project(
         course_id=project_data.course_id,
         student_id=project_data.student_id,
         title=project_data.title.dict(),
-        subtitle=project_data.subtitle.dict() if project_data.subtitle else None,
+        subtitle=subtitle_value,
         description=project_data.description.dict(),
         image_urls=project_data.image_urls or [],
         links=project_data.links or {},
@@ -197,15 +204,16 @@ async def update_project(
     if "image_urls" in update_data and update_data["image_urls"] is not None:
         delete_removed_cloudinary_urls(project.image_urls or [], update_data["image_urls"])
 
-    # Handle multilingual fields explicitly to ensure they are dicts
-    if 'title' in update_data and update_data['title']:
-        update_data['title'] = update_data['title']
-    if 'subtitle' in update_data and update_data['subtitle']:
-        update_data['subtitle'] = update_data['subtitle']
-    if 'description' in update_data and update_data['description']:
-        update_data['description'] = update_data['description']
-    
+    # subtitle is nullable — allow explicit clearing
+    if "subtitle" in update_data:
+        sub = update_data["subtitle"]
+        if isinstance(sub, dict) and not any((sub.get(k) or "").strip() for k in ("en", "ru", "hy")):
+            sub = None
+        project.subtitle = sub
+
     for field, value in update_data.items():
+        if field == "subtitle":
+            continue
         if value is not None:
             setattr(project, field, value)
     

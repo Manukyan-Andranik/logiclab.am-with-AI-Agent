@@ -1,5 +1,6 @@
 # app/api/endpoints/visits.py
 from fastapi import APIRouter, Depends, Request, status, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, cast, Date
 from typing import List, Dict, Any, Optional
@@ -7,7 +8,15 @@ from datetime import datetime, timedelta
 
 from ...core.database import get_db
 from ...models.models import Visit # Import the new Visit model
-from ...schemas.schemas import VisitResponse, VisitCreate, VisitSummaryResponse, VisitAggregationItem, VisitListResponse # Updated import
+from ...schemas.schemas import (
+    VisitResponse,
+    VisitCreate,
+    VisitSummaryResponse,
+    VisitAggregationItem,
+    VisitListResponse,
+    VisitorBreakdownItem,
+    RecentVisitItem,
+)
 from ..deps import get_current_admin # Assuming admin access for summary, but not for tracking
 
 router = APIRouter()
@@ -29,19 +38,35 @@ def _agg_label(value: Any) -> str:
     return str(value)
 
 
+class VisitTrackPayload(BaseModel):
+    page_url: Optional[str] = None
+    referrer: Optional[str] = None
+
+
 @router.post("/visits/track", status_code=status.HTTP_201_CREATED, response_model=VisitResponse)
 async def track_visit(
     request: Request,
+    payload: Optional[VisitTrackPayload] = None,
     db: Session = Depends(get_db)
 ):
     """
     Track a new website visit.
-    Automatically extracts IP, user agent, and referrer from the request.
+    Client should send the page URL it is on (window.location.href). Falls back to
+    the request URL / Referer header if not supplied.
     """
-    ip_address = request.client.host if request.client else "unknown"
+    # X-Forwarded-For takes precedence when behind a proxy
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        ip_address = forwarded_for.split(",")[0].strip()
+    elif request.client:
+        ip_address = request.client.host
+    else:
+        ip_address = "unknown"
+
     user_agent = request.headers.get("User-Agent", "unknown")
-    page_url = str(request.url) # Full URL of the request
-    referrer = request.headers.get("Referer") # Note: 'Referer' header is often misspelled
+    header_referer = request.headers.get("Referer")
+    page_url = (payload.page_url if payload and payload.page_url else header_referer) or str(request.url)
+    referrer = (payload.referrer if payload and payload.referrer else header_referer)
     
     # Simple bot detection (can be improved)
     is_bot = any(bot_string in user_agent.lower() for bot_string in ["bot", "spider", "crawler", "lighthouse"])
@@ -115,6 +140,40 @@ async def get_visit_summary(
         VisitAggregationItem(label=_agg_label(v.label), count=v.count) for v in visits_over_time
     ]
 
+    # Weekly aggregation (ISO week starting Monday)
+    week_col = func.date_trunc("week", Visit.timestamp)
+    visits_by_week_rows = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(week_col.label("label"), func.count(Visit.id).label("count"))
+        .group_by(week_col)
+        .order_by(week_col)
+        .all()
+    )
+    visits_by_week_data = [
+        VisitAggregationItem(
+            label=v.label.strftime("%Y-%m-%d") if v.label else "",
+            count=v.count,
+        )
+        for v in visits_by_week_rows
+    ]
+
+    # Monthly aggregation
+    month_col = func.date_trunc("month", Visit.timestamp)
+    visits_by_month_rows = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(month_col.label("label"), func.count(Visit.id).label("count"))
+        .group_by(month_col)
+        .order_by(month_col)
+        .all()
+    )
+    visits_by_month_data = [
+        VisitAggregationItem(
+            label=v.label.strftime("%Y-%m") if v.label else "",
+            count=v.count,
+        )
+        for v in visits_by_month_rows
+    ]
+
     visits_by_page = (
         _visits_query(db, start_date, end_date)
         .with_entities(Visit.page_url.label("label"), func.count(Visit.id).label("count"))
@@ -171,6 +230,51 @@ async def get_visit_summary(
     visits_by_browser_data.sort(key=lambda x: x.count, reverse=True)
 
 
+    # Per-unique-visitor breakdown: count, first/last seen, latest user agent
+    visitor_rows = (
+        _visits_query(db, start_date, end_date)
+        .with_entities(
+            Visit.ip_address.label("ip_address"),
+            func.count(Visit.id).label("count"),
+            func.min(Visit.timestamp).label("first_seen"),
+            func.max(Visit.timestamp).label("last_seen"),
+            func.max(Visit.user_agent).label("user_agent"),
+        )
+        .group_by(Visit.ip_address)
+        .order_by(func.count(Visit.id).desc())
+        .limit(50)
+        .all()
+    )
+    visits_per_unique_data = [
+        VisitorBreakdownItem(
+            ip_address=row.ip_address or "unknown",
+            count=row.count,
+            first_seen=row.first_seen,
+            last_seen=row.last_seen,
+            user_agent=row.user_agent,
+        )
+        for row in visitor_rows
+    ]
+
+    # Recent visits — most recent 25 with date/time
+    recent_rows = (
+        _visits_query(db, start_date, end_date)
+        .order_by(Visit.timestamp.desc())
+        .limit(25)
+        .all()
+    )
+    recent_visits_data = [
+        RecentVisitItem(
+            timestamp=v.timestamp,
+            page_url=v.page_url or "",
+            ip_address=v.ip_address or "unknown",
+            is_bot=bool(v.is_bot),
+        )
+        for v in recent_rows
+    ]
+
+    avg_visits_per_unique = (total_visits / unique_visitors) if unique_visitors else 0.0
+
     return VisitSummaryResponse(
         total_visits=total_visits,
         unique_visitors=unique_visitors,
@@ -178,10 +282,15 @@ async def get_visit_summary(
         desktop_visits=desktop_visits,
         bot_visits=bot_visits,
         human_visits=human_visits,
+        avg_visits_per_unique=round(avg_visits_per_unique, 2),
         visits_over_time=visits_over_time_data,
+        visits_by_week=visits_by_week_data,
+        visits_by_month=visits_by_month_data,
         visits_by_page=visits_by_page_data,
         visits_by_country=visits_by_country_data,
-        visits_by_browser=visits_by_browser_data
+        visits_by_browser=visits_by_browser_data,
+        visits_per_unique=visits_per_unique_data,
+        recent_visits=recent_visits_data,
     )
 
 @router.get("/visits/stats/by-path", response_model=List[VisitAggregationItem])

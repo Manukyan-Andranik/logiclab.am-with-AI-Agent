@@ -8,6 +8,7 @@ import ScrollToTop from './ScrollToTop';
 import ScrollToTopButton from './ScrollToTopButton';
 import { useNavigationMode } from '../../hooks/useNavigationMode';
 import { useNavigationContext } from './NavigationProvider';
+import { usePageViewTracker } from '../../hooks/usePageViewTracker';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MainLayout: React.FC = () => {
@@ -15,6 +16,7 @@ const MainLayout: React.FC = () => {
   const { navigationSystem, isConfigLoading } = useNavigationContext();
   const [isAgentOpen, setIsAgentOpen] = useState(true);
   const location = useLocation();
+  usePageViewTracker();
 
   // Show loading state while config is being fetched
   if (isConfigLoading) {

@@ -204,9 +204,7 @@ const ProjectDetailPage = () => {
   const links = project.links as { demo?: string; github?: string; colab?: string } | null;
 
   const projectImages = project.image_urls;
-  const subtitle = project.subtitle
-    ? (project.subtitle.hy || project.subtitle.en || "")
-    : "";
+  const subtitle = getLocalizedContent(project.subtitle);
 
   return (
     <div className="min-h-screen bg-black text-white">

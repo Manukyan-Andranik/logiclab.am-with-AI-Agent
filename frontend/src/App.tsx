@@ -29,6 +29,7 @@ import AdminProjects from "./pages/admin/AdminProjects";
 import AdminDailyLife from "./pages/admin/AdminDailyLife";
 import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminMessages from "./pages/admin/AdminMessages";
+import AdminVisits from "./pages/admin/AdminVisits";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="visits" element={<AdminVisits />} />
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="courses" element={<AdminCourses />} />
               <Route path="students" element={<AdminStudents />} />

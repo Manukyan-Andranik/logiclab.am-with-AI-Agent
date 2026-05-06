@@ -45,8 +45,43 @@ export const getAdminStudents = async (): Promise<any[]> => {
   return apiClient('/admin/students');
 };
 
-export const getVisitStatsSummary = async (): Promise<Record<string, any>> => {
-  return apiClient('/visits/stats/summary');
+export const getVisitStatsSummary = async (params: Record<string, string | number | boolean> = {}): Promise<Record<string, any>> => {
+  return apiClient('/visits/stats/summary', { params });
+};
+
+export type VisitRecord = {
+  id: number;
+  timestamp: string;
+  ip_address: string;
+  page_url: string;
+  user_agent?: string | null;
+  country?: string | null;
+  city?: string | null;
+  referrer?: string | null;
+  is_bot?: boolean | null;
+};
+
+export type VisitListResponse = {
+  data: VisitRecord[];
+  total: number;
+};
+
+export const getVisits = async (params: {
+  skip?: number;
+  limit?: number;
+  is_bot?: boolean;
+  search?: string;
+  start_date?: string;
+  end_date?: string;
+} = {}): Promise<VisitListResponse> => {
+  return apiClient<VisitListResponse>('/visits', { params: params as Record<string, any> });
+};
+
+export const trackPageView = async (pageUrl: string, referrer: string | null): Promise<void> => {
+  await apiClient('/visits/track', {
+    method: 'POST',
+    body: JSON.stringify({ page_url: pageUrl, referrer: referrer || null }),
+  });
 };
 
 export const getDailyLifeStats = async (): Promise<{ total: number; published: number; draft: number }> => {

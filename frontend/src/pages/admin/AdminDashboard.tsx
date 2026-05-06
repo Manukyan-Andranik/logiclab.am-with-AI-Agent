@@ -1,20 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardStats, getVisitStatsSummary, getDailyLifeStats } from "@/api/admin";
-import { 
-  Users, 
-  BookOpen, 
-  UserCheck, 
-  TrendingUp, 
-  Monitor, 
-  Smartphone, 
-  UserCircle, 
+import {
+  Users,
+  BookOpen,
+  UserCheck,
+  TrendingUp,
+  Monitor,
+  Smartphone,
+  UserCircle,
   Rocket,
   CheckCircle2,
   Clock,
   XCircle,
   Briefcase,
   Heart,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  Bot,
+  Globe,
+  FileText
 } from "lucide-react";
 import Card from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +32,9 @@ const AdminDashboard = () => {
     queryFn: getDashboardStats,
   });
 
-  const { data: visits, isLoading: isVisitsLoading } = useQuery({
+  const { data: visits } = useQuery({
     queryKey: ["visit-stats"],
-    queryFn: getVisitStatsSummary,
+    queryFn: () => getVisitStatsSummary(),
   });
 
   const { data: dailyLifeStats, isLoading: isDailyLifeLoading } = useQuery({
@@ -38,7 +42,7 @@ const AdminDashboard = () => {
     queryFn: getDailyLifeStats,
   });
 
-  if (isStatsLoading || isVisitsLoading) {
+  if (isStatsLoading) {
     return (
       <div className="animate-pulse space-y-8">
         <div className="h-32 bg-secondary rounded-xl w-full" />
@@ -82,6 +86,49 @@ const AdminDashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Website Visits Summary */}
+      <Card className="border border-border/50 shadow-sm bg-card" hoverable={false}>
+        <div className="mb-6 flex items-center justify-between">
+          <h3 className="font-bold flex items-center gap-2">
+            <TrendingUp size={18} className="text-primary" />
+            Website Visits
+          </h3>
+          <Badge variant="outline">{visits?.total_visits || 0} Total</Badge>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 text-center">
+            <Eye className="h-5 w-5 text-primary mx-auto mb-2" />
+            <div className="text-xl font-bold text-primary">{visits?.unique_visitors || 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Unique Visitors</div>
+          </div>
+          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-center">
+            <UserCircle className="h-5 w-5 text-emerald-500 mx-auto mb-2" />
+            <div className="text-xl font-bold text-emerald-500">{visits?.human_visits || 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Human Visits</div>
+          </div>
+          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
+            <Bot className="h-5 w-5 text-amber-500 mx-auto mb-2" />
+            <div className="text-xl font-bold text-amber-500">{visits?.bot_visits || 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Bot Visits</div>
+          </div>
+          <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
+            <Globe className="h-5 w-5 text-blue-500 mx-auto mb-2" />
+            <div className="text-xl font-bold text-blue-500">
+              {(visits?.visits_by_country?.length as number | undefined) || 0}
+            </div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Countries</div>
+          </div>
+          <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 text-center">
+            <TrendingUp className="h-5 w-5 text-purple-500 mx-auto mb-2" />
+            <div className="text-xl font-bold text-purple-500">{visits?.avg_visits_per_unique ?? 0}</div>
+            <div className="text-[10px] uppercase font-bold text-muted-foreground">Avg / Visitor</div>
+          </div>
+        </div>
+
+
+      </Card>
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Registration Breakdown */}
