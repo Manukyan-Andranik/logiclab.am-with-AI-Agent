@@ -55,8 +55,8 @@ class Student(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user_personal.id", ondelete="CASCADE"), unique=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
-    last_chapter_id = Column(Integer, ForeignKey("chapters.id"), nullable=True)
-    last_lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=True)
+    last_chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True)
+    last_lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True)
     status = Column(SQLEnum(RegistrationStatus), default=RegistrationStatus.PENDING)
 
     created_at = Column(DateTime, default=datetime.utcnow)
