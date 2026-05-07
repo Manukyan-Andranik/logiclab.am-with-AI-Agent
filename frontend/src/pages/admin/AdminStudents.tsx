@@ -344,15 +344,25 @@ const AdminStudents = () => {
 
   const revokeAllAccessMutation = useMutation({
     mutationFn: async () => {
-      if (!accessData?.data) return;
-      for (const access of accessData.data) {
-        await revokeLessonAccess(access.id);
-      }
+      if (!accessData?.data?.length) return { ok: 0, failed: 0 };
+      const results = await Promise.allSettled(
+        accessData.data.map((a: any) => revokeLessonAccess(a.id))
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      return { ok: results.length - failed, failed };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       refetchAccess();
       invalidateProgress();
-      toast({ title: "Revoked", description: "All access revoked." });
+      if (res && res.failed > 0) {
+        toast({
+          title: "Partially revoked",
+          description: `${res.ok} revoked, ${res.failed} failed.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Revoked", description: "All access revoked." });
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to revoke access", variant: "destructive" });
@@ -1097,7 +1107,7 @@ const AdminStudents = () => {
                 </div>
 
                 <div className="space-y-6">
-                  {curriculumData?.curriculum.map((chapter: any) => {
+                  {curriculumData?.curriculum?.map((chapter: any) => {
                     const chapterAccess = getAccessRecord(
                       chapter.chapter.id,
                       undefined

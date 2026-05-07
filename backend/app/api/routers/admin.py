@@ -258,16 +258,17 @@ async def get_student_timeline_admin(
         Registration.student_id == student_id
     ).order_by(Registration.registration_date.desc()).all()
     
-    # Get material (chapter) access history
+    # Get material (chapter / lesson) access history
     material_accesses = db.query(MaterialAccess).options(
-        joinedload(MaterialAccess.chapter).joinedload(Chapter.course)
+        joinedload(MaterialAccess.chapter).joinedload(Chapter.course),
+        joinedload(MaterialAccess.lesson),
     ).filter(
         MaterialAccess.student_id == student_id
     ).order_by(MaterialAccess.granted_at.desc()).all()
-    
+
     # Build timeline
     timeline = []
-    
+
     for reg in registrations:
         timeline.append({
             "type": "registration",
@@ -276,20 +277,31 @@ async def get_student_timeline_admin(
             "course_id": reg.course_id,
             "details": f"Registration {reg.status.value}"
         })
-    
+
     for access in material_accesses:
+        # Lesson-only access has chapter_id == None — guard against missing chapter relation.
+        chapter_title = access.chapter.title if access.chapter else None
+        lesson_title = getattr(getattr(access, "lesson", None), "title", None)
+        if lesson_title:
+            details = f"Access granted to lesson: {lesson_title}"
+        elif chapter_title:
+            details = f"Access granted to chapter: {chapter_title}"
+        else:
+            details = "Access granted"
         timeline.append({
             "type": "material_access",
             "date": access.granted_at,
             "chapter_id": access.chapter_id,
-            "chapter_title": access.chapter.title,
+            "lesson_id": access.lesson_id,
+            "chapter_title": chapter_title,
+            "lesson_title": lesson_title,
             "accessed": access.accessed_at is not None,
             "accessed_at": access.accessed_at,
-            "details": f"Access granted to chapter: {access.chapter.title}"
+            "details": details,
         })
-    
-    # Sort timeline by date
-    timeline.sort(key=lambda x: x["date"], reverse=True)
+
+    # Sort timeline by date — guard against null dates from legacy rows.
+    timeline.sort(key=lambda x: x["date"] or datetime.min, reverse=True)
     
     return {
         "student": StudentResponse.model_validate(student),
@@ -429,6 +441,9 @@ async def delete_student_admin(
         
         db.commit()
         return None
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -808,20 +823,23 @@ async def update_registration_status_admin(
         user.is_active = True
         student.course_id = registration.course_id
         student.status = DbRegistrationStatus.CONFIRMED
-        
-        # Generate temporary password if not already set properly
-        temp_password = secrets.token_urlsafe(12)
-        user.password_hash = get_password_hash(temp_password)
-        
+
+        # Only (re)issue a temp password on the *transition* into CONFIRMED.
+        # Re-confirming an already-confirmed registration must not overwrite
+        # the student's current password.
+        if old_status != DbRegistrationStatus.CONFIRMED:
+            temp_password = secrets.token_urlsafe(12)
+            user.password_hash = get_password_hash(temp_password)
+
         db.commit()
-        
+
         email_sent = await email_service.send_registration_confirmed(
             to_email=user.email,
             student_name=student_name,
             course_name=course_name,
             login_email=user.email,
             temp_password=temp_password
-        )
+        ) if temp_password else True
     
     elif new_status == DbRegistrationStatus.COMPLETED:
         email_sent = await email_service.send_course_completed(
@@ -964,23 +982,28 @@ async def bulk_update_registration_status_admin(
                 user.is_active = True
                 student.course_id = registration.course_id
                 student.status = DbRegistrationStatus.CONFIRMED
-                
-                temp_password = secrets.token_urlsafe(12)
-                user.password_hash = get_password_hash(temp_password)
-                
+
+                # Only issue a new temp password on the actual transition into
+                # CONFIRMED — never overwrite an already-confirmed student's password.
+                temp_password = None
+                if old_status != DbRegistrationStatus.CONFIRMED:
+                    temp_password = secrets.token_urlsafe(12)
+                    user.password_hash = get_password_hash(temp_password)
+
                 # Fix: Safely handle course title
                 if isinstance(registration.course.title, dict):
                     course_name = registration.course.title.get("en", "Course")
                 else:
                     course_name = str(registration.course.title)
-                    
-                await email_service.send_registration_confirmed(
-                    to_email=user.email,
-                    student_name=f"{user.first_name} {user.last_name}",
-                    course_name=course_name,
-                    login_email=user.email,
-                    temp_password=temp_password
-                )
+
+                if temp_password:
+                    await email_service.send_registration_confirmed(
+                        to_email=user.email,
+                        student_name=f"{user.first_name} {user.last_name}",
+                        course_name=course_name,
+                        login_email=user.email,
+                        temp_password=temp_password
+                    )
             
             db.commit()
             updated.append({
