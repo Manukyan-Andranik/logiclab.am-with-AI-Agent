@@ -331,6 +331,8 @@ async def update_student_admin(
             detail="Student not found"
         )
 
+    # Use exclude_unset so callers can clear nullable fields by sending null,
+    # but PATCH-style omissions still leave existing values alone.
     _upd = student_data.model_dump(exclude_unset=True)
     if student.user and "profile_image" in _upd:
         _old_pi = student.user.profile_image
@@ -338,18 +340,20 @@ async def update_student_admin(
         if _old_pi and _old_pi != _new_pi:
             delete_cloudinary_by_url(_old_pi)
 
-    # Update Student specific fields
-    student_fields = ['course_id', 'last_chapter_id', 'last_lesson_id']
-    for field in student_fields:
-        if hasattr(student_data, field) and getattr(student_data, field) is not None:
-            setattr(student, field, getattr(student_data, field))
-            
-    # Update UserPersonal fields
-    user_personal_fields = ['first_name', 'last_name', 'email', 'phone', 'profile_image', 'social_links', 'country', 'city']
+    # Update Student-specific fields. course_id == 0 / negative is invalid; skip.
+    student_fields = {'course_id', 'last_chapter_id', 'last_lesson_id'}
+    for field, value in _upd.items():
+        if field in student_fields:
+            setattr(student, field, value)
+
+    # Update UserPersonal fields. Driving from _upd lets explicit nulls through,
+    # which is required to clear optional fields like phone/city/country/profile_image.
+    user_personal_fields = {'first_name', 'last_name', 'email', 'phone', 'profile_image',
+                            'social_links', 'country', 'city'}
     if student.user:
-        for field in user_personal_fields:
-            if hasattr(student_data, field) and getattr(student_data, field) is not None:
-                setattr(student.user, field, getattr(student_data, field))
+        for field, value in _upd.items():
+            if field in user_personal_fields:
+                setattr(student.user, field, value)
                 
     db.commit()
     db.refresh(student)
@@ -675,6 +679,45 @@ async def remove_student_enrollment_admin(
     ).first()
     if not enrollment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enrollment not found")
+
+    course_id = enrollment.course_id
+    student = db.query(Student).filter(Student.id == student_id).first()
+
+    # Cascade-revoke any chapter/lesson MaterialAccess belonging to this course —
+    # otherwise stale access rows linger and the Access tab still shows them.
+    chapter_ids = [cid for (cid,) in db.query(Chapter.id).filter(Chapter.course_id == course_id).all()]
+    lesson_ids = []
+    if chapter_ids:
+        lesson_ids = [lid for (lid,) in db.query(Lesson.id).filter(Lesson.chapter_id.in_(chapter_ids)).all()]
+
+    if chapter_ids or lesson_ids:
+        db.query(MaterialAccess).filter(
+            MaterialAccess.student_id == student_id,
+            or_(
+                MaterialAccess.chapter_id.in_(chapter_ids) if chapter_ids else False,
+                MaterialAccess.lesson_id.in_(lesson_ids) if lesson_ids else False,
+            ),
+        ).delete(synchronize_session=False)
+
+    # If the student's legacy course_id pointed at this course, clear it —
+    # otherwise get_student_enrollments_admin's backfill silently re-creates
+    # the enrollment we just removed.
+    if student and student.course_id == course_id:
+        student.course_id = None
+        # Move legacy course_id to the next remaining enrollment, if any,
+        # so existing logic that relies on it still works.
+        next_enrollment = db.query(Enrollment).filter(
+            Enrollment.student_id == student_id,
+            Enrollment.id != enrollment_id,
+        ).order_by(Enrollment.enrolled_date.asc()).first()
+        if next_enrollment:
+            student.course_id = next_enrollment.course_id
+
+    # Also clear last_chapter/last_lesson pointers if they belonged to the course we removed.
+    if student and student.last_chapter_id and student.last_chapter_id in chapter_ids:
+        student.last_chapter_id = None
+    if student and student.last_lesson_id and student.last_lesson_id in lesson_ids:
+        student.last_lesson_id = None
 
     db.delete(enrollment)
     db.commit()
