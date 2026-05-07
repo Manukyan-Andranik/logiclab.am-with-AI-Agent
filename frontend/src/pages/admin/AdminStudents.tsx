@@ -363,6 +363,8 @@ const AdminStudents = () => {
     mutationFn: (studentId: number) => deleteStudent(studentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-student-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["student-enrollments"] });
       setIsDeleteDialogOpen(false);
       setStudentToDelete(null);
       toast({
@@ -384,6 +386,7 @@ const AdminStudents = () => {
     onSuccess: () => {
       refetchEnrollments();
       queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-student-dashboard"] });
       setNewEnrollCourseId("");
       toast({ title: "Enrolled", description: "Student enrolled in course." });
     },
@@ -397,6 +400,7 @@ const AdminStudents = () => {
     onSuccess: () => {
       refetchEnrollments();
       queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-student-dashboard"] });
       toast({ title: "Removed", description: "Enrollment removed." });
     },
     onError: (error: any) => {
@@ -502,8 +506,13 @@ const AdminStudents = () => {
     const q = searchQuery.toLowerCase();
     const name = `${s.user?.first_name} ${s.user?.last_name}`.toLowerCase();
     const email = (s.user?.email || "").toLowerCase();
-    const course = (s.course?.title?.en || "").toLowerCase();
-    return name.includes(q) || email.includes(q) || course.includes(q);
+    const courseTitles: string[] = [];
+    if (s.course?.title?.en) courseTitles.push(s.course.title.en);
+    for (const e of (s.enrollments || []) as any[]) {
+      if (e?.course_title?.en) courseTitles.push(e.course_title.en);
+    }
+    const courseMatch = courseTitles.some((t) => t.toLowerCase().includes(q));
+    return name.includes(q) || email.includes(q) || courseMatch;
   });
 
   if (isLoading)

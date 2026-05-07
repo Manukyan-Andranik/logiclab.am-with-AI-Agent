@@ -545,6 +545,7 @@ async def get_student_enrollments_admin(
         joinedload(Enrollment.course)
     ).filter(Enrollment.student_id == student_id).all()
 
+    dirty = False
     # Backfill: if the student has a legacy course_id but no Enrollment row for it, create one.
     if student.course_id and not any(e.course_id == student.course_id for e in enrollments):
         legacy_course = db.query(Course).filter(Course.id == student.course_id).first()
@@ -560,21 +561,23 @@ async def get_student_enrollments_admin(
             enrollments = db.query(Enrollment).options(
                 joinedload(Enrollment.course)
             ).filter(Enrollment.student_id == student_id).all()
+            dirty = True
 
     data = []
     for e in enrollments:
         prog = compute_course_progress(db, student_id, e.course_id)
 
-        # Keep the cached Enrollment.progress / is_completed in sync.
         progress_int = int(prog["percentage"])
         if progress_int != (e.progress or 0):
             e.progress = progress_int
+            dirty = True
         should_be_completed = (
             prog["total_lessons"] > 0
             and prog["available_lessons"] >= prog["total_lessons"]
         )
         if should_be_completed != bool(e.is_completed):
             e.is_completed = should_be_completed
+            dirty = True
 
         data.append({
             "id": e.id,
@@ -586,7 +589,8 @@ async def get_student_enrollments_admin(
             "progress": prog,
         })
 
-    db.commit()
+    if dirty:
+        db.commit()
 
     return {"data": data, "total": len(enrollments)}
 
