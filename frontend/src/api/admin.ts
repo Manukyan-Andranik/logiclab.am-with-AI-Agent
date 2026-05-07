@@ -194,6 +194,11 @@ export const getStudentTimeline = async (studentId: number): Promise<any> => {
   return apiClient(`/admin/students/${studentId}/timeline`);
 };
 
+// Admin: same payload shape as /student/dashboard, but for any student.
+export const getAdminStudentDashboard = async (studentId: number): Promise<import('./students').StudentDashboardData> => {
+  return apiClient(`/admin/students/${studentId}/dashboard`);
+};
+
 // Student and Registration deletion
 export const getStudentEnrollments = async (studentId: number): Promise<any> => {
   return apiClient(`/admin/students/${studentId}/enrollments`);

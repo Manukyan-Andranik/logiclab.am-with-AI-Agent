@@ -13,7 +13,9 @@ import {
   getStudentEnrollments,
   addStudentEnrollment,
   removeStudentEnrollment,
+  getAdminStudentDashboard,
 } from "@/api/admin";
+import type { EnrolledCourse } from "@/api/students";
 import { createStudent } from "@/api/auth";
 import { getCourses } from "@/api/courses";
 import { getCourseCurriculum } from "@/api/courses";
@@ -74,6 +76,93 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+
+const StudentCoursesCell = ({ studentId }: { studentId: number }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["student-enrollments", studentId],
+    queryFn: () => getStudentEnrollments(studentId),
+    staleTime: 30_000,
+  });
+
+  if (isLoading) {
+    return <span className="text-xs opacity-50">…</span>;
+  }
+
+  const enrollments = (data?.data || []) as any[];
+  if (enrollments.length === 0) {
+    return <span className="italic opacity-50">Unassigned</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {enrollments.map((e: any) => {
+        const title = e?.course_title?.en || `Course #${e.course_id}`;
+        return (
+          <Badge key={e.id} variant="outline" className="text-[10px] font-semibold w-fit">
+            {title}
+          </Badge>
+        );
+      })}
+    </div>
+  );
+};
+
+const StudentProgressCell = ({ studentId }: { studentId: number }) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-student-dashboard", studentId],
+    queryFn: () => getAdminStudentDashboard(studentId),
+    staleTime: 30_000,
+  });
+
+  if (isLoading) {
+    return <div className="text-xs text-muted-foreground opacity-50">…</div>;
+  }
+
+  const courses = (data?.courses || []) as EnrolledCourse[];
+  if (courses.length === 0) {
+    return <div className="text-xs text-muted-foreground italic opacity-50">No enrollments</div>;
+  }
+
+  return (
+    <div className="space-y-2 min-w-[220px]">
+      {courses.map((enrolled) => {
+        const title = enrolled.course?.title?.en || `Course #${enrolled.course_id}`;
+        const pct = enrolled.progress?.percentage ?? 0;
+        const accessed = enrolled.progress?.accessed_lessons ?? 0;
+        const total = enrolled.progress?.total_lessons ?? 0;
+        const accessedChapters = enrolled.progress?.accessed_chapters ?? 0;
+        const totalChapters = enrolled.progress?.total_chapters ?? 0;
+        const isComplete = total > 0 && accessed >= total;
+        return (
+          <div key={enrolled.course_id} className="space-y-1">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <BookOpen size={11} className="text-primary shrink-0" />
+                <span className="truncate font-semibold text-foreground" title={title}>
+                  {title}
+                </span>
+                {isComplete && (
+                  <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+                )}
+              </div>
+              <span className="font-bold text-primary shrink-0">{pct}%</span>
+            </div>
+            <div className="h-1 rounded-full bg-secondary/40 overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span>Lessons: {accessed}/{total}</span>
+              <span>Chapters: {accessedChapters}/{totalChapters}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const AdminStudents = () => {
   const queryClient = useQueryClient();
@@ -210,12 +299,21 @@ const AdminStudents = () => {
     },
   });
 
+  const invalidateProgress = () => {
+    queryClient.invalidateQueries({ queryKey: ["student-enrollments"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-student-dashboard"] });
+  };
+
   const grantChapterMutation = useMutation({
     mutationFn: (chapterId: number) =>
       assignChapterToStudent(selectedStudent.id, chapterId),
     onSuccess: () => {
       refetchAccess();
+      invalidateProgress();
       toast({ title: "Granted", description: "Chapter access granted." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to grant access", variant: "destructive" });
     },
   });
 
@@ -224,7 +322,11 @@ const AdminStudents = () => {
       grantLessonAccess(selectedStudent.id, lessonId),
     onSuccess: () => {
       refetchAccess();
+      invalidateProgress();
       toast({ title: "Granted", description: "Lesson access granted." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to grant access", variant: "destructive" });
     },
   });
 
@@ -232,7 +334,11 @@ const AdminStudents = () => {
     mutationFn: (accessId: number) => revokeLessonAccess(accessId),
     onSuccess: () => {
       refetchAccess();
+      invalidateProgress();
       toast({ title: "Revoked", description: "Access revoked." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to revoke access", variant: "destructive" });
     },
   });
 
@@ -245,7 +351,11 @@ const AdminStudents = () => {
     },
     onSuccess: () => {
       refetchAccess();
+      invalidateProgress();
       toast({ title: "Revoked", description: "All access revoked." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to revoke access", variant: "destructive" });
     },
   });
 
@@ -273,6 +383,7 @@ const AdminStudents = () => {
     mutationFn: (courseId: number) => addStudentEnrollment(selectedStudent.id, courseId),
     onSuccess: () => {
       refetchEnrollments();
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
       setNewEnrollCourseId("");
       toast({ title: "Enrolled", description: "Student enrolled in course." });
     },
@@ -285,6 +396,7 @@ const AdminStudents = () => {
     mutationFn: (enrollmentId: number) => removeStudentEnrollment(selectedStudent.id, enrollmentId),
     onSuccess: () => {
       refetchEnrollments();
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
       toast({ title: "Removed", description: "Enrollment removed." });
     },
     onError: (error: any) => {
@@ -330,7 +442,13 @@ const AdminStudents = () => {
     setNewEnrollCourseId("");
     setNewPassword("");
     setShowNewPassword(false);
-    setSelectedAccessCourseId(student.course_id?.toString() || "");
+    const firstEnrollmentCourseId =
+      student.enrollments && student.enrollments.length > 0
+        ? student.enrollments[0].course_id
+        : null;
+    setSelectedAccessCourseId(
+      (student.course_id ?? firstEnrollmentCourseId)?.toString() || ""
+    );
     setIsManageOpen(true);
   };
 
@@ -444,7 +562,7 @@ const AdminStudents = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredStudents.length === 0 ? (
+              {filteredStudents.length === 0 ? ( 
                 <tr>
                   <td
                     colSpan={7}
@@ -503,29 +621,10 @@ const AdminStudents = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground text-sm">
-                      {student.course?.title?.en || (
-                        <span className="italic opacity-50">Unassigned</span>
-                      )}
+                      <StudentCoursesCell studentId={student.id} />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs space-y-1">
-                        <div className="flex items-center gap-1.5">
-                          <BookOpen size={12} className="text-primary" />
-                          <span>
-                            Ch: {student.last_chapter_id || (
-                              <span className="opacity-50">—</span>
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <ChevronRight size={12} className="text-primary" />
-                          <span>
-                            Ls: {student.last_lesson_id || (
-                              <span className="opacity-50">—</span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
+                      <StudentProgressCell studentId={student.id} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
@@ -971,11 +1070,19 @@ const AdminStudents = () => {
                       <SelectValue placeholder="Select a course to manage access" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(courses || []).map((course: any) => (
-                        <SelectItem key={course.id} value={course.id.toString()}>
-                          {course.title?.en}
-                        </SelectItem>
-                      ))}
+                      {(() => {
+                        const enrolledIds = new Set<number>();
+                        (enrollmentsData?.data || []).forEach((e: any) => {
+                          if (e?.course_id != null) enrolledIds.add(e.course_id);
+                        });
+                        if (selectedStudent?.course_id != null) enrolledIds.add(selectedStudent.course_id);
+                        const list = (courses || []).filter((c: any) => enrolledIds.size === 0 || enrolledIds.has(c.id));
+                        return list.map((course: any) => (
+                          <SelectItem key={course.id} value={course.id.toString()}>
+                            {course.title?.en}
+                          </SelectItem>
+                        ));
+                      })()}
                     </SelectContent>
                   </Select>
                 </div>

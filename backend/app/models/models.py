@@ -67,6 +67,11 @@ class Student(Base):
     registrations = relationship("Registration", back_populates="student")
     material_access = relationship("MaterialAccess", back_populates="student")
     projects = relationship("Project", back_populates="student")
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
 
 
 class Instructor(Base):
@@ -322,7 +327,7 @@ class Enrollment(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    student = relationship("Student")
+    student = relationship("Student", back_populates="enrollments")
     course = relationship("Course")
     certificate = relationship("Certificate")
 

@@ -110,6 +110,44 @@ class StudentBase(BaseModel):
     status: Optional[RegistrationStatus] = None
     created_at: Optional[datetime] = None
 
+class EnrollmentSummary(BaseModel):
+    id: int
+    course_id: int
+    status: Optional[str] = None
+    course_title: Optional[Dict[str, str]] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def coerce_status(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        return v.value if hasattr(v, "value") else str(v)
+
+    @field_validator("course_title", mode="before")
+    @classmethod
+    def coerce_course_title(cls, v: Any) -> Optional[Dict[str, str]]:
+        if isinstance(v, dict):
+            return v
+        return None
+
+    class Config:
+        from_attributes = True
+
+
+class StudentCourseSummary(BaseModel):
+    id: int
+    title: Optional[Dict[str, str]] = None
+    slug: Optional[str] = None
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def coerce_title(cls, v: Any) -> Optional[Dict[str, str]]:
+        return v if isinstance(v, dict) else None
+
+    class Config:
+        from_attributes = True
+
+
 class StudentResponse(StudentBase):
     id: int
     user_id: int
@@ -117,7 +155,28 @@ class StudentResponse(StudentBase):
     last_chapter_id: Optional[int] = None
     last_lesson_id: Optional[int] = None
     user: UserPersonalResponse
-    
+    course: Optional[StudentCourseSummary] = None
+    enrollments: List[EnrollmentSummary] = []
+
+    @field_validator("enrollments", mode="before")
+    @classmethod
+    def build_enrollments(cls, v: Any) -> List[Any]:
+        if not v:
+            return []
+        result: List[Dict[str, Any]] = []
+        for e in v:
+            if isinstance(e, dict):
+                result.append(e)
+                continue
+            course = getattr(e, "course", None)
+            result.append({
+                "id": getattr(e, "id", None),
+                "course_id": getattr(e, "course_id", None),
+                "status": getattr(e, "status", None),
+                "course_title": getattr(course, "title", None) if course is not None else None,
+            })
+        return result
+
     class Config:
         from_attributes = True
 

@@ -20,6 +20,8 @@ from ...schemas.schemas import (
     RegistrationResponse, RegistrationUpdate, RegistrationStatus, RegisterRequest, RegistrationListResponse
 )
 from ..deps import get_current_admin, get_current_student
+from ..progress import compute_course_progress
+from ..dashboard import build_student_dashboard
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -149,11 +151,15 @@ async def get_all_students_admin(
     query = db.query(Student).options(
         joinedload(Student.user),
         joinedload(Student.course),
+        joinedload(Student.enrollments).joinedload(Enrollment.course),
     )
-    
+
     if course_id is not None:
-        query = query.filter(Student.course_id == course_id) 
-    
+        query = query.filter(
+            (Student.course_id == course_id) |
+            (Student.id.in_(db.query(Enrollment.student_id).filter(Enrollment.course_id == course_id)))
+        )
+
     students = query.offset(skip).limit(limit).all()
     return students
 
@@ -193,6 +199,16 @@ async def create_student_admin(
         status=DbRegistrationStatus.CONFIRMED,
     )
     db.add(student)
+    db.flush()
+
+    enrollment = Enrollment(
+        student_id=student.id,
+        course_id=data.course_id,
+        status=DbEnrollmentStatus.ACTIVE,
+        enrolled_date=datetime.now(timezone.utc),
+    )
+    db.add(enrollment)
+
     db.commit()
     db.refresh(student)
 
@@ -499,6 +515,21 @@ async def mark_material_accessed_admin(
         "access_id": material_access.id
     }
 
+@router.get("/students/{student_id}/dashboard")
+async def get_student_dashboard_admin(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin),
+):
+    """Return the same dashboard payload (student + per-course progress + materials)
+    that /student/dashboard returns for the logged-in student, but for any student.
+    """
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    return build_student_dashboard(db, student_id)
+
+
 @router.get("/students/{student_id}/enrollments")
 async def get_student_enrollments_admin(
     student_id: int,
@@ -514,21 +545,50 @@ async def get_student_enrollments_admin(
         joinedload(Enrollment.course)
     ).filter(Enrollment.student_id == student_id).all()
 
-    return {
-        "data": [
-            {
-                "id": e.id,
-                "course_id": e.course_id,
-                "course_title": e.course.title if e.course else None,
-                "status": e.status.value,
-                "enrolled_date": e.enrolled_date,
-                "is_completed": e.is_completed,
-                "progress": e.progress,
-            }
-            for e in enrollments
-        ],
-        "total": len(enrollments),
-    }
+    # Backfill: if the student has a legacy course_id but no Enrollment row for it, create one.
+    if student.course_id and not any(e.course_id == student.course_id for e in enrollments):
+        legacy_course = db.query(Course).filter(Course.id == student.course_id).first()
+        if legacy_course:
+            backfill = Enrollment(
+                student_id=student_id,
+                course_id=student.course_id,
+                status=DbEnrollmentStatus.ACTIVE,
+                enrolled_date=datetime.now(timezone.utc),
+            )
+            db.add(backfill)
+            db.flush()
+            enrollments = db.query(Enrollment).options(
+                joinedload(Enrollment.course)
+            ).filter(Enrollment.student_id == student_id).all()
+
+    data = []
+    for e in enrollments:
+        prog = compute_course_progress(db, student_id, e.course_id)
+
+        # Keep the cached Enrollment.progress / is_completed in sync.
+        progress_int = int(prog["percentage"])
+        if progress_int != (e.progress or 0):
+            e.progress = progress_int
+        should_be_completed = (
+            prog["total_lessons"] > 0
+            and prog["available_lessons"] >= prog["total_lessons"]
+        )
+        if should_be_completed != bool(e.is_completed):
+            e.is_completed = should_be_completed
+
+        data.append({
+            "id": e.id,
+            "course_id": e.course_id,
+            "course_title": e.course.title if e.course else None,
+            "status": e.status.value,
+            "enrolled_date": e.enrolled_date,
+            "is_completed": e.is_completed,
+            "progress": prog,
+        })
+
+    db.commit()
+
+    return {"data": data, "total": len(enrollments)}
 
 
 @router.post("/students/{student_id}/enrollments")
