@@ -20,8 +20,16 @@ from ...schemas.schemas import (
     RegistrationResponse, RegistrationUpdate, RegistrationStatus, RegisterRequest, RegistrationListResponse
 )
 from ..deps import get_current_admin, get_current_student
-from ..progress import compute_course_progress
-from ..dashboard import build_student_dashboard
+
+try:
+    from ..progress import compute_course_progress
+except Exception:  # pragma: no cover - defensive: prod may not have new module yet
+    compute_course_progress = None  # type: ignore
+
+try:
+    from ..dashboard import build_student_dashboard
+except Exception:  # pragma: no cover
+    build_student_dashboard = None  # type: ignore
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -151,14 +159,16 @@ async def get_all_students_admin(
     query = db.query(Student).options(
         joinedload(Student.user),
         joinedload(Student.course),
-        joinedload(Student.enrollments).joinedload(Enrollment.course),
     )
 
     if course_id is not None:
-        query = query.filter(
-            (Student.course_id == course_id) |
-            (Student.id.in_(db.query(Enrollment.student_id).filter(Enrollment.course_id == course_id)))
-        )
+        try:
+            enrolled_ids = db.query(Enrollment.student_id).filter(Enrollment.course_id == course_id).subquery()
+            query = query.filter(
+                (Student.course_id == course_id) | (Student.id.in_(enrolled_ids))
+            )
+        except Exception:
+            query = query.filter(Student.course_id == course_id)
 
     students = query.offset(skip).limit(limit).all()
     return students
@@ -546,6 +556,8 @@ async def get_student_dashboard_admin(
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+    if build_student_dashboard is None:
+        raise HTTPException(status_code=503, detail="Dashboard helper not deployed")
     return build_student_dashboard(db, student_id)
 
 
@@ -584,7 +596,17 @@ async def get_student_enrollments_admin(
 
     data = []
     for e in enrollments:
-        prog = compute_course_progress(db, student_id, e.course_id)
+        if compute_course_progress is None:
+            prog = {
+                "total_lessons": 0,
+                "total_chapters": 0,
+                "available_lessons": 0,
+                "accessed_lessons": 0,
+                "accessed_chapters": 0,
+                "percentage": float(e.progress or 0),
+            }
+        else:
+            prog = compute_course_progress(db, student_id, e.course_id)
 
         progress_int = int(prog["percentage"])
         if progress_int != (e.progress or 0):

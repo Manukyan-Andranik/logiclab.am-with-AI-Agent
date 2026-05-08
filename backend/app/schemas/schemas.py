@@ -156,26 +156,6 @@ class StudentResponse(StudentBase):
     last_lesson_id: Optional[int] = None
     user: UserPersonalResponse
     course: Optional[StudentCourseSummary] = None
-    enrollments: List[EnrollmentSummary] = []
-
-    @field_validator("enrollments", mode="before")
-    @classmethod
-    def build_enrollments(cls, v: Any) -> List[Any]:
-        if not v:
-            return []
-        result: List[Dict[str, Any]] = []
-        for e in v:
-            if isinstance(e, dict):
-                result.append(e)
-                continue
-            course = getattr(e, "course", None)
-            result.append({
-                "id": getattr(e, "id", None),
-                "course_id": getattr(e, "course_id", None),
-                "status": getattr(e, "status", None),
-                "course_title": getattr(course, "title", None) if course is not None else None,
-            })
-        return result
 
     class Config:
         from_attributes = True
