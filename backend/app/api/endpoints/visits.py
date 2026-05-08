@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, Request, Response, status, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import func, distinct, cast, Date
+from sqlalchemy import func, distinct, cast, Date, Integer
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
@@ -378,7 +378,7 @@ async def get_visits_by_day(
             func.min(Visit.timestamp).label("first_seen"),
             func.max(Visit.timestamp).label("last_seen"),
             func.max(Visit.user_agent).label("user_agent"),
-            func.max(Visit.is_bot).label("is_bot"),
+            func.max(cast(Visit.is_bot, Integer)).label("is_bot"),
         )
         .group_by(day_col, Visit.ip_address)
         .order_by(day_col.desc(), func.count(Visit.id).desc())
