@@ -407,6 +407,20 @@ class VisitorBreakdownItem(BaseModel):
     last_seen: datetime
     user_agent: Optional[str] = None
 
+class DailyVisitorBreakdownItem(BaseModel):
+    ip_address: str
+    count: int
+    first_seen: datetime
+    last_seen: datetime
+    user_agent: Optional[str] = None
+    is_bot: Optional[bool] = False
+
+class DailyVisitGroup(BaseModel):
+    date: str
+    unique_visitors: int
+    total_visits: int
+    visitors: List[DailyVisitorBreakdownItem]
+
 class RecentVisitItem(BaseModel):
     timestamp: datetime
     page_url: str

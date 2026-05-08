@@ -1,5 +1,5 @@
 # app/api/endpoints/visits.py
-from fastapi import APIRouter, Depends, Request, status, Query, HTTPException
+from fastapi import APIRouter, Depends, Request, Response, status, Query, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, cast, Date
@@ -16,7 +16,21 @@ from ...schemas.schemas import (
     VisitListResponse,
     VisitorBreakdownItem,
     RecentVisitItem,
+    DailyVisitorBreakdownItem,
+    DailyVisitGroup,
 )
+
+LOCALHOST_IPS = {"127.0.0.1", "::1", "0.0.0.0", "localhost"}
+
+
+def _is_localhost(ip_address: Optional[str], page_url: Optional[str]) -> bool:
+    if ip_address and ip_address.strip().lower() in LOCALHOST_IPS:
+        return True
+    if page_url:
+        url = page_url.lower()
+        if "://localhost" in url or "://127.0.0.1" in url or "://[::1]" in url or "://0.0.0.0" in url:
+            return True
+    return False
 from ..deps import get_current_admin # Assuming admin access for summary, but not for tracking
 
 router = APIRouter()
@@ -43,9 +57,10 @@ class VisitTrackPayload(BaseModel):
     referrer: Optional[str] = None
 
 
-@router.post("/visits/track", status_code=status.HTTP_201_CREATED, response_model=VisitResponse)
+@router.post("/visits/track", status_code=status.HTTP_201_CREATED, response_model=Optional[VisitResponse])
 async def track_visit(
     request: Request,
+    response: Response,
     payload: Optional[VisitTrackPayload] = None,
     db: Session = Depends(get_db)
 ):
@@ -68,6 +83,11 @@ async def track_visit(
     page_url = (payload.page_url if payload and payload.page_url else header_referer) or str(request.url)
     referrer = (payload.referrer if payload and payload.referrer else header_referer)
     
+    # Skip localhost / development traffic — never persisted.
+    if _is_localhost(ip_address, page_url):
+        response.status_code = status.HTTP_204_NO_CONTENT
+        return None
+
     # Simple bot detection (can be improved)
     is_bot = any(bot_string in user_agent.lower() for bot_string in ["bot", "spider", "crawler", "lighthouse"])
 
@@ -331,6 +351,67 @@ async def get_visits_by_date(
     )
 
     return [VisitAggregationItem(label=_agg_label(item.label), count=item.count) for item in visits_by_date]
+
+@router.get("/visits/stats/by-day", response_model=List[DailyVisitGroup])
+async def get_visits_by_day(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    is_bot: Optional[bool] = None,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """
+    Visits grouped by day. For each day returns the unique visitors that day
+    (deduplicated by IP) and how many visits each one made that day. Used by
+    the admin Visits page in place of a per-visit list.
+    """
+    day_col = cast(Visit.timestamp, Date)
+    q = _visits_query(db, start_date, end_date)
+    if is_bot is not None:
+        q = q.filter(Visit.is_bot == is_bot)
+
+    rows = (
+        q.with_entities(
+            day_col.label("day"),
+            Visit.ip_address.label("ip_address"),
+            func.count(Visit.id).label("count"),
+            func.min(Visit.timestamp).label("first_seen"),
+            func.max(Visit.timestamp).label("last_seen"),
+            func.max(Visit.user_agent).label("user_agent"),
+            func.max(Visit.is_bot).label("is_bot"),
+        )
+        .group_by(day_col, Visit.ip_address)
+        .order_by(day_col.desc(), func.count(Visit.id).desc())
+        .all()
+    )
+
+    grouped: Dict[str, DailyVisitGroup] = {}
+    for r in rows:
+        day_label = _agg_label(r.day)
+        group = grouped.get(day_label)
+        if group is None:
+            group = DailyVisitGroup(
+                date=day_label,
+                unique_visitors=0,
+                total_visits=0,
+                visitors=[],
+            )
+            grouped[day_label] = group
+        group.visitors.append(
+            DailyVisitorBreakdownItem(
+                ip_address=r.ip_address or "unknown",
+                count=r.count,
+                first_seen=r.first_seen,
+                last_seen=r.last_seen,
+                user_agent=r.user_agent,
+                is_bot=bool(r.is_bot),
+            )
+        )
+        group.unique_visitors += 1
+        group.total_visits += r.count
+
+    return list(grouped.values())
+
 
 @router.get("/visits", response_model=VisitListResponse)
 async def get_visits(
