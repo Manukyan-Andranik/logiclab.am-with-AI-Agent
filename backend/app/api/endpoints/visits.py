@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct, cast, Date, Integer
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+import ipaddress
 
 from ...core.database import get_db
 from ...models.models import Visit # Import the new Visit model
@@ -23,9 +24,83 @@ from ...schemas.schemas import (
 LOCALHOST_IPS = {"127.0.0.1", "::1", "0.0.0.0", "localhost"}
 
 
+def _normalize_ip(raw: Optional[str]) -> Optional[str]:
+    """
+    Clean a single IP candidate: strip whitespace/quotes, drop port suffix,
+    unwrap IPv6 brackets, validate with ipaddress, normalize to its compressed form.
+    Returns None if the value isn't a valid IP.
+    """
+    if not raw:
+        return None
+    s = raw.strip().strip('"').strip("'")
+    if not s:
+        return None
+    # Bracketed IPv6, optionally with port: [::1]:1234 or [2001:db8::1]
+    if s.startswith("["):
+        end = s.find("]")
+        if end != -1:
+            s = s[1:end]
+    elif s.count(":") == 1:
+        # IPv4 with port: 1.2.3.4:5678 — IPv6 has multiple colons, leave alone.
+        s = s.split(":", 1)[0]
+    try:
+        return str(ipaddress.ip_address(s))
+    except ValueError:
+        return None
+
+
+def _client_ip(request: Request) -> str:
+    """
+    Resolve the real client IP, preferring proxy headers in the order they're
+    most likely to be authoritative behind our deployment (Cloudflare → nginx → ASGI).
+    Falls back to "unknown" if nothing parses.
+    """
+    cf = request.headers.get("CF-Connecting-IP")
+    ip = _normalize_ip(cf)
+    if ip:
+        return ip
+
+    real_ip = request.headers.get("X-Real-IP")
+    ip = _normalize_ip(real_ip)
+    if ip:
+        return ip
+
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # Left-most non-private entry is the original client; private/loopback
+        # entries are usually proxies in the chain.
+        first_parseable: Optional[str] = None
+        for candidate in forwarded_for.split(","):
+            normalized = _normalize_ip(candidate)
+            if not normalized:
+                continue
+            if first_parseable is None:
+                first_parseable = normalized
+            addr = ipaddress.ip_address(normalized)
+            if not (addr.is_loopback or addr.is_private or addr.is_link_local):
+                return normalized
+        if first_parseable:
+            return first_parseable
+
+    if request.client and request.client.host:
+        ip = _normalize_ip(request.client.host)
+        if ip:
+            return ip
+
+    return "unknown"
+
+
 def _is_localhost(ip_address: Optional[str], page_url: Optional[str]) -> bool:
-    if ip_address and ip_address.strip().lower() in LOCALHOST_IPS:
-        return True
+    if ip_address:
+        cleaned = ip_address.strip().lower()
+        if cleaned in LOCALHOST_IPS:
+            return True
+        try:
+            addr = ipaddress.ip_address(cleaned)
+            if addr.is_loopback or addr.is_unspecified:
+                return True
+        except ValueError:
+            pass
     if page_url:
         url = page_url.lower()
         if "://localhost" in url or "://127.0.0.1" in url or "://[::1]" in url or "://0.0.0.0" in url:
@@ -69,14 +144,7 @@ async def track_visit(
     Client should send the page URL it is on (window.location.href). Falls back to
     the request URL / Referer header if not supplied.
     """
-    # X-Forwarded-For takes precedence when behind a proxy
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        ip_address = forwarded_for.split(",")[0].strip()
-    elif request.client:
-        ip_address = request.client.host
-    else:
-        ip_address = "unknown"
+    ip_address = _client_ip(request)
 
     user_agent = request.headers.get("User-Agent", "unknown")
     header_referer = request.headers.get("Referer")
