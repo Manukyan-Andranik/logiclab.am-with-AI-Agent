@@ -1,7 +1,7 @@
 // StudentsSettings.tsx
 
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getStudentMe, updateStudentProfile } from "@/api/students";
 import { changePassword } from "@/api/auth";
@@ -46,14 +46,14 @@ const StudentSettingsPage = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-
-    if (!token || role !== "student") {
-      navigate("/login?role=student", { replace: true });
-    }
-  }, [navigate]);
+  // Synchronous render guard — returning <Navigate /> before the queries
+  // fire prevents the brief flash of the settings page (and the redundant
+  // 401-bound request) for unauthenticated visitors.
+  const _token = localStorage.getItem("token");
+  const _role = localStorage.getItem("role");
+  if (!_token || _role !== "student") {
+    return <Navigate to="/login?role=student" replace />;
+  }
 
   const { data: student, isLoading, error } = useQuery({
     queryKey: ["studentMe"],

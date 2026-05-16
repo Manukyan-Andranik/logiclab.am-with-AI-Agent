@@ -4,6 +4,7 @@ import {
   LogOut, Settings, Briefcase, Heart, Menu, X, Activity,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const menuItems = [
   { label: "Dashboard",     href: "/admin",                icon: LayoutDashboard },
@@ -95,16 +96,33 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ pathname, onClose, onLogout }) 
   </div>
 );
 
+const isAdminAuthorized = (): boolean => {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+  return !!token && role === "admin";
+};
+
 const AdminLayout = () => {
   const location = useLocation();
   const navigate  = useNavigate();
+  const queryClient = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Initialize synchronously so the admin shell never paints for an
+  // unauthorized visitor (prevents the previous "flash of admin UI").
+  const [authReady, setAuthReady] = useState<boolean>(() => isAdminAuthorized());
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role  = localStorage.getItem("role");
-    if (!token || role !== "admin") navigate("/login?role=admin");
-  }, [navigate]);
+    if (isAdminAuthorized()) {
+      if (!authReady) setAuthReady(true);
+      return;
+    }
+    // Stale or missing — purge local auth state immediately, then bounce.
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    const next = encodeURIComponent(location.pathname + location.search);
+    navigate(`/login?role=admin&next=${next}`, { replace: true });
+    // intentionally NOT resetting authReady here; the redirect unmounts us.
+  }, [location.pathname, location.search, navigate, authReady]);
 
   // Close drawer on route change
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
@@ -112,8 +130,13 @@ const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    window.location.href = "/";
+    // Drop any cached data tied to the previous session so the next user
+    // doesn't briefly see stale admin queries.
+    queryClient.clear();
+    navigate("/login", { replace: true });
   };
+
+  if (!authReady) return null;
 
   return (
     <div className="flex min-h-screen bg-secondary/30">

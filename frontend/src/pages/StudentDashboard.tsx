@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
 import { getStudentDashboard, markChapterAccessed, EnrolledCourse } from "@/api/students";
 import Loader from "@/components/ui/Loader";
 import { getMediaUrl } from "@/api/client";
@@ -39,6 +39,14 @@ const StudentDashboard = () => {
   const isMaterialsPage = pathname === "/student/materials";
   const queryClient = useQueryClient();
   const [openChapter, setOpenChapter] = useState<number | null>(null);
+
+  // Synchronous render guard — prevents both the loading-flash and the
+  // wasted dashboard API call (which would 401 and bounce the user anyway).
+  const _token = localStorage.getItem("token");
+  const _role = localStorage.getItem("role");
+  if (!_token || _role !== "student") {
+    return <Navigate to="/login?role=student" replace />;
+  }
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["studentDashboard"],
