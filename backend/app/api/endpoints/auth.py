@@ -17,7 +17,7 @@ from ...schemas.schemas import (
     ChangePasswordRequest,
 )
 import secrets
-from ..deps import get_current_user
+from ..deps import get_current_user, get_current_admin
 
 router = APIRouter()
 
@@ -35,11 +35,11 @@ async def login(
             detail="Incorrect email or password"
         )
     
-    # if not user.is_active:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Account is inactive"
-    #     )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive"
+        )
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -74,40 +74,47 @@ async def register(
     password = registration.password or secrets.token_urlsafe(12)
     hashed_password = get_password_hash(password)
     
-    # Create user account (inactive until admin confirms)
-    new_user = UserPersonal(
-        first_name=registration.first_name,
-        last_name=registration.last_name,
-        email=registration.email,
-        phone=registration.phone,
-        password_hash=hashed_password,
-        role=UserRole.STUDENT,
-        is_active=False  # Will be activated when admin confirms
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    # Create student profile
-    new_student = Student(
-        user_id=new_user.id,
-        course_id=registration.course_id
-    )
-    db.add(new_student)
-    db.commit()
-    db.refresh(new_student)
-    
-    # Create registration record
-    new_registration = Registration(
-        student_id=new_student.id,
-        course_id=registration.course_id,
-        status=RegistrationStatus.PENDING,
-        message=registration.message
-    )
-    db.add(new_registration)
-    db.commit()
-    
-    # Send confirmation email
+    # Create user + student + registration atomically. flush() between inserts
+    # populates auto-generated PKs so dependent rows can reference them; a
+    # single commit at the end guarantees the whole chain succeeds or fails
+    # together (no orphan UserPersonal/Student rows on partial failure).
+    try:
+        new_user = UserPersonal(
+            first_name=registration.first_name,
+            last_name=registration.last_name,
+            email=registration.email,
+            phone=registration.phone,
+            password_hash=hashed_password,
+            role=UserRole.STUDENT,
+            is_active=False  # Will be activated when admin confirms
+        )
+        db.add(new_user)
+        db.flush()  # populate new_user.id
+
+        new_student = Student(
+            user_id=new_user.id,
+            course_id=registration.course_id
+        )
+        db.add(new_student)
+        db.flush()  # populate new_student.id
+
+        new_registration = Registration(
+            student_id=new_student.id,
+            course_id=registration.course_id,
+            status=RegistrationStatus.PENDING,
+            message=registration.message
+        )
+        db.add(new_registration)
+        db.flush()
+
+        db.commit()
+        db.refresh(new_registration)
+    except Exception:
+        db.rollback()
+        raise
+
+    # Send confirmation email (outside the transaction: SMTP failures must
+    # not roll back the persisted registration).
     course = db.query(Course).filter(Course.id == registration.course_id).first()
     course_name = course.title.get("en", "Course") if course else "Course"
     
@@ -129,9 +136,9 @@ async def create_admin(
     first_name: str,
     last_name: str,
     db: Session = Depends(get_db),
-    # current_admin: UserPersonal = Depends(get_current_user) # Protect this endpoint
+    current_admin: UserPersonal = Depends(get_current_admin),
 ):
-    """Create initial admin user (should be protected in production)"""
+    """Create a new admin user. Only existing admins may call this."""
     existing = db.query(UserPersonal).filter(UserPersonal.email == email).first()
     if existing:
         raise HTTPException(

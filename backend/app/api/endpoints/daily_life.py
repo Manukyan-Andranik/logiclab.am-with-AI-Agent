@@ -102,9 +102,9 @@ async def create_daily_life(
     
     # Create daily life story
     new_story = DailyLife(
-        title=story_data.title.dict() if hasattr(story_data.title, 'dict') else story_data.title,
-        subtitle=story_data.subtitle.dict() if story_data.subtitle and hasattr(story_data.subtitle, 'dict') else story_data.subtitle,
-        description=story_data.description.dict() if hasattr(story_data.description, 'dict') else story_data.description,
+        title=story_data.title.model_dump(),
+        subtitle=story_data.subtitle.model_dump() if story_data.subtitle else None,
+        description=story_data.description.model_dump(),
         image_urls=story_data.image_urls or [],
         video_url=story_data.video_url,
         is_published=story_data.is_published,
@@ -178,15 +178,20 @@ async def toggle_daily_life_published(
     current_admin = Depends(get_current_admin)
 ):
     """Toggle daily life story published status (Admin only)"""
-    story = db.query(DailyLife).filter(DailyLife.id == story_id).first()
-    
-    if not story:
+    # Atomic flip via UPDATE ... SET is_published = NOT is_published — closes
+    # the read-modify-write race when two admins toggle concurrently.
+    exists = db.query(DailyLife.id).filter(DailyLife.id == story_id).first()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Daily life story not found"
         )
-    
-    story.is_published = not story.is_published
+
+    db.query(DailyLife).filter(DailyLife.id == story_id).update(
+        {DailyLife.is_published: ~DailyLife.is_published},
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(story)
+
+    story = db.query(DailyLife).filter(DailyLife.id == story_id).first()
     return story

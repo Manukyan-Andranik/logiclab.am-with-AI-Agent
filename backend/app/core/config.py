@@ -86,10 +86,10 @@ class Settings(BaseSettings):
     DEFAULT_COURSE_ICON: str = "https://res.cloudinary.com/demo/image/upload/v1622550000/sample.jpg"
     DEFAULT_PROJECT_IMAGE: str = "https://res.cloudinary.com/demo/image/upload/v1622550000/sample.jpg"
 
-    # Cloudinary
-    CLOUDINARY_CLOUD_NAME: str = "dujmbcltl"
-    CLOUDINARY_API_KEY: str = "486986232445545"
-    CLOUDINARY_API_SECRET: str = "QxZqJ3GJQ8X8NEdoS3qr6Zltilw"
+    # Cloudinary (must be supplied via environment / .env — never hardcode)
+    CLOUDINARY_CLOUD_NAME: str
+    CLOUDINARY_API_KEY: str
+    CLOUDINARY_API_SECRET: str
 
     # Frontend URL
     FRONTEND_URL: str = "https://logiclab.am"

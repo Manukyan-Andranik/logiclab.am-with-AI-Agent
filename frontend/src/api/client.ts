@@ -39,6 +39,22 @@ export const apiClient = async <T>(endpoint: string, options: FetchOptions = {})
     headers,
   });
 
+  if (response.status === 401) {
+    // Token is missing, expired, or rejected by the server. Clear local auth
+    // state and bounce the user to /login (unless they're already there).
+    if (typeof window !== 'undefined') {
+      const wasAuthenticated = !!localStorage.getItem('token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      const onLogin = window.location.pathname === '/login';
+      if (wasAuthenticated && !onLogin) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.replace(`/login?next=${next}`);
+      }
+    }
+    throw new Error('Unauthorized');
+  }
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     const message = errorData.detail || errorData.message || 'API request failed';
