@@ -215,17 +215,32 @@ async def toggle_instructor_active(
 ):
     """Toggle instructor active status (Admin only)"""
     instructor = db.query(Instructor).filter(Instructor.id == instructor_id).first()
-    
     if not instructor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Instructor not found"
         )
-    
-    instructor.is_active = not instructor.is_active
-    instructor.user.is_active = instructor.is_active
+    user_id = instructor.user_id
+
+    # Atomic flip of Instructor.is_active, then propagate the freshly-computed
+    # value to the linked UserPersonal. Both UPDATEs run in the same
+    # transaction and are committed together; the in-DB NOT closes the
+    # read-modify-write race that the previous Python-side toggle exposed.
+    db.query(Instructor).filter(Instructor.id == instructor_id).update(
+        {Instructor.is_active: ~Instructor.is_active},
+        synchronize_session=False,
+    )
+    db.flush()
+    new_value = db.query(Instructor.is_active).filter(
+        Instructor.id == instructor_id
+    ).scalar()
+    db.query(UserPersonal).filter(UserPersonal.id == user_id).update(
+        {UserPersonal.is_active: new_value},
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(instructor)
+
+    instructor = db.query(Instructor).filter(Instructor.id == instructor_id).first()
     return instructor
 
 @router.post("/{instructor_id}/courses/{course_id}", status_code=status.HTTP_201_CREATED)

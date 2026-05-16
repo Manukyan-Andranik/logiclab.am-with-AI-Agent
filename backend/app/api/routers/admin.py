@@ -9,6 +9,7 @@ from ...core.database import get_db
 from ...core.cloudinary import delete_cloudinary_by_url, delete_cloudinary_urls
 from ...core.email import email_service
 from ...core.security import get_password_hash
+from collections import defaultdict
 from ...models.models import (
     Student, UserPersonal, Registration, MaterialAccess,
     Lesson, Chapter, Course, EmailLog, Instructor, Project,
@@ -172,6 +173,222 @@ async def get_all_students_admin(
 
     students = query.offset(skip).limit(limit).all()
     return students
+
+@router.get("/students/with-progress")
+async def get_students_with_progress_admin(
+    skip: int = 0,
+    limit: int = 100,
+    course_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin),
+):
+    """Batched variant of GET /admin/students that also returns per-course
+    progress for every student in a single round-trip.
+
+    Designed to back the admin Students table without the previous N+1 fan-out
+    (one call per row to `/students/{id}/enrollments` and `/students/{id}/dashboard`).
+    Total backend queries: O(1) regardless of student count.
+
+    Response: ``[ { ...StudentResponse fields, enrollments_summary: [...] } ]``
+    where each ``enrollments_summary`` item exposes the same shape the row
+    cells already consumed (``course_title``, ``course``, ``progress``).
+    """
+    query = db.query(Student).options(
+        joinedload(Student.user),
+        joinedload(Student.course),
+    )
+
+    if course_id is not None:
+        enrolled_ids = db.query(Enrollment.student_id).filter(
+            Enrollment.course_id == course_id
+        ).subquery()
+        query = query.filter(
+            (Student.course_id == course_id) | (Student.id.in_(enrolled_ids))
+        )
+
+    students = query.offset(skip).limit(limit).all()
+    if not students:
+        return []
+
+    student_ids = [s.id for s in students]
+
+    # 1 query — all enrollments for this page of students, with course eagerly loaded.
+    enrollments = (
+        db.query(Enrollment)
+        .options(joinedload(Enrollment.course))
+        .filter(Enrollment.student_id.in_(student_ids))
+        .all()
+    )
+    enroll_by_student: "defaultdict[int, list]" = defaultdict(list)
+    enroll_pairs = set()
+    for e in enrollments:
+        enroll_by_student[e.student_id].append(e)
+        enroll_pairs.add((e.student_id, e.course_id))
+
+    # Legacy: students with a `Student.course_id` but no matching Enrollment row.
+    # Surface those in the payload so the table matches the rest of the admin UI,
+    # but do NOT write a backfill row here (read-only endpoint).
+    legacy_pairs: list = []
+    legacy_course_ids: set = set()
+    for s in students:
+        if s.course_id and (s.id, s.course_id) not in enroll_pairs:
+            legacy_pairs.append((s.id, s.course_id))
+            legacy_course_ids.add(s.course_id)
+
+    course_ids: set = {e.course_id for e in enrollments} | legacy_course_ids
+
+    # Resolve any legacy courses we don't already have via the enrollment join.
+    legacy_courses_by_id: dict = {}
+    existing_course_ids = {e.course_id for e in enrollments}
+    missing_course_ids = legacy_course_ids - existing_course_ids
+    if missing_course_ids:
+        for c in db.query(Course).filter(Course.id.in_(missing_course_ids)).all():
+            legacy_courses_by_id[c.id] = c
+
+    # 1 query — chapter→course map across every course we care about.
+    chapter_to_course: dict = {}
+    course_chapters: "defaultdict[int, set]" = defaultdict(set)
+    if course_ids:
+        for ch_id, c_id in db.query(Chapter.id, Chapter.course_id).filter(
+            Chapter.course_id.in_(course_ids)
+        ).all():
+            chapter_to_course[ch_id] = c_id
+            course_chapters[c_id].add(ch_id)
+
+    # 1 query — lesson→chapter map for those chapters.
+    lesson_to_chapter: dict = {}
+    chapter_lessons: "defaultdict[int, set]" = defaultdict(set)
+    if chapter_to_course:
+        for l_id, ch_id in db.query(Lesson.id, Lesson.chapter_id).filter(
+            Lesson.chapter_id.in_(list(chapter_to_course.keys()))
+        ).all():
+            lesson_to_chapter[l_id] = ch_id
+            chapter_lessons[ch_id].add(l_id)
+
+    course_total_lessons = {
+        c_id: sum(len(chapter_lessons[ch_id]) for ch_id in chs)
+        for c_id, chs in course_chapters.items()
+    }
+    course_total_chapters = {c_id: len(chs) for c_id, chs in course_chapters.items()}
+
+    # 1 query — all MaterialAccess rows for these students touching these scopes.
+    granted_lessons: "defaultdict[tuple, set]" = defaultdict(set)
+    granted_chapters: "defaultdict[tuple, set]" = defaultdict(set)
+    access_filters = []
+    if chapter_to_course:
+        access_filters.append(MaterialAccess.chapter_id.in_(list(chapter_to_course.keys())))
+    if lesson_to_chapter:
+        access_filters.append(MaterialAccess.lesson_id.in_(list(lesson_to_chapter.keys())))
+    if access_filters:
+        combined = or_(*access_filters) if len(access_filters) > 1 else access_filters[0]
+        accesses = db.query(MaterialAccess).filter(
+            MaterialAccess.student_id.in_(student_ids),
+            combined,
+        ).all()
+        for a in accesses:
+            sid = a.student_id
+            # Lesson-level grant (chapter-level grants are expanded below).
+            if a.lesson_id is not None and a.lesson_id in lesson_to_chapter:
+                ch_id = lesson_to_chapter[a.lesson_id]
+                c_id = chapter_to_course.get(ch_id)
+                if c_id is None:
+                    continue
+                granted_lessons[(sid, c_id)].add(a.lesson_id)
+                if a.chapter_id is not None:
+                    granted_chapters[(sid, c_id)].add(a.chapter_id)
+            elif a.chapter_id is not None and a.chapter_id in chapter_to_course:
+                c_id = chapter_to_course[a.chapter_id]
+                granted_chapters[(sid, c_id)].add(a.chapter_id)
+                granted_lessons[(sid, c_id)].update(chapter_lessons[a.chapter_id])
+
+    def _progress(student_id: int, c_id: int) -> dict:
+        total_lessons = course_total_lessons.get(c_id, 0)
+        total_chapters = course_total_chapters.get(c_id, 0)
+        accessed_lessons = len(granted_lessons.get((student_id, c_id), set()))
+        accessed_chapters = len(granted_chapters.get((student_id, c_id), set()))
+        pct = round(accessed_lessons / total_lessons * 100, 2) if total_lessons else 0.0
+        return {
+            "percentage": pct,
+            "accessed_lessons": accessed_lessons,
+            "available_lessons": accessed_lessons,
+            "total_lessons": total_lessons,
+            "accessed_chapters": accessed_chapters,
+            "total_chapters": total_chapters,
+        }
+
+    def _course_card(c) -> dict:
+        return {
+            "id": c.id,
+            "title": c.title,
+            "slug": c.slug,
+            "icon_url": c.icon_url,
+            "duration_months": c.duration_months,
+        }
+
+    def _student_payload(s) -> dict:
+        # Mirror the StudentResponse shape consumed by the admin UI without
+        # introducing a new Pydantic schema (avoids a schema bump for a
+        # read-only superset).
+        u = s.user
+        c = s.course
+        return {
+            "id": s.id,
+            "user_id": s.user_id,
+            "course_id": s.course_id,
+            "status": s.status.value if s.status else None,
+            "current_chapter_id": s.current_chapter_id,
+            "last_lesson_id": s.last_lesson_id,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "user": {
+                "id": u.id,
+                "first_name": u.first_name,
+                "last_name": u.last_name,
+                "email": u.email,
+                "phone": u.phone,
+                "profile_image": u.profile_image,
+                "city": u.city,
+                "country": u.country,
+                "is_active": u.is_active,
+                "role": u.role.value if u.role else None,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            } if u else None,
+            "course": _course_card(c) if c else None,
+        }
+
+    result = []
+    for s in students:
+        enr_payload = []
+        seen = set()
+        for e in enroll_by_student.get(s.id, []):
+            seen.add(e.course_id)
+            c = e.course
+            enr_payload.append({
+                "enrollment_id": e.id,
+                "course_id": e.course_id,
+                "course_title": c.title if c else None,
+                "course": _course_card(c) if c else None,
+                "enrollment_status": e.status.value if e.status else None,
+                "progress": _progress(s.id, e.course_id),
+            })
+        # Legacy course_id surfacing.
+        if s.course_id and s.course_id not in seen:
+            c = legacy_courses_by_id.get(s.course_id) or s.course
+            if c is not None:
+                enr_payload.append({
+                    "enrollment_id": None,
+                    "course_id": s.course_id,
+                    "course_title": c.title,
+                    "course": _course_card(c),
+                    "enrollment_status": "active",
+                    "progress": _progress(s.id, s.course_id),
+                })
+
+        payload = _student_payload(s)
+        payload["enrollments_summary"] = enr_payload
+        result.append(payload)
+
+    return result
+
 
 @router.post("/create-student")
 async def create_student_admin(
@@ -377,15 +594,20 @@ async def toggle_student_active_admin(
 ):
     """Toggle student user active status (Admin only)"""
     student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == student_id).first()
-    
+
     if not student:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found"
         )
-    
+
     if student.user:
-        student.user.is_active = not student.user.is_active
+        # Atomic UPDATE on the linked UserPersonal row so concurrent toggles
+        # can't both compute their NOT from the same stale value.
+        db.query(UserPersonal).filter(UserPersonal.id == student.user.id).update(
+            {UserPersonal.is_active: ~UserPersonal.is_active},
+            synchronize_session=False,
+        )
     db.commit()
     db.refresh(student)
     return student
