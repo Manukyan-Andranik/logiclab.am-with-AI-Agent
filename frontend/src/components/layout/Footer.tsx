@@ -134,8 +134,8 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
               <button
                 onClick={() => handleNavigationModeChange('modern')}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${mode === 'modern'
-                  ? 'bg-[#FFD700] text-[var(--black)] border-[#FFD700]'
-                  : 'bg-transparent text-[var(--gray-light)] opacity-50 border-gray-dark hover:border-[#FFD700] hover:opacity-100'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-transparent text-muted-foreground border-border hover:border-primary hover:text-foreground'
                   }`}
               >
                 <Bot size={18} />
@@ -144,8 +144,8 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
               <button
                 onClick={() => handleNavigationModeChange('traditional')}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all ${mode === 'traditional'
-                  ? 'bg-[#FFD700] text-[var(--black)] border-[#FFD700]'
-                  : 'bg-transparent text-[var(--gray-light)] opacity-50 border-gray-dark hover:border-[#FFD700] hover:opacity-100'
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-transparent text-muted-foreground border-border hover:border-primary hover:text-foreground'
                   }`}
               >
                 <Layout size={18} />
@@ -170,13 +170,13 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
       {/* "Coming Soon" Dialog for Traditional Mode */}
       <AlertDialog open={showComingSoonDialog} onOpenChange={setShowComingSoonDialog}>
         <AlertDialogContent className="bg-gray-dark border border-gray-dark"> {/* changed from bg-black */}
-          <AlertDialogTitle className="text-[#FFC000]">Շուտով հասանելի կլինի</AlertDialogTitle>
-          <AlertDialogDescription className="text-[var(--gray-light)]">
+          <AlertDialogTitle className="text-primary">Շուտով հասանելի կլինի</AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground">
             Navigation համակարգի փոփոխումը այս պահին հասանելի չէ։ Այս հնարավորությունը կավելացվի առաջիկա թարմացումներում։ Ներկայում դուք օգտագործում եք Traditional նավիգացիոն համակարգը։
           </AlertDialogDescription>
           <AlertDialogAction
             onClick={() => setShowComingSoonDialog(false)}
-            className="w-fit px-6 py-3 rounded-xl bg-[#FFC000] hover:bg-[#FFD700] text-[#222] text-sm font-semibold uppercase tracking-wide transition-all duration-200 ease-in-out hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#FFC000] focus:ring-offset-2"
+            className="w-fit px-6 py-3 rounded-xl bg-primary hover:bg-[hsl(var(--accent-strong))] text-primary-foreground text-sm font-semibold uppercase tracking-wide transition-all duration-200 ease-in-out hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
             Հասկացա
           </AlertDialogAction>

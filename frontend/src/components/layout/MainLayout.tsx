@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import LogicAgent from '../logic/LogicAgent';
 import Footer from './Footer';
 import TraditionalNavbar from './TraditionalNavbar';
@@ -15,7 +15,6 @@ const MainLayout: React.FC = () => {
   const { mode, selectMode } = useNavigationMode();
   const { navigationSystem, isConfigLoading } = useNavigationContext();
   const [isAgentOpen, setIsAgentOpen] = useState(true);
-  const location = useLocation();
   usePageViewTracker();
 
   // Show loading state while config is being fetched
@@ -63,24 +62,25 @@ const MainLayout: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Main Content Area */}
-      <main 
+      {/* Main Content Area
+       *
+       * No AnimatePresence wrapper around <Outlet />. The previous
+       * `mode="wait"` page-transition kept the OLD route mounted for ~300ms
+       * (exit animation) before the new route mounted with its own 300ms
+       * enter. Combined with framer-motion `<FadeIn>` wrappers inside pages
+       * like RegisterPage (further 600ms+ staggered fades), navigating from
+       * a tall page (e.g. CourseDetailPage) to a short one (e.g.
+       * RegisterPage) produced a perceived "blank page" for ~1s — users
+       * thought it was broken and refreshed to force a paint. Routes now
+       * swap instantly; ScrollToTop resets scroll synchronously in a
+       * useLayoutEffect; per-page entry animations still run as before.
+       */}
+      <main
         className={`flex-1 transition-[padding_0.5s_cubic-bezier(0.25,0.8,0.25,1)] pl-0 ${
           mode === 'modern' && isAgentOpen && navigationSystem === 'AGENT' ? 'md:pl-[420px]' : 'md:pl-0'
         } ${mode === 'traditional' || navigationSystem === 'TRADITIONAL' ? 'pt-24' : ''}`}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Dynamic Page Content */}
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <Outlet />
       </main>
 
       {/* Footer also moved to content area to align with padding */}

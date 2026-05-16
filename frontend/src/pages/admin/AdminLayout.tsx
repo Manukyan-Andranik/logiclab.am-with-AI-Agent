@@ -87,7 +87,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ pathname, onClose, onLogout }) 
       </Link>
       <button
         onClick={onLogout}
-        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-[#dc3545] hover:bg-[#dc3545]/10 transition-all duration-200"
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
       >
         <LogOut size={18} />
         Logout

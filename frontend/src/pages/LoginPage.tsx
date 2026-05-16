@@ -100,18 +100,6 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
 
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(hsl(var(--text-primary)) 1px,transparent 1px),linear-gradient(90deg,hsl(var(--text-primary)) 1px,transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
-
-      <div className="pointer-events-none fixed -top-60 -right-60 w-[700px] h-[700px] rounded-full bg-primary opacity-[0.04] blur-3xl" />
-      <div className="pointer-events-none fixed -bottom-60 -left-60 w-[500px] h-[500px] rounded-full bg-primary opacity-[0.03] blur-3xl" />
 
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16">
         <div className="w-full max-w-md">

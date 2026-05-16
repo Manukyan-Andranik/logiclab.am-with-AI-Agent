@@ -89,7 +89,7 @@ const CoursesPage = () => {
             <div className="max-w-2xl">
               <h2 className="text-[var(--primary-alt)] font-display text-4xl sm:text-5xl lg:text-6xl font-black  uppercase tracking-tighter leading-none">
                 ԲՈԼՈՐ <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--white)] to-[var(--gray-light)]">
+                <span className="text-foreground">
                   ԴԱՍԸՆԹԱՑՆԵՐԸ
                 </span>
               </h2>

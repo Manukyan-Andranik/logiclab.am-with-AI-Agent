@@ -91,7 +91,7 @@ const TraditionalNavbar: React.FC = () => {
   return (
     <>
       {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] pt-[env(safe-area-inset-top)] bg-[#222]/30 backdrop-blur-md border-b border-white/5">
+      <nav className="fixed top-0 left-0 right-0 z-[100] pt-[env(safe-area-inset-top)] bg-background/30 backdrop-blur-md border-b border-border">
         <div className="relative z-10 w-full max-w-[1400px] mx-auto px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-4 py-2">
           <Link
             to={studentLoggedIn ? '/student/dashboard' : '/'}
@@ -107,8 +107,8 @@ const TraditionalNavbar: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`shrink-0 whitespace-nowrap text-[10px] xl:text-xs 2xl:text-sm font-bold uppercase tracking-wide 2xl:tracking-[0.2em] transition-colors hover:text-[#FFD700] ${
-                  isActive(link.path) ? 'text-[#FFC000]' : 'text-white/70'
+                className={`shrink-0 whitespace-nowrap text-[10px] xl:text-xs 2xl:text-sm font-bold uppercase tracking-wide 2xl:tracking-[0.2em] transition-colors hover:text-primary ${
+                  isActive(link.path) ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
                 {link.name}
@@ -119,7 +119,7 @@ const TraditionalNavbar: React.FC = () => {
               <DropdownMenu>
                 <DropdownMenuTrigger
                   type="button"
-                  className="shrink-0 flex items-center gap-2 rounded-xl border border-white/15 hover:border-white/30 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-[#FFC000]/50"
+                  className="shrink-0 flex items-center gap-2 rounded-xl border border-white/15 hover:border-white/30 bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black/40 ring-1 ring-white/10">
                     {profileImageUrl ? (
@@ -138,11 +138,11 @@ const TraditionalNavbar: React.FC = () => {
                       </span>
                     ) : null}
                   </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-[#FFC000]" aria-hidden />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-primary" aria-hidden />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="z-[200] min-w-[12rem] rounded-xl border border-white/10 bg-[#1f1f1f] p-1.5 text-white shadow-xl"
+                  className="z-[200] min-w-[12rem] rounded-xl border border-border bg-card p-1.5 text-foreground shadow-xl"
                 >
                   {ACCOUNT_MENU.map((entry) =>
                     entry.kind === 'route' ? (
@@ -151,8 +151,8 @@ const TraditionalNavbar: React.FC = () => {
                           to={entry.path}
                           className={`cursor-pointer rounded-lg px-3 py-2.5 text-xs font-bold uppercase tracking-widest focus:bg-white/10 focus:text-white ${
                             isStudentRouteActive(entry.path)
-                              ? 'bg-[#FFC000]/15 text-[#FFC000]'
-                              : 'text-white/80'
+                              ? 'bg-primary/15 text-primary'
+                              : 'text-muted-foreground'
                           }`}
                         >
                           {entry.name}
@@ -162,7 +162,7 @@ const TraditionalNavbar: React.FC = () => {
                       <DropdownMenuItem
                         key="logout"
                         onSelect={() => handleStudentLogout()}
-                        className="cursor-pointer rounded-lg px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-white/70 focus:bg-red-500/15 focus:text-red-300"
+                        className="cursor-pointer rounded-lg px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground focus:bg-red-500/15 focus:text-red-300"
                       >
                         {entry.name}
                       </DropdownMenuItem>
@@ -174,15 +174,15 @@ const TraditionalNavbar: React.FC = () => {
               <>
                 <Link
                   to="/login"
-                  className={`shrink-0 text-[10px] xl:text-xs 2xl:text-sm font-bold uppercase tracking-wide transition-colors hover:text-[#FFD700] ${
-                    location.pathname === '/login' ? 'text-[#FFC000]' : 'text-white/70'
+                  className={`shrink-0 text-[10px] xl:text-xs 2xl:text-sm font-bold uppercase tracking-wide transition-colors hover:text-primary ${
+                    location.pathname === '/login' ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
                   Մուտք
                 </Link>
                 <Link
                   to="/register"
-                  className="shrink-0 rounded-xl bg-[#FFD700] px-3 py-2 text-[10px] xl:text-xs 2xl:text-sm font-black uppercase tracking-wide text-[#222] transition-colors hover:bg-[#FFC000]"
+                  className="shrink-0 rounded-xl bg-primary px-3 py-2 text-[10px] xl:text-xs 2xl:text-sm font-black uppercase tracking-wide text-primary-foreground transition-colors hover:bg-[hsl(var(--accent-strong))]"
                 >
                   Գրանցվել
                 </Link>
@@ -203,7 +203,7 @@ const TraditionalNavbar: React.FC = () => {
 
       {/* MOBILE DRAWER */}
       <div
-        className={`fixed inset-0 bg-[#222] z-[9999] transition-transform lg:hidden ${
+        className={`fixed inset-0 bg-background z-[9999] transition-transform lg:hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -244,8 +244,8 @@ const TraditionalNavbar: React.FC = () => {
               onClick={() => setIsOpen(false)}
               className={`block text-xl font-bold uppercase ${
                 isActive(link.path)
-                  ? 'text-[#FFC000]'
-                  : 'text-white hover:text-[#FFD700]'
+                  ? 'text-primary'
+                  : 'text-white hover:text-primary'
               }`}
             >
               {link.name}
@@ -256,7 +256,7 @@ const TraditionalNavbar: React.FC = () => {
             <div className="pt-6 border-t border-white/10 space-y-4">
               <Link
                 to="/login"
-                className="block text-xl font-bold uppercase text-white/80"
+                className="block text-xl font-bold uppercase text-muted-foreground"
                 onClick={() => setIsOpen(false)}
               >
                 Մուտք
@@ -264,7 +264,7 @@ const TraditionalNavbar: React.FC = () => {
 
               <Link
                 to="/register"
-                className="block text-xl font-bold uppercase text-[#FFD700]"
+                className="block text-xl font-bold uppercase text-primary"
                 onClick={() => setIsOpen(false)}
               >
                 Գրանցվել
@@ -279,7 +279,7 @@ const TraditionalNavbar: React.FC = () => {
                     to={entry.path}
                     onClick={() => setIsOpen(false)}
                     className={`block text-xl font-bold uppercase ${
-                      isStudentRouteActive(entry.path) ? 'text-[#FFC000]' : 'text-white'
+                      isStudentRouteActive(entry.path) ? 'text-primary' : 'text-white'
                     }`}
                   >
                     {entry.name}
@@ -292,7 +292,7 @@ const TraditionalNavbar: React.FC = () => {
                       handleStudentLogout();
                       setIsOpen(false);
                     }}
-                    className="block w-full text-left text-xl font-bold uppercase text-white/70 hover:text-red-300"
+                    className="block w-full text-left text-xl font-bold uppercase text-muted-foreground hover:text-red-300"
                   >
                     {entry.name}
                   </button>

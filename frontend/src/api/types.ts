@@ -57,6 +57,7 @@ export type User = {
   last_name: string;
   email: string;
   profile_image?: string;
+  social_links?: Record<string, string>;
 };
 
 export type Instructor = {

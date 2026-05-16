@@ -128,9 +128,6 @@ const ProjectCover = ({ project }: { project: any }) => {
               {description}
             </p>
 
-            {!expanded && description.length > 150 && (
-              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
-            )}
           </div>
         </div>
 

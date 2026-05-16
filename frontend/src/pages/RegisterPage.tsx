@@ -102,8 +102,10 @@ const RegisterPage = () => {
     );
   }
 
+  // text-gray-800 on a dark surface was invisible. Use semantic tokens that
+  // resolve to high-contrast white-on-dark.
   const inputBase =
-    "w-full bg-black-solid/70 border border-border rounded-xl px-5 py-4 text-gray-800 placeholder:text-gray-500 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold/20 transition-all";
+    "w-full bg-background border border-border rounded-xl px-5 py-4 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all";
   const labelBase =
     "block text-xs font-black uppercase tracking-widest text-muted-foreground mb-2 ml-1 group-focus-within:text-gold transition-colors";
 
@@ -111,15 +113,6 @@ const RegisterPage = () => {
     <div className="min-h-screen bg-black-solid text-foreground overflow-x-hidden">
       <section className="relative min-h-screen lg:py-24 flex items-center bg-black overflow-hidden">
         <div className="absolute inset-0 bg-black/80 z-0" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)",
-            backgroundSize: "60px 60px",
-          }}
-        />
         <Container>
           <div className="relative z-10 py-20 grid lg:grid-cols-2 gap-20 items-start">
 

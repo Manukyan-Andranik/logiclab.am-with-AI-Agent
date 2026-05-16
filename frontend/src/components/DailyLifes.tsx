@@ -175,7 +175,7 @@ const DailyLifeCover = ({ story }: { story: DailyLife }) => {
           />
         </AnimatePresence>
 
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-black/55 pointer-events-none" />
 
         {hasMultipleImages && (
           <>
@@ -216,9 +216,6 @@ const DailyLifeCover = ({ story }: { story: DailyLife }) => {
           >
             {description}
           </p>
-          {!expanded && isLongDescription && (
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent pointer-events-none" />
-          )}
         </div>
 
         {isLongDescription && (
@@ -284,7 +281,7 @@ const DailyLifePreview = ({
             isActive ? "grayscale-0 brightness-90" : "grayscale-[0.5] group-hover:grayscale-0"
           }`}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-black/55" />
         {isActive && (
           <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gold" />
         )}

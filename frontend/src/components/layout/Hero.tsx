@@ -55,7 +55,10 @@ function AnimatedRole() {
 
 const Hero: React.FC = () => {
   return (
-    <div className="relative min-h-[90vh] flex items-center bg-primary overflow-hidden">
+    <div
+      className="relative min-h-[90vh] flex items-center overflow-hidden"
+      style={{ background: 'hsl(var(--surface-1))' }}
+    >
       {/* Background depth — soft accent halos echo the brand without
           competing with the headline. */}
       <div

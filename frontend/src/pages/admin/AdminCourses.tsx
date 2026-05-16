@@ -8,9 +8,10 @@ import { getInstructors } from "@/api/instructors";
 import { uploadFile, getMediaUrl } from "@/api/client";
 import { getLocalizedContent } from "@/lib/localization";
 import { useToast } from "@/hooks/use-toast";
-// import { Button } from "@/components/ui/button";
 import Button from "@/components/ui/Button";
-import { Plus, Edit2, Trash2, Globe, Users, BookOpen, ChevronDown, ChevronUp, FileText, Video, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, Users, BookOpen, X, Loader2, Image as ImageIcon, Calendar, CreditCard, Clock, Video } from "lucide-react";
+import { FaGlobe } from "react-icons/fa";
+import { Badge } from "@/components/ui/badge";
 import { useState, useRef } from "react";
 import {
   Dialog,
@@ -24,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Course, Instructor, Chapter, Lesson } from "@/api/types";
+import { Course, Chapter, Lesson, Instructor } from "@/api/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -58,6 +59,9 @@ const AdminCourses = () => {
     description_ru: "",
     duration_months: 3,
     monthly_payment: 50000,
+    total_payment: 150000,
+    start_date: "",
+    schedule: "",
     order_index: 0,
     is_active: true,
     category: "course" as "course" | "profession",
@@ -82,29 +86,34 @@ const AdminCourses = () => {
     materials: [{ name: "", url: "" }],
   });
 
-  const { data: courses, isLoading } = useQuery({
+  const { data: courses, isLoading } = useQuery<Course[]>({
     queryKey: ["admin-courses"],
     queryFn: () => getCourses(),
   });
 
-  const { data: instructors } = useQuery({
+  const { data: instructors } = useQuery<Instructor[]>({
     queryKey: ["admin-instructors"],
     queryFn: getInstructors,
   });
 
-  const { data: curriculumData, isLoading: isCurriculumLoading } = useQuery({
+  const { data: curriculumData, isLoading: isCurriculumLoading } = useQuery<{
+    curriculum: { chapter: Chapter; lessons: Lesson[] }[];
+  }>({
     queryKey: ["admin-curriculum"],
     queryFn: () => getCourseCurriculum(curriculumCourse!.id),
     enabled: !!curriculumCourse,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => {
+    mutationFn: (data: typeof formData) => {
       const payload = {
         title: { hy: data.title_hy, en: data.title_en, ru: data.title_ru },
         description: { hy: data.description_hy, en: data.description_en, ru: data.description_ru },
         duration_months: data.duration_months,
         monthly_payment: data.monthly_payment,
+        total_payment: data.total_payment,
+        start_date: data.start_date || null,
+        schedule: data.schedule ? { info: data.schedule } : null,
         order_index: data.order_index,
         is_active: data.is_active,
         category: data.category,
@@ -134,8 +143,9 @@ const AdminCourses = () => {
       const { url } = await uploadFile(file);
       setFormData(prev => ({ ...prev, hero_video_url: url }));
       toast({ title: "Success", description: "Video uploaded successfully." });
-    } catch (error: any) {
-      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to upload video";
+      toast({ title: "Upload Failed", description: msg, variant: "destructive" });
     } finally {
       setVideoUploading(false);
     }
@@ -150,8 +160,9 @@ const AdminCourses = () => {
       const { url } = await uploadFile(file);
       setFormData(prev => ({ ...prev, icon_url: url }));
       toast({ title: "Success", description: "Icon uploaded successfully." });
-    } catch (error: any) {
-      toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to upload icon";
+      toast({ title: "Upload Failed", description: msg, variant: "destructive" });
     } finally {
       setIconUploading(false);
     }
@@ -189,7 +200,6 @@ const AdminCourses = () => {
   // Lesson Mutations
   const lessonMutation = useMutation({
     mutationFn: async (data: typeof lessonFormData) => {
-      // Only send supported lesson fields to the lesson API
       const lessonPayload = {
         title: data.title,
         order_index: data.order_index,
@@ -203,7 +213,6 @@ const AdminCourses = () => {
         savedLesson = await createLesson(targetChapterId!, lessonPayload as any);
       }
 
-      // Handle materials via dedicated materials API
       const cleanedLinks = data.materials
         .filter((m) => m.url.trim().length > 0)
         .map((m) => ({
@@ -242,6 +251,9 @@ const AdminCourses = () => {
       description_ru: "",
       duration_months: 3,
       monthly_payment: 50000,
+      total_payment: 150000,
+      start_date: "",
+      schedule: "",
       order_index: 0,
       is_active: true,
       category: "course",
@@ -264,6 +276,9 @@ const AdminCourses = () => {
       description_ru: course.description.ru || "",
       duration_months: course.duration_months,
       monthly_payment: course.monthly_payment,
+      total_payment: course.total_payment || (course.monthly_payment * course.duration_months),
+      start_date: course.start_date || "",
+      schedule: (course.schedule as any)?.info || "",
       order_index: course.order_index || 0,
       is_active: course.is_active,
       category: course.category || "course",
@@ -314,8 +329,6 @@ const AdminCourses = () => {
 
   const handleEditLesson = async (lesson: Lesson) => {
     setEditingLesson(lesson);
-
-    // Try to load existing materials for this lesson
     try {
       const material = await getLessonMaterials(lesson.id);
       const links = Array.isArray(material?.links) ? material.links : [];
@@ -325,14 +338,12 @@ const AdminCourses = () => {
         materials: links.length > 0 ? links : [{ name: "", url: "" }],
       });
     } catch {
-      // If no materials yet or error, just initialize with empty row
       setLessonFormData({
         title: lesson.title,
         order_index: lesson.order_index,
         materials: [{ name: "", url: "" }],
       });
     }
-
     setIsLessonOpen(true);
   };
 
@@ -354,12 +365,7 @@ const AdminCourses = () => {
     setLessonFormData((prev) => ({
       ...prev,
       materials: prev.materials.map((m, i) =>
-        i === index
-          ? {
-              ...m,
-              [field]: value,
-            }
-          : m
+        i === index ? { ...m, [field]: value } : m
       ),
     }));
   };
@@ -402,7 +408,7 @@ const AdminCourses = () => {
               Add Course
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
             <DialogHeader>
               <DialogTitle>{editingCourse ? "Edit Course" : "Add New Course"}</DialogTitle>
             </DialogHeader>
@@ -440,20 +446,40 @@ const AdminCourses = () => {
             <div className="grid gap-6 py-4 border-t border-border mt-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (months)</Label>
+                  <Label htmlFor="duration" className="flex items-center gap-2"><Clock size={14} /> Duration (mo)</Label>
                   <Input id="duration" type="number" value={formData.duration_months} onChange={e => setFormData({ ...formData, duration_months: parseInt(e.target.value) })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="payment">Monthly Payment (AMD)</Label>
+                  <Label htmlFor="payment" className="flex items-center gap-2"><CreditCard size={14} /> Monthly (AMD)</Label>
                   <Input id="payment" type="number" value={formData.monthly_payment} onChange={e => setFormData({ ...formData, monthly_payment: parseInt(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="total_payment" className="flex items-center gap-2"><CreditCard size={14} /> Total (AMD)</Label>
+                  <Input id="total_payment" type="number" value={formData.total_payment} onChange={e => setFormData({ ...formData, total_payment: parseInt(e.target.value) })} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start_date" className="flex items-center gap-2"><Calendar size={14} /> Start Date</Label>
+                  <Input id="start_date" type="date" value={formData.start_date} onChange={e => setFormData({ ...formData, start_date: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="order_index">Order Index</Label>
                   <Input id="order_index" type="number" value={formData.order_index} onChange={e => setFormData({ ...formData, order_index: parseInt(e.target.value) })} />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="level">Level</Label>
+                  <Input id="level" value={formData.level} onChange={e => setFormData({ ...formData, level: e.target.value })} />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="schedule" className="flex items-center gap-2"><Clock size={14} /> Schedule Info</Label>
+                <Input id="schedule" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="e.g. Mon, Wed, Fri at 19:00" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
                   <select
@@ -465,10 +491,6 @@ const AdminCourses = () => {
                     <option value="course">Course</option>
                     <option value="profession">Profession</option>
                   </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="level">Level</Label>
-                  <Input id="level" value={formData.level} onChange={e => setFormData({ ...formData, level: e.target.value })} />
                 </div>
               </div>
 
@@ -536,11 +558,6 @@ const AdminCourses = () => {
                     </Button>
                   )}
                 </div>
-                {formData.hero_video_url && (
-                  <p className="text-[10px] text-muted-foreground break-all mt-1">
-                    Current: {formData.hero_video_url}
-                  </p>
-                )}
               </div>
 
               <div className="space-y-3">
@@ -582,7 +599,7 @@ const AdminCourses = () => {
 
         {/* Curriculum Dialog */}
         <Dialog open={isCurriculumOpen} onOpenChange={setIsCurriculumOpen}>
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
             <DialogHeader>
               <DialogTitle>Manage Curriculum: {curriculumCourse ? getLocalizedContent(curriculumCourse.title) : ""}</DialogTitle>
             </DialogHeader>
@@ -601,14 +618,14 @@ const AdminCourses = () => {
                 </div>
 
                 <Accordion type="single" collapsible className="w-full space-y-4">
-                  {curriculumData?.curriculum?.map((item: any, i: number) => (
+                  {curriculumData?.curriculum?.map((item, i) => (
                     <AccordionItem key={item.chapter.id} value={`chap-${item.chapter.id}`} className="border rounded-xl px-4 bg-secondary/10">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-3 text-left">
                           <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                             {i + 1}
                           </span>
-                          <span className="font-semibold text-white">{item.chapter.title}</span>
+                          <span className="font-semibold">{item.chapter.title}</span>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pb-4">
@@ -619,7 +636,7 @@ const AdminCourses = () => {
                               <Button size="icon" variant="ghost" className="h-6 w-6 text-primary hover:bg-primary/10" onClick={() => handleEditChapter(item.chapter)}>
                                 <Edit2 size={12} />
                               </Button>
-                              <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--danger)]" onClick={() => {
+                              <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => {
                                 if (confirm("Delete chapter and all its lessons?")) deleteChapterMutation.mutate(item.chapter.id);
                               }}>
                                 <Trash2 size={12} />
@@ -628,14 +645,14 @@ const AdminCourses = () => {
                           </div>
 
                           <div className="space-y-2 border-l-2 border-primary/20 pl-4">
-                            {item.lessons?.map((lesson: any, li: number) => (
-                              <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border group">
-                                <span className="text-sm text-foreground">{li + 1}. {lesson.title}</span>
-                                <div className="flex gap-1 text-primary">
+                            {item.lessons?.map((lesson, li) => (
+                              <div key={lesson.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-border group">
+                                <span className="text-sm">{li + 1}. {lesson.title}</span>
+                                <div className="flex gap-1">
                                   <Button size="icon" variant="ghost" className="h-6 w-6 text-primary" onClick={() => handleEditLesson(lesson)}>
                                     <Edit2 size={12} />
                                   </Button>
-                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-[var(--danger)]" onClick={() => {
+                                  <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => {
                                     if (confirm("Delete this lesson?")) deleteLessonMutation.mutate(lesson.id);
                                   }}>
                                     <Trash2 size={12} />
@@ -646,7 +663,7 @@ const AdminCourses = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="w-full border-dashed border border-gray-dark text-xs gap-2 text-muted-foreground"
+                              className="w-full border-dashed border border-border text-xs gap-2 text-muted-foreground"
                               onClick={() => handleAddLesson(item.chapter.id, item.lessons?.length || 0)}
                             >
                               <Plus size={12} /> Add Lesson
@@ -660,14 +677,14 @@ const AdminCourses = () => {
               </div>
             )}
             <DialogFooter>
-              <Button  onClick={() => setIsCurriculumOpen(false)}>Done</Button>
+              <Button onClick={() => setIsCurriculumOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* Chapter Form Dialog */}
         <Dialog open={isChapterDialogOpen} onOpenChange={setIsChapterOpen}>
-          <DialogContent>
+          <DialogContent className="bg-card text-card-foreground">
             <DialogHeader>
               <DialogTitle>{editingChapter ? "Edit Chapter" : "Add Chapter"}</DialogTitle>
             </DialogHeader>
@@ -692,7 +709,7 @@ const AdminCourses = () => {
 
         {/* Lesson Form Dialog */}
         <Dialog open={isLessonDialogOpen} onOpenChange={setIsLessonOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px] bg-card text-card-foreground">
             <DialogHeader>
               <DialogTitle>{editingLesson ? "Edit Lesson" : "Add Lesson"}</DialogTitle>
             </DialogHeader>
@@ -707,50 +724,36 @@ const AdminCourses = () => {
               </div>
               <div className="space-y-3">
                 <Label>Materials (links)</Label>
-                <p className="text-xs text-muted-foreground">
-                  Add lesson materials such as Google Colab, YouTube, Google Drive, or presentation links.
-                </p>
                 <div className="space-y-2">
-                  {lessonFormData.materials.map((material, index) => {
-                    const showSourceWarning =
-                      material.url.trim().length > 0 &&
-                      !isSupportedMaterialSource(material.url.trim());
-
-                    return (
-                      <div key={index} className="flex flex-col gap-1 rounded-lg border border-border p-3 bg-secondary/10">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Label (optional, e.g. Colab Notebook)"
-                            value={material.name}
-                            onChange={(e) => handleMaterialChange(index, "name", e.target.value)}
-                            className="text-xs"
-                          />
-                          <Input
-                            placeholder="https://..."
-                            type="url"
-                            value={material.url}
-                            onChange={(e) => handleMaterialChange(index, "url", e.target.value)}
-                            className="text-xs"
-                          />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => handleRemoveMaterialRow(index)}
-                            disabled={lessonFormData.materials.length === 1}
-                          >
-                            <X size={14} />
-                          </Button>
-                        </div>
-                        {showSourceWarning && (
-                          <p className="text-[10px] text-amber-400">
-                            This URL is not from a typical source (Colab, YouTube, Drive). Please double-check it.
-                          </p>
-                        )}
+                  {lessonFormData.materials.map((material, index) => (
+                    <div key={index} className="flex flex-col gap-1 rounded-lg border border-border p-3 bg-secondary/10">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Label (e.g. Notebook)"
+                          value={material.name}
+                          onChange={(e) => handleMaterialChange(index, "name", e.target.value)}
+                          className="text-xs"
+                        />
+                        <Input
+                          placeholder="https://..."
+                          type="url"
+                          value={material.url}
+                          onChange={(e) => handleMaterialChange(index, "url", e.target.value)}
+                          className="text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleRemoveMaterialRow(index)}
+                          disabled={lessonFormData.materials.length === 1}
+                        >
+                          <X size={14} />
+                        </Button>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
                 <Button
                   type="button"
@@ -775,22 +778,20 @@ const AdminCourses = () => {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedCourses.map((course) => (
-          <div key={course.id} className="bg-background rounded-xl border border-border overflow-hidden shadow-sm hover:border-primary/40 transition-all group">
+          <div key={course.id} className="bg-card rounded-xl border border-border overflow-hidden shadow-sm hover:border-primary/40 transition-all group">
             <div className="aspect-video bg-secondary/50 relative">
               <div className="absolute inset-0 flex items-center justify-center text-primary/20">
                 {course.icon_url ? (
                   <img src={getMediaUrl(course.icon_url)} alt={getLocalizedContent(course.title)} className="w-1/2 h-auto max-w-full" />
                 ) : (
-                  <Globe size={64} />
+                  <FaGlobe size={64} />
                 )}
               </div>
-              <div className="absolute top-4 right-4 flex gap-2 transition-opacity">
-                
-                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[#17a2b8] hover:bg-[#138496] text-white" onClick={() => handleEdit(course)}>
+              <div className="absolute top-4 right-4 flex gap-2">
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-background/80 hover:bg-primary hover:text-white" onClick={() => handleEdit(course)}>
                   <Edit2 size={14} />
                 </Button>
-
-                <Button size="icon" variant="secondary" className="h-8 w-8 bg-[#dc3545] hover:bg-[#c82333] text-white" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
+                <Button size="icon" variant="secondary" className="h-8 w-8 bg-background/80 hover:bg-destructive hover:text-white" onClick={() => { if (confirm("Are you sure?")) deleteMutation.mutate(course.id);}}>
                   <Trash2 size={14} />
                 </Button>
               </div>
@@ -800,12 +801,12 @@ const AdminCourses = () => {
             </div>
             <div className="p-6">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
+                <h3 className="font-bold group-hover:text-primary transition-colors">
                   {getLocalizedContent(course.title)}
                 </h3>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-tighter ${course.is_active ? 'bg-green-500/10 text-green-500' : 'bg-secondary text-muted-foreground'}`}>
+                <Badge variant={course.is_active ? "default" : "secondary"}>
                   {course.is_active ? 'Active' : 'Inactive'}
-                </span>
+                </Badge>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                 {getLocalizedContent(course.description)}
@@ -813,7 +814,7 @@ const AdminCourses = () => {
 
               <div className="flex items-center justify-between text-xs font-medium mb-4">
                 <span className="text-foreground">{course.duration_months} months</span>
-                <span className="text-primary">{course.monthly_payment.toLocaleString()} AMD</span>
+                <span className="text-primary font-bold">{course.monthly_payment.toLocaleString()} AMD</span>
               </div>
 
               <Button
