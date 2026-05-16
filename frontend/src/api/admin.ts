@@ -45,6 +45,44 @@ export const getAdminStudents = async (): Promise<any[]> => {
   return apiClient('/admin/students');
 };
 
+export interface AdminEnrollmentSummary {
+  enrollment_id: number | null;
+  course_id: number;
+  course_title: any | null;
+  course: {
+    id: number;
+    title: any;
+    slug?: string | null;
+    icon_url?: string | null;
+    duration_months?: number | null;
+  } | null;
+  enrollment_status: string | null;
+  progress: {
+    percentage: number;
+    accessed_lessons: number;
+    available_lessons: number;
+    total_lessons: number;
+    accessed_chapters: number;
+    total_chapters: number;
+  };
+}
+
+export interface AdminStudentWithProgress {
+  id: number;
+  user_id: number;
+  course_id: number | null;
+  status: string | null;
+  created_at: string | null;
+  user: any | null;
+  course: any | null;
+  enrollments_summary: AdminEnrollmentSummary[];
+  [key: string]: any;
+}
+
+export const getAdminStudentsWithProgress = async (): Promise<AdminStudentWithProgress[]> => {
+  return apiClient('/admin/students/with-progress');
+};
+
 export const getVisitStatsSummary = async (params: Record<string, string | number | boolean> = {}): Promise<Record<string, any>> => {
   return apiClient('/visits/stats/summary', { params });
 };

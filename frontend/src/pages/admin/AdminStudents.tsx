@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getAdminStudents,
+  getAdminStudentsWithProgress,
   assignChapterToStudent,
   getStudentLessonAccess,
   grantLessonAccess,
@@ -13,9 +13,8 @@ import {
   getStudentEnrollments,
   addStudentEnrollment,
   removeStudentEnrollment,
-  getAdminStudentDashboard,
 } from "@/api/admin";
-import type { EnrolledCourse } from "@/api/students";
+import type { AdminEnrollmentSummary } from "@/api/admin";
 import { createStudent } from "@/api/auth";
 import { getCourses } from "@/api/courses";
 import { getCourseCurriculum } from "@/api/courses";
@@ -77,28 +76,22 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
-const StudentCoursesCell = ({ studentId }: { studentId: number }) => {
-  const { data, isLoading } = useQuery({
-    queryKey: ["student-enrollments", studentId],
-    queryFn: () => getStudentEnrollments(studentId),
-    staleTime: 30_000,
-  });
-
-  if (isLoading) {
-    return <span className="text-xs opacity-50">…</span>;
-  }
-
-  const enrollments = (data?.data || []) as any[];
-  if (enrollments.length === 0) {
+// Pure presentational cells. Data comes from the batched `/admin/students/with-progress`
+// endpoint via the parent table, so each row no longer fires its own request.
+const StudentCoursesCell = ({ enrollments }: { enrollments: AdminEnrollmentSummary[] }) => {
+  if (!enrollments || enrollments.length === 0) {
     return <span className="italic opacity-50">Unassigned</span>;
   }
-
   return (
     <div className="flex flex-col gap-1">
-      {enrollments.map((e: any) => {
+      {enrollments.map((e) => {
         const title = e?.course_title?.en || `Course #${e.course_id}`;
         return (
-          <Badge key={e.id} variant="outline" className="text-[10px] font-semibold w-fit">
+          <Badge
+            key={`${e.course_id}-${e.enrollment_id ?? "legacy"}`}
+            variant="outline"
+            className="text-[10px] font-semibold w-fit"
+          >
             {title}
           </Badge>
         );
@@ -107,25 +100,13 @@ const StudentCoursesCell = ({ studentId }: { studentId: number }) => {
   );
 };
 
-const StudentProgressCell = ({ studentId }: { studentId: number }) => {
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-student-dashboard", studentId],
-    queryFn: () => getAdminStudentDashboard(studentId),
-    staleTime: 30_000,
-  });
-
-  if (isLoading) {
-    return <div className="text-xs text-muted-foreground opacity-50">…</div>;
-  }
-
-  const courses = (data?.courses || []) as EnrolledCourse[];
-  if (courses.length === 0) {
+const StudentProgressCell = ({ enrollments }: { enrollments: AdminEnrollmentSummary[] }) => {
+  if (!enrollments || enrollments.length === 0) {
     return <div className="text-xs text-muted-foreground italic opacity-50">No enrollments</div>;
   }
-
   return (
     <div className="space-y-2 min-w-[220px]">
-      {courses.map((enrolled) => {
+      {enrollments.map((enrolled) => {
         const title = enrolled.course?.title?.en || `Course #${enrolled.course_id}`;
         const pct = enrolled.progress?.percentage ?? 0;
         const accessed = enrolled.progress?.accessed_lessons ?? 0;
@@ -213,7 +194,7 @@ const AdminStudents = () => {
   // Queries
   const { data: students, isLoading } = useQuery({
     queryKey: ["admin-students"],
-    queryFn: getAdminStudents,
+    queryFn: getAdminStudentsWithProgress,
   });
 
   const { data: courses } = useQuery({
@@ -518,7 +499,7 @@ const AdminStudents = () => {
     const email = (s.user?.email || "").toLowerCase();
     const courseTitles: string[] = [];
     if (s.course?.title?.en) courseTitles.push(s.course.title.en);
-    for (const e of (s.enrollments || []) as any[]) {
+    for (const e of (s.enrollments_summary || []) as AdminEnrollmentSummary[]) {
       if (e?.course_title?.en) courseTitles.push(e.course_title.en);
     }
     const courseMatch = courseTitles.some((t) => t.toLowerCase().includes(q));
@@ -640,10 +621,10 @@ const AdminStudents = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground text-sm">
-                      <StudentCoursesCell studentId={student.id} />
+                      <StudentCoursesCell enrollments={student.enrollments_summary || []} />
                     </td>
                     <td className="px-6 py-4">
-                      <StudentProgressCell studentId={student.id} />
+                      <StudentProgressCell enrollments={student.enrollments_summary || []} />
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
