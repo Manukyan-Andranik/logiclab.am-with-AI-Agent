@@ -16,15 +16,14 @@ router = APIRouter()
 
 # Helper function
 def _multilingual_to_dict(obj) -> dict:
-    """Convert Pydantic MultilingualText to dict for JSON columns."""
+    """Convert Pydantic MultilingualText (or an already-coerced dict) to a
+    plain dict for storage in JSON columns. Pydantic v2 only."""
     if obj is None:
         return {}
-    if hasattr(obj, "model_dump"):
-        return obj.model_dump(exclude_none=True)
-    if hasattr(obj, "dict"):
-        return obj.dict(exclude_none=True)
     if isinstance(obj, dict):
         return obj
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump(exclude_none=True)
     return {}
 
 # ==================== CHAPTERS ====================
@@ -386,8 +385,7 @@ async def update_course(
     
     course_id = course.id
     
-    raw = getattr(course_data, "model_dump", None) or getattr(course_data, "dict")
-    update_data = raw(exclude_unset=True, exclude={'instructor_ids'})
+    update_data = course_data.model_dump(exclude_unset=True, exclude={'instructor_ids'})
     
     # Handle order_index swap
     if 'order_index' in update_data and update_data['order_index'] != course.order_index:
@@ -462,15 +460,23 @@ async def toggle_course_active(
     current_admin = Depends(get_current_admin)
 ):
     """Toggle course active status (Admin only)"""
-    query = db.query(Course)
+    # Resolve id-or-slug to a primary key first, then issue an atomic flip
+    # so concurrent toggles can't both observe the same starting value.
+    query = db.query(Course.id)
     if course_id_or_slug.isdigit():
-        course = query.filter(Course.id == int(course_id_or_slug)).first()
+        row = query.filter(Course.id == int(course_id_or_slug)).first()
     else:
-        course = query.filter(Course.slug == course_id_or_slug).first()
-    
-    if not course:
+        row = query.filter(Course.slug == course_id_or_slug).first()
+
+    if not row:
         raise HTTPException(status_code=404, detail="Course not found")
-    course.is_active = not course.is_active
+    course_id = row[0]
+
+    db.query(Course).filter(Course.id == course_id).update(
+        {Course.is_active: ~Course.is_active},
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(course)
+
+    course = db.query(Course).filter(Course.id == course_id).first()
     return course

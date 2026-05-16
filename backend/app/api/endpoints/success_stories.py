@@ -94,8 +94,8 @@ async def create_daily_life(
     """Create new daily life story (Admin only)"""
     # Create daily life story
     new_story = DailyLife(
-        title=story_data.title.dict(),
-        description=story_data.description.dict(),
+        title=story_data.title.model_dump(),
+        description=story_data.description.model_dump(),
         image_urls=story_data.image_urls or [],
         is_published=story_data.is_published,
         published_date=datetime.now(timezone.utc)  # Set published date when story is created
@@ -122,22 +122,10 @@ async def update_daily_life(
             detail="Story not found"
         )
     
-    # Update fields
-    update_data = story_data.dict(exclude_unset=True)
-    
-    # Handle multilingual fields - convert to dict if needed
-    if 'title' in update_data and update_data['title']:
-        if isinstance(update_data['title'], dict):
-            update_data['title'] = update_data['title']
-        else:
-            update_data['title'] = update_data['title'].dict()
-    
-    if 'description' in update_data and update_data['description']:
-        if isinstance(update_data['description'], dict):
-            update_data['description'] = update_data['description']
-        else:
-            update_data['description'] = update_data['description'].dict()
-    
+    # model_dump() recursively serializes nested MultilingualText models to
+    # plain dicts, which is the storage shape for the JSON columns.
+    update_data = story_data.model_dump(exclude_unset=True)
+
     for field, value in update_data.items():
         setattr(story, field, value)
     
@@ -171,15 +159,20 @@ async def toggle_daily_life_published(
     current_admin = Depends(get_current_admin)
 ):
     """Toggle daily life story published status (Admin only)"""
-    story = db.query(DailyLife).filter(DailyLife.id == story_id).first()
-    
-    if not story:
+    # Atomic flip via UPDATE ... SET is_published = NOT is_published — closes
+    # the read-modify-write race when two admins toggle concurrently.
+    exists = db.query(DailyLife.id).filter(DailyLife.id == story_id).first()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Daily life story not found"
         )
-    
-    story.is_published = not story.is_published
+
+    db.query(DailyLife).filter(DailyLife.id == story_id).update(
+        {DailyLife.is_published: ~DailyLife.is_published},
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(story)
+
+    story = db.query(DailyLife).filter(DailyLife.id == story_id).first()
     return story

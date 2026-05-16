@@ -161,7 +161,7 @@ async def create_project(
     # Normalize subtitle: drop if all language values are empty
     subtitle_value = None
     if project_data.subtitle:
-        sub_dict = project_data.subtitle.dict()
+        sub_dict = project_data.subtitle.model_dump()
         if any((sub_dict.get(k) or "").strip() for k in ("en", "ru", "hy")):
             subtitle_value = sub_dict
 
@@ -169,9 +169,9 @@ async def create_project(
     new_project = Project(
         course_id=project_data.course_id,
         student_id=project_data.student_id,
-        title=project_data.title.dict(),
+        title=project_data.title.model_dump(),
         subtitle=subtitle_value,
-        description=project_data.description.dict(),
+        description=project_data.description.model_dump(),
         image_urls=project_data.image_urls or [],
         links=project_data.links or {},
         is_featured=project_data.is_featured,
@@ -249,17 +249,20 @@ async def toggle_project_published(
     current_admin = Depends(get_current_admin)
 ):
     """Toggle project published status (Admin only)"""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
+    exists = db.query(Project.id).filter(Project.id == project_id).first()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-    
-    project.is_published = not project.is_published
+
+    db.query(Project).filter(Project.id == project_id).update(
+        {Project.is_published: ~Project.is_published},
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(project)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
     return project
 
 @router.patch("/{project_id}/toggle-featured", response_model=ProjectResponse)
@@ -269,17 +272,20 @@ async def toggle_project_featured(
     current_admin = Depends(get_current_admin)
 ):
     """Toggle project featured status (Admin only)"""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    
-    if not project:
+    exists = db.query(Project.id).filter(Project.id == project_id).first()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-    
-    project.is_featured = not project.is_featured
+
+    db.query(Project).filter(Project.id == project_id).update(
+        {Project.is_featured: ~Project.is_featured},
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(project)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
     return project
 
 @router.get("/by-course/{course_id_or_slug}", response_model=List[ProjectResponse])

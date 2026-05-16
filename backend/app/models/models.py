@@ -2,10 +2,21 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Text, JSON, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 
 Base = declarative_base()
+
+
+def _utc_now() -> datetime:
+    """Timezone-aware UTC timestamp.
+
+    Replaces the deprecated ``datetime.utcnow`` (removed direction in Python 3.12+).
+    The value is timezone-aware; for ``DateTime`` columns without
+    ``timezone=True`` SQLAlchemy will strip the tzinfo at write time, so the
+    on-disk format is unchanged and no Alembic migration is required.
+    """
+    return datetime.now(timezone.utc)
 
 # Enums
 class UserRole(str, enum.Enum):
@@ -41,8 +52,8 @@ class UserPersonal(Base):
     country = Column(String(100))
     city = Column(String(100))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
     # Relationships
     student = relationship("Student", back_populates="user", uselist=False)
@@ -59,7 +70,7 @@ class Student(Base):
     last_lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True)
     status = Column(SQLEnum(RegistrationStatus), default=RegistrationStatus.PENDING)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
     
     # Relationships
     user = relationship("UserPersonal", back_populates="student")
@@ -83,8 +94,8 @@ class Instructor(Base):
     skills = Column(JSON, default=[])  # List of skills
     proficiency = Column(JSON, default=[])  # List of technologies
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
     # Relationships
     user = relationship("UserPersonal", back_populates="instructor")
@@ -108,8 +119,8 @@ class Course(Base):
     monthly_payment = Column(Float)
     total_payment = Column(Float)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
      
     # Relationships
     instructors = relationship("Instructor", secondary="course_instructors", back_populates="courses")
@@ -123,7 +134,7 @@ class CourseInstructor(Base):
     id = Column(Integer, primary_key=True, index=True)
     course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"))
     instructor_id = Column(Integer, ForeignKey("instructors.id", ondelete="CASCADE"))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
 class Chapter(Base):
     __tablename__ = "chapters"
@@ -132,7 +143,7 @@ class Chapter(Base):
     course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"))
     title = Column(String(255), nullable=False)
     order_index = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
     # Relationships
     course = relationship("Course", back_populates="chapters")
     lessons = relationship("Lesson", back_populates="chapter", cascade="all, delete-orphan", passive_deletes=True)
@@ -152,8 +163,8 @@ class Lesson(Base):
     title = Column(String(255), nullable=False)
     order_index = Column(Integer, nullable=False)
     resource_links = Column(JSON, default=[])  # [{name, url}, ...]
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
     # Relationships
     chapter = relationship("Chapter", back_populates="lessons")
@@ -172,8 +183,8 @@ class Material(Base):
     chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
     lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=False)
     links = Column(JSON, default=[])  # [{name, url}, ...]
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
     # Relationships
     chapter = relationship("Chapter", back_populates="materials")
@@ -188,8 +199,8 @@ class Registration(Base):
     course_id = Column(Integer, ForeignKey("courses.id"))
     status = Column(SQLEnum(RegistrationStatus), default=RegistrationStatus.PENDING)
     message = Column(Text)
-    registration_date = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    registration_date = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
     # Relationships
     student = relationship("Student", back_populates="registrations")
@@ -203,7 +214,7 @@ class MaterialAccess(Base):
     chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
-    granted_at = Column(DateTime, default=datetime.utcnow)
+    granted_at = Column(DateTime, default=_utc_now)
     accessed_at = Column(DateTime, nullable=True)
     
     # Relationships
@@ -225,8 +236,8 @@ class Project(Base):
     links = Column(JSON, default={})  # {github, web, colab}
     is_featured = Column(Boolean, default=False)
     is_published = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
     # Relationships
     course = relationship("Course", back_populates="projects")
@@ -247,9 +258,9 @@ class DailyLife(Base):
     description = Column(JSON, nullable=False)  # {en, ru, hy} - Story description/narrative
     image_urls = Column(JSON, default=[])  # List of image URLs
     video_url = Column(String(500), nullable=True)  # Optional video URL
-    published_date = Column(DateTime, default=datetime.utcnow)  # When story was published
+    published_date = Column(DateTime, default=_utc_now)  # When story was published
     is_published = Column(Boolean, default=False)  # Admin can control visibility
-    created_at = Column(DateTime, default=datetime.utcnow)  # When story was created
+    created_at = Column(DateTime, default=_utc_now)  # When story was created
 
 
 class EmailLog(Base):
@@ -260,14 +271,14 @@ class EmailLog(Base):
     subject = Column(String(500), nullable=False)
     body = Column(Text, nullable=False)
     status = Column(String(50), default="sent")  # sent/failed
-    sent_at = Column(DateTime, default=datetime.utcnow)
+    sent_at = Column(DateTime, default=_utc_now)
     error_message = Column(Text, nullable=True)
 
 class Visit(Base):
     __tablename__ = "visits"
 
     id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=_utc_now)
     ip_address = Column(String(50), nullable=False)
     page_url = Column(String(500), nullable=False)
     user_agent = Column(String(500), nullable=True)
@@ -286,7 +297,7 @@ class ContactMessage(Base):
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
     is_resolved = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
 class Certificate(Base):
     __tablename__ = "certificates"
@@ -296,9 +307,9 @@ class Certificate(Base):
     course_id = Column(Integer, ForeignKey("courses.id"))
     certificate_number = Column(String(100), unique=True, nullable=False)
     certificate_url = Column(String(500), nullable=True)
-    issued_date = Column(DateTime, default=datetime.utcnow)
+    issued_date = Column(DateTime, default=_utc_now)
     is_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     # Relationships
     student = relationship("Student")
@@ -319,12 +330,12 @@ class Enrollment(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
     status = Column(SQLEnum(EnrollmentStatus), default=EnrollmentStatus.PENDING)
     progress = Column(Integer, default=0) # Percentage
-    enrolled_date = Column(DateTime, default=datetime.utcnow)
+    enrolled_date = Column(DateTime, default=_utc_now)
     completed_date = Column(DateTime, nullable=True)
     is_completed = Column(Boolean, default=False)
     certificate_id = Column(Integer, ForeignKey("certificates.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
     # Relationships
     student = relationship("Student", back_populates="enrollments")
@@ -339,7 +350,7 @@ class PasswordResetToken(Base):
     token = Column(String(255), unique=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = relationship("UserPersonal")
 
