@@ -1,97 +1,48 @@
+/* =================================================================
+ * Legacy hex aliases — kept ONLY for source compatibility with
+ * components that already reference these names directly (e.g.
+ * `var(--white)`, `var(--primary-alt)`). All values derive from the
+ * canonical HSL tokens in `src/index.css`.
+ *
+ * IMPORTANT: this file MUST NOT redeclare any token that Tailwind /
+ * shadcn consume in HSL-component form (e.g. `--primary`, `--background`,
+ * `--success`, `--warning`, `--danger`). Doing so re-introduces the
+ * token-collision bug where `hsl(var(--primary))` resolves to
+ * `hsl(#FFD700)`, which is invalid CSS and silently breaks every
+ * `bg-primary` / `text-primary` utility in the app.
+ * ================================================================= */
+
 :root {
-  /* Brand Colors - MANDATORY SOLID COLORS ONLY */
-  --primary: #FFD700;
-  --primary-alt: #FFC000;
-  --white: #ffffff;
-  --gray-dark: #333333;
-  --gray-light: #f4f4f4;
-  --black: #222222;
-  --success: #28a745;
-  --danger: #dc3545;
-  --blue: #0077B5;
-  --teal: #17a2b8;
-  --warning: #ffc107;
+  /* Hex-resolved aliases for direct `var()` consumption ---------------- */
+  --primary-alt: hsl(var(--accent-strong));
+  --white:       hsl(var(--text-primary));
+  --black:       hsl(var(--surface-1));
+  --gray-dark:   hsl(var(--surface-3));
+  --gray-light:  hsl(var(--text-secondary));
 
-  /* Neutrals derived from palette */
-  --text-main: var(--white);
-  --text-dark: var(--black);
-  --text-gray: var(--gray-light);
-  --bg-main: var(--black);
-  --bg-alt: var(--gray-dark);
+  /* Brand-specific solids that aren't part of the surface system ------- */
+  --linkedin-solid: #0077B5;
+  --teal-solid:     #17a2b8;
 
-  /* Helper for contrast on primary/gold backgrounds */
-  --on-primary: var(--black);
+  /* Derived helpers --------------------------------------------------- */
+  --text-main:  var(--white);
+  --text-dark:  var(--black);
+  --text-gray:  var(--gray-light);
+  --bg-main:    var(--black);
+  --bg-alt:     var(--gray-dark);
+
+  --on-primary:     var(--black);
   --on-primary-alt: var(--black);
 
-  /* Transition - MANDATORY */
   --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
-  /* Spacing & Layout */
-  --container-max-width: 1200px;
-  --section-padding: 100px 0;
+  /* Layout primitives (kept; used by .t-container) ------------------- */
+  --container-max-width:    1200px;
+  --section-padding:        100px 0;
   --section-padding-mobile: 60px 0;
 }
 
-body {
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  font-family: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
-  margin: 0;
-  transition: var(--transition);
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-  font-weight: 900;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-  transition: var(--transition);
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  background: none;
-  font-family: inherit;
-  transition: var(--transition);
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--black);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--gray-dark);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
-}
-
-/* Container utility matching Tilda */
+/* `.t-container` is the legacy max-width helper used by a few sections. */
 .t-container {
   max-width: var(--container-max-width);
   margin-left: auto;

@@ -33,12 +33,16 @@ function AnimatedRole() {
   return (
     <h1
       onClick={() => navigate(`/courses/${role.slug}`)}
-      className="text-[var(--white)] text-5xl md:text-6xl lg:text-8xl font-black leading-[0.85] tracking-tighter uppercase transition-all duration-400 cursor-pointer hover:scale-[1.02] active:scale-95 pl-8"
+      className="text-hero font-black leading-[0.85] uppercase transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-95 pl-8 text-foreground"
       style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >
       {role.lines.map((line, i) =>
         i === role.lines.length - 1 ? (
-          <span key={i} className="block text-[var(--primary-alt)] drop-shadow-[4px_4px_0px_var(--black)]">
+          <span
+            key={i}
+            className="block drop-shadow-[4px_4px_0px_hsl(var(--surface-1))]"
+            style={{ color: 'hsl(var(--accent-strong))' }}
+          >
             {line}
           </span>
         ) : (
@@ -51,29 +55,37 @@ function AnimatedRole() {
 
 const Hero: React.FC = () => {
   return (
-    <div className="relative min-h-[90vh] flex items-center bg-[var(--primary)] overflow-hidden transition-[var(--transition)]">
-      {/* Decorative Tilda-style large background circles - SOLID SHAPES */}
-      <div className="absolute -right-40 -top-40 w-[800px] h-[800px] bg-[var(--primary-alt)] rounded-full opacity-80 animate-pulse"></div>
-      <div className="absolute -left-20 -bottom-20 w-[400px] h-[400px] bg-[var(--white)] rounded-full opacity-10"></div>
+    <div className="relative min-h-[90vh] flex items-center bg-primary overflow-hidden">
+      {/* Background depth — soft accent halos echo the brand without
+          competing with the headline. */}
+      <div
+        className="absolute -right-40 -top-40 w-[800px] h-[800px] rounded-full opacity-80 animate-pulse"
+        style={{ background: 'hsl(var(--accent-strong))' }}
+      />
+      <div
+        className="absolute -left-20 -bottom-20 w-[400px] h-[400px] rounded-full opacity-10"
+        style={{ background: 'hsl(var(--text-primary))' }}
+      />
 
-      {/* Container with the grid feel */}
       <Container className="relative z-10 py-20">
         <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
 
-
-          <span className="inline-block text-[var(--white)] font-black text-xl uppercase tracking-widest animate-bounce">
+          <span className="inline-block text-foreground font-black text-xl uppercase tracking-widest animate-bounce">
             ԱՐԻ՜ ԴԱՌՆԱԼՈւ
           </span>
           <AnimatedRole />
 
-          <p className="text-[var(--white)] text-xl md:text-2xl font-bold max-w-1xl leading-snug opacity-95 border-l-8 border-[var(--black)] pl-8">
+          <p
+            className="text-foreground text-xl md:text-2xl font-bold max-w-1xl leading-snug opacity-95 pl-8"
+            style={{ borderLeft: '8px solid hsl(var(--surface-1))' }}
+          >
             Ստեղծիր ապագան այսօր։ Միացիր LogicLab-ին և տիրապետիր աշխարհի ամենապահանջված մասնագիտություններին
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6">
             <button
               onClick={() => (window.location.href = "/register")}
-              className="text-[var(--white)] pl-0 pr-10 py-4 rounded-2xl font-black text-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-4 group"
+              className="text-foreground pl-0 pr-10 py-4 rounded-2xl font-black text-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-4 group"
             >
               Գրանցվել հիմա
               <ArrowRight className="group-hover:translate-x-2 transition-transform" />
@@ -82,7 +94,6 @@ const Hero: React.FC = () => {
         </div>
       </Container>
 
-      {/* Futuristic Grid Overlay & Textures from Tilda */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none"></div>
     </div>
   );
