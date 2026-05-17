@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Text, JSON, Enum as SQLEnum
+from sqlalchemy import Column, Index, Integer, String, Boolean, DateTime, Float, ForeignKey, Text, JSON, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -154,6 +154,9 @@ class Chapter(Base):
         cascade="all, delete-orphan",
         passive_deletes=True
     )
+    __table_args__ = (
+        Index("ix_chapters_course_id", "course_id"),
+    )
 
 class Lesson(Base):
     __tablename__ = "lessons"
@@ -174,6 +177,9 @@ class Lesson(Base):
         back_populates="lesson",
         cascade="all, delete-orphan",
         passive_deletes=True
+    )
+    __table_args__ = (
+        Index("ix_lessons_chapter_id", "chapter_id"),
     )
 
 class Material(Base):
@@ -221,6 +227,14 @@ class MaterialAccess(Base):
     chapter = relationship("Chapter", back_populates="material_access")
     lesson = relationship("Lesson", back_populates="material_access")
     student = relationship("Student", back_populates="material_access")
+
+    __table_args__ = (
+        # Hot paths: progress.py filters by (student_id, chapter_id IN …)
+        # and (student_id, lesson_id IN …). Composite indexes turn these
+        # from sequential scans into index range scans.
+        Index("ix_material_access_student_chapter", "student_id", "chapter_id"),
+        Index("ix_material_access_student_lesson", "student_id", "lesson_id"),
+    )
 
 
 class Project(Base):

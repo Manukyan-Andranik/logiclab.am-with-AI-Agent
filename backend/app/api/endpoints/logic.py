@@ -1,9 +1,12 @@
 import re
 import os
 import json
+import logging
 import dotenv
 import ast
 from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from app.core.config import settings
@@ -18,11 +21,11 @@ agent_client = None
 def get_agent_client():
     global agent_client
     if agent_client is None:
-        print("Initializing Logic Agent client...")
+        logger.info("Initializing Logic Agent client")
         try:
             agent_client = Client("LogicLabAcademy/Logic_Agnet")
         except Exception as e:
-            print(f"Failed to initialize Logic Agent client: {e}")
+            logger.exception("Failed to initialize Logic Agent client: %s", e)
             raise e
     return agent_client
 
@@ -72,7 +75,7 @@ def generate_answer_with_agent(question: str, context: str, client, max_new_toke
             api_name="/respond"
         )
     except Exception as e:
-        print(f"Error calling Gradio client: {e}")
+        logger.exception("Error calling Gradio client: %s", e)
         return "Ցավոք, կապի խնդիր առաջացավ։", {}
 
     # Ensure result is a string
@@ -91,14 +94,14 @@ def generate_answer_with_agent(question: str, context: str, client, max_new_toke
             try:
                 parsed_json = json.loads(json_str)
             except Exception as e:
-                print(f"JSON standard parsing failed: {e}")
+                logger.warning("JSON standard parsing failed: %s", e)
                 try:
                     # Fallback for cases where AI might use single quotes
                     parsed_json = ast.literal_eval(json_str)
                     if not isinstance(parsed_json, dict):
                         parsed_json = {}
                 except Exception as e2:
-                    print(f"JSON literal_eval fallback failed: {e2}")
+                    logger.warning("JSON literal_eval fallback failed: %s", e2)
                     parsed_json = {}
             clean_text = result.replace(json_match.group(0), "").strip()
         else:
@@ -115,7 +118,7 @@ def generate_answer_with_agent(question: str, context: str, client, max_new_toke
             if len(clean_text) > 2:
                 translated_clean_answer = translator.translate(clean_text)
         except Exception as te:
-            print(f"Translation failed: {te}")
+            logger.warning("Translation failed: %s", te)
             translated_clean_answer = clean_text
 
     return translated_clean_answer, parsed_json
@@ -224,7 +227,7 @@ async def logic_chat(request: ChatRequest):
     clean_text, parsed_json = generate_answer_with_agent(question=request.message, context=SYSTEM_PROMPT, client=client)
 
     intent = parsed_json.get("intent")
-    print(f"[AI] Intent: {intent}")
+    logger.debug("[AI] Intent: %s", intent)
 
     return LogicAgentResponse(
         text=clean_text,

@@ -210,6 +210,9 @@ async def mark_chapter_accessed(
     for access in accesses:
         db.refresh(access)
 
+    from ..progress import invalidate_progress_cache
+    invalidate_progress_cache(current_student.id)
+
     return {
         "message": "Chapter marked as accessed",
         "accessed_at": max(a.accessed_at for a in accesses if a.accessed_at),

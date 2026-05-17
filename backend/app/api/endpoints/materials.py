@@ -254,6 +254,8 @@ async def grant_material_access(
 
     db.add(new_access)
     db.commit()
+    from ..progress import invalidate_progress_cache
+    invalidate_progress_cache(access_data.student_id)
 
     return {"message": "Access granted successfully"}
 
@@ -267,6 +269,9 @@ async def revoke_material_access(
     access = db.query(MaterialAccess).filter(MaterialAccess.id == access_id).first()
     if not access:
         raise HTTPException(status_code=404, detail="Access record not found")
+    student_id = access.student_id
     db.delete(access)
     db.commit()
+    from ..progress import invalidate_progress_cache
+    invalidate_progress_cache(student_id)
     return None

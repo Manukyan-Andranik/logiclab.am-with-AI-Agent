@@ -1,6 +1,9 @@
 # app/api/endpoints/contact_messages.py
 import html
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -39,7 +42,7 @@ class ContactFormBody(BaseModel):
 
 async def send_contact_emails(body: ContactFormBody):
     """Background task to send admin and user emails"""
-    print(f"Sending contact form emails for {body.email}")
+    logger.info("Sending contact form emails for %s", body.email)
 
     safe_name = html.escape(body.name.strip())
     safe_email = html.escape(body.email.strip())
@@ -358,7 +361,7 @@ async def submit_contact_form(
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
-    print(f"New contact message saved with ID: {new_message.id}")
+    logger.info("New contact message saved id=%s", new_message.id)
     # Add email sending to background tasks
     background_tasks.add_task(send_contact_emails, body)
     

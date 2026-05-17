@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Iterable, List, Optional, Set, Tuple
 
@@ -5,6 +6,8 @@ import cloudinary
 import cloudinary.uploader
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 # Configure Cloudinary
 if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET:
@@ -113,7 +116,7 @@ def delete_cloudinary_by_url(url: Optional[str]) -> bool:
         cloudinary.uploader.destroy(public_id, resource_type=rt, invalidate=True)
         return True
     except Exception as e:
-        print(f"Error deleting from Cloudinary ({public_id}): {e}")
+        logger.warning("Error deleting from Cloudinary public_id=%s err=%s", public_id, e)
         return False
 
 
@@ -146,7 +149,7 @@ def upload_image(file, folder="logiclab"):
         upload_result = cloudinary.uploader.upload(file, folder=folder)
         return upload_result.get("secure_url")
     except Exception as e:
-        print(f"Error uploading to Cloudinary: {e}")
+        logger.warning("Error uploading to Cloudinary: %s", e)
         return None
 
 
@@ -165,7 +168,7 @@ def upload_video(file, folder="hero"):
         )
         return upload_result.get("secure_url")
     except Exception as e:
-        print(f"Error uploading video to Cloudinary: {e}")
+        logger.warning("Error uploading video to Cloudinary: %s", e)
         return None
 
 
@@ -180,5 +183,5 @@ def delete_image(public_id: str) -> bool:
         cloudinary.uploader.destroy(public_id, resource_type="image", invalidate=True)
         return True
     except Exception as e:
-        print(f"Error deleting from Cloudinary: {e}")
+        logger.warning("Error deleting from Cloudinary: %s", e)
         return False

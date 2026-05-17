@@ -23,9 +23,11 @@ from ...schemas.schemas import (
 from ..deps import get_current_admin, get_current_student
 
 try:
-    from ..progress import compute_course_progress
+    from ..progress import compute_course_progress, invalidate_progress_cache
 except Exception:  # pragma: no cover - defensive: prod may not have new module yet
     compute_course_progress = None  # type: ignore
+    def invalidate_progress_cache(*_args, **_kwargs):  # type: ignore
+        return None
 
 try:
     from ..dashboard import build_student_dashboard
@@ -336,8 +338,6 @@ async def get_students_with_progress_admin(
             "user_id": s.user_id,
             "course_id": s.course_id,
             "status": s.status.value if s.status else None,
-            "current_chapter_id": s.current_chapter_id,
-            "last_lesson_id": s.last_lesson_id,
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "user": {
                 "id": u.id,
@@ -661,6 +661,7 @@ async def delete_student_admin(
         # Order matters! Delete from tables with foreign keys first
         db.query(Registration).filter(Registration.student_id == student_id).delete(synchronize_session=False)
         db.query(MaterialAccess).filter(MaterialAccess.student_id == student_id).delete(synchronize_session=False)
+        invalidate_progress_cache(student_id)
         db.query(Enrollment).filter(Enrollment.student_id == student_id).delete(synchronize_session=False)
         db.query(Project).filter(Project.student_id == student_id).delete(synchronize_session=False)
         db.query(Certificate).filter(Certificate.student_id == student_id).delete(synchronize_session=False)
@@ -749,6 +750,7 @@ async def mark_material_accessed_admin(
         if existing.accessed_at is None:
             existing.accessed_at = datetime.now(timezone.utc)
             db.commit()
+            invalidate_progress_cache(student_id)
         return {"message": "Access updated", "access_id": existing.id}
 
     # Create new access
@@ -760,6 +762,7 @@ async def mark_material_accessed_admin(
     db.add(material_access)
     db.commit()
     db.refresh(material_access)
+    invalidate_progress_cache(student_id)
 
     return {
         "message": "Material (chapter) access granted",
