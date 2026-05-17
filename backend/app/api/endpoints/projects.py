@@ -2,18 +2,76 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from ...core.database import get_db
 from ...core.cloudinary import delete_cloudinary_urls, delete_removed_cloudinary_urls
-from ...models.models import Project, Course, Student
-from ...schemas.schemas import ProjectCreate, ProjectUpdate, ProjectResponse
-from ..deps import get_current_admin
+from ...models.models import Enrollment, Project, Course, Student
+from ...schemas.schemas import (
+    MultilingualText,
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+)
+from ..deps import get_current_admin, get_current_student
 from ...core.cloudinary import upload_image
 from ...core.config import settings
 from ...core.image_webp import raster_image_to_webp
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+_ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
+
+
+def _multilingual_dict(value: Optional[MultilingualText]) -> Optional[Dict[str, str]]:
+    """Drop the multilingual object if all language fields are blank."""
+    if value is None:
+        return None
+    d = value.model_dump()
+    if any((d.get(k) or "").strip() for k in ("en", "ru", "hy")):
+        return d
+    return None
+
+
+def _upload_project_image_bytes(file: UploadFile, raw: bytes) -> str:
+    ext = Path(file.filename or "").suffix.lower()
+    if ext and ext not in _ALLOWED_IMAGE_EXTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Allowed image types: jpg, jpeg, png, gif, webp, heic, heif",
+        )
+    if len(raw) > settings.MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large",
+        )
+    try:
+        webp_buf = raster_image_to_webp(raw)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    url = upload_image(webp_buf, folder="projects")
+    if not url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload image",
+        )
+    return url
+
+
+class StudentProjectCreate(BaseModel):
+    """Student-side payload — student/course are inferred from the auth token
+    and the student's enrollments, so they can't impersonate someone else."""
+    course_id: int
+    title: MultilingualText
+    description: MultilingualText
+    subtitle: Optional[MultilingualText] = None
+    image_urls: Optional[List[str]] = None
+    links: Optional[Dict[str, str]] = None
 
 @router.post("/upload-image", response_model=dict)
 async def upload_project_image(
@@ -111,6 +169,104 @@ async def get_featured_projects(
             project.image_urls = [settings.DEFAULT_PROJECT_IMAGE]
             
     return projects
+
+# ---------------------------------------------------------------------------
+# STUDENT self-service endpoints
+# Declared BEFORE /{project_id} so the literal "/me" path is matched first.
+# ---------------------------------------------------------------------------
+@router.get("/me", response_model=List[ProjectResponse])
+async def list_my_projects(
+    db: Session = Depends(get_db),
+    current_student: Student = Depends(get_current_student),
+):
+    """List projects owned by the currently authenticated student."""
+    projects = (
+        db.query(Project)
+        .options(
+            joinedload(Project.student).joinedload(Student.user),
+            joinedload(Project.course),
+        )
+        .filter(Project.student_id == current_student.id)
+        .order_by(Project.created_at.desc())
+        .all()
+    )
+    for p in projects:
+        if not p.image_urls:
+            p.image_urls = [settings.DEFAULT_PROJECT_IMAGE]
+    return projects
+
+
+@router.post("/me", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+async def create_my_project(
+    payload: StudentProjectCreate,
+    db: Session = Depends(get_db),
+    current_student: Student = Depends(get_current_student),
+):
+    """Create a project on behalf of the currently authenticated student.
+
+    The project is stored unpublished — an admin must approve and publish it
+    via the existing /projects/{id}/toggle-published endpoint.
+    """
+    # Course must exist AND the student must be enrolled in it (or legacy
+    # course_id match) — prevents cross-course submissions.
+    course = db.query(Course).filter(Course.id == payload.course_id).first()
+    if not course:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+
+    enrolled = (
+        db.query(Enrollment.id)
+        .filter(
+            Enrollment.student_id == current_student.id,
+            Enrollment.course_id == payload.course_id,
+        )
+        .first()
+    )
+    if not enrolled and current_student.course_id != payload.course_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not enrolled in this course",
+        )
+
+    new_project = Project(
+        course_id=payload.course_id,
+        student_id=current_student.id,
+        title=payload.title.model_dump(),
+        subtitle=_multilingual_dict(payload.subtitle),
+        description=payload.description.model_dump(),
+        image_urls=payload.image_urls or [],
+        links=payload.links or {},
+        is_featured=False,
+        is_published=False,
+    )
+    db.add(new_project)
+    db.commit()
+    db.refresh(new_project)
+    # Eager-load relations for the response_model serializer.
+    new_project = (
+        db.query(Project)
+        .options(
+            joinedload(Project.student).joinedload(Student.user),
+            joinedload(Project.course),
+        )
+        .filter(Project.id == new_project.id)
+        .first()
+    )
+    if not new_project.image_urls:
+        new_project.image_urls = [settings.DEFAULT_PROJECT_IMAGE]
+    return new_project
+
+
+@router.post("/me/upload-image", response_model=dict)
+async def upload_my_project_image(
+    file: UploadFile = File(...),
+    current_student: Student = Depends(get_current_student),
+):
+    """Upload a project image (student-authenticated)."""
+    await file.seek(0)
+    raw = await file.read()
+    url = _upload_project_image_bytes(file, raw)
+    return {"url": url}
+
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
