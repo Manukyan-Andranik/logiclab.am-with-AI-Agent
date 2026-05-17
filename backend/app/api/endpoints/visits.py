@@ -196,12 +196,15 @@ async def get_visit_summary(
 
     browser_rows = (
         base.with_entities(
-            func.coalesce(Visit.browser, func.cast("Other", type_=Visit.browser.type)).label("label"),
+            Visit.browser.label("label"),
             func.count(Visit.id).label("count"),
         )
         .group_by(Visit.browser).order_by(func.count(Visit.id).desc()).all()
     )
-    visits_by_browser = [VisitAggregationItem(label=_label(r.label), count=int(r.count)) for r in browser_rows]
+    visits_by_browser = [
+        VisitAggregationItem(label=_label(r.label) or "Other", count=int(r.count))
+        for r in browser_rows
+    ]
 
     visitor_rows = (
         base.with_entities(
