@@ -1,13 +1,15 @@
 # app/api/endpoints/projects.py
+import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, File, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from typing import Any, Dict, List, Optional
 from ...core.database import get_db
 from ...core.cloudinary import delete_cloudinary_urls, delete_removed_cloudinary_urls
-from ...models.models import Enrollment, Project, Course, Student
+from ...core.email import email_service
+from ...models.models import Enrollment, Project, Course, Student, UserPersonal
 from ...schemas.schemas import (
     MultilingualText,
     ProjectCreate,
@@ -19,6 +21,7 @@ from ...core.cloudinary import upload_image
 from ...core.config import settings
 from ...core.image_webp import raster_image_to_webp
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -61,6 +64,39 @@ def _upload_project_image_bytes(file: UploadFile, raw: bytes) -> str:
             detail="Failed to upload image",
         )
     return url
+
+
+def _localized(text: Any, prefer: tuple = ("hy", "en", "ru")) -> str:
+    """Best-effort pick a human-readable label from a multilingual JSON field."""
+    if isinstance(text, dict):
+        for lang in prefer:
+            v = (text.get(lang) or "").strip()
+            if v:
+                return v
+        for v in text.values():
+            if v:
+                return str(v).strip()
+        return ""
+    return str(text or "").strip()
+
+
+def _project_owner_contact(db: Session, project: Project) -> Optional[tuple[str, str]]:
+    """Return (email, first_name) for the student who owns the project, or None.
+
+    Note: we intentionally do NOT filter on UserPersonal.is_active — inactive
+    students should still receive their own project's publish notification.
+    """
+    if not project.student_id:
+        return None
+    row = (
+        db.query(UserPersonal.email, UserPersonal.first_name)
+        .join(Student, Student.user_id == UserPersonal.id)
+        .filter(Student.id == project.student_id)
+        .first()
+    )
+    if not row or not row.email:
+        return None
+    return (row.email, row.first_name or "")
 
 
 class StudentProjectCreate(BaseModel):
@@ -343,18 +379,25 @@ async def create_project(
 async def update_project(
     project_id: int,
     project_data: ProjectUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Update project (Admin only)"""
+    """Update project (Admin only).
+
+    If this update is the one that publishes the project (False/NULL → True),
+    the owner gets a notification email — same as toggle-published.
+    """
     project = db.query(Project).filter(Project.id == project_id).first()
-    
+
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
-    
+
+    was_published = bool(project.is_published)
+
     update_data = project_data.model_dump(exclude_unset=True)
 
     if "image_urls" in update_data and update_data["image_urls"] is not None:
@@ -372,9 +415,29 @@ async def update_project(
             continue
         if value is not None:
             setattr(project, field, value)
-    
+
     db.commit()
     db.refresh(project)
+
+    if project.is_published and not was_published:
+        contact = _project_owner_contact(db, project)
+        if contact is None:
+            logger.warning(
+                "project.publish (via update): no email recipient project_id=%s student_id=%s",
+                project.id, project.student_id,
+            )
+        else:
+            email, first_name = contact
+            title = _localized(project.title) or "Project"
+            logger.info(
+                "project.publish (via update): queueing notification project_id=%s to=%s",
+                project.id, email,
+            )
+            background_tasks.add_task(
+                email_service.send_project_published,
+                email, first_name, title, project.id,
+            )
+
     return project
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -401,24 +464,54 @@ async def delete_project(
 @router.patch("/{project_id}/toggle-published", response_model=ProjectResponse)
 async def toggle_project_published(
     project_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Toggle project published status (Admin only)"""
-    exists = db.query(Project.id).filter(Project.id == project_id).first()
-    if not exists:
+    """Toggle project published status (Admin only).
+
+    On a False → True transition, the project owner gets a notification email
+    (sent via BackgroundTasks so the response is not blocked on SMTP).
+    """
+    prior = db.query(Project.id, Project.is_published).filter(
+        Project.id == project_id
+    ).first()
+    if not prior:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+    # NULL-safe: legacy rows can have is_published = NULL (model default only
+    # at the Python level). Treat NULL as False so the toggle is deterministic.
+    was_published = bool(prior.is_published)
+    new_value = not was_published
 
     db.query(Project).filter(Project.id == project_id).update(
-        {Project.is_published: ~Project.is_published},
+        {Project.is_published: new_value},
         synchronize_session=False,
     )
     db.commit()
 
     project = db.query(Project).filter(Project.id == project_id).first()
+
+    if new_value and not was_published and project is not None:
+        contact = _project_owner_contact(db, project)
+        if contact is None:
+            logger.warning(
+                "project.publish: no email recipient project_id=%s student_id=%s",
+                project.id, project.student_id,
+            )
+        else:
+            email, first_name = contact
+            title = _localized(project.title) or "Project"
+            logger.info(
+                "project.publish: queueing notification project_id=%s to=%s",
+                project.id, email,
+            )
+            background_tasks.add_task(
+                email_service.send_project_published,
+                email, first_name, title, project.id,
+            )
     return project
 
 @router.patch("/{project_id}/toggle-featured", response_model=ProjectResponse)

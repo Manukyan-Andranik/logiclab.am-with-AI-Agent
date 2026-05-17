@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
@@ -169,13 +169,35 @@ async def get_all_material_access(
     
     return {"data": accesses, "total": total}
 
+def _course_title_label(course) -> str:
+    """Best-effort multilingual → human label for course.title."""
+    if course is None:
+        return ""
+    t = course.title
+    if isinstance(t, dict):
+        for lang in ("hy", "en", "ru"):
+            v = (t.get(lang) or "").strip()
+            if v:
+                return v
+        for v in t.values():
+            if v:
+                return str(v).strip()
+        return ""
+    return str(t or "")
+
+
 @router.post("/grant-access", status_code=status.HTTP_201_CREATED)
 async def grant_material_access(
     access_data: MaterialAccessCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Grant chapter-level or lesson-level material access (Admin only)."""
+    """Grant chapter-level or lesson-level material access (Admin only).
+
+    On a successful grant, the student is notified by email
+    (non-blocking — dispatched via FastAPI BackgroundTasks).
+    """
     if access_data.chapter_id is None and access_data.lesson_id is None:
         raise HTTPException(
             status_code=400,
@@ -221,6 +243,8 @@ async def grant_material_access(
             lesson_id=access_data.lesson_id,
             student_id=access_data.student_id,
         )
+        chapter_for_email = lesson.chapter
+        lesson_for_email = lesson
     else:
         chapter_id = access_data.chapter_id
         chapter = (
@@ -231,6 +255,8 @@ async def grant_material_access(
         )
         if not chapter:
             raise HTTPException(status_code=404, detail="Chapter not found")
+        chapter_for_email = chapter
+        lesson_for_email = None  # chapter-level grant
 
         existing = (
             db.query(MaterialAccess)
@@ -256,6 +282,32 @@ async def grant_material_access(
     db.commit()
     from ..progress import invalidate_progress_cache
     invalidate_progress_cache(access_data.student_id)
+
+    # Notify the student. Pick the lesson-specific email when the grant
+    # targets a single lesson; otherwise send the chapter-wide notification.
+    if (
+        chapter_for_email is not None
+        and student.user is not None
+        and student.user.email
+    ):
+        course_label = _course_title_label(chapter_for_email.course)
+        if lesson_for_email is not None:
+            background_tasks.add_task(
+                email_service.send_lesson_access_granted,
+                student.user.email,
+                student.user.first_name or "",
+                lesson_for_email.title or "",
+                chapter_for_email.title or "",
+                course_label,
+            )
+        else:
+            background_tasks.add_task(
+                email_service.send_material_access_granted,
+                student.user.email,
+                student.user.first_name or "",
+                chapter_for_email.title or "",
+                course_label,
+            )
 
     return {"message": "Access granted successfully"}
 

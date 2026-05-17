@@ -74,7 +74,9 @@ class EmailService:
     <tr>
       <td style="background:{CARD};border-radius:12px;border:1px solid {CARD_BORDER};overflow:hidden;">
         <div style="padding:18px 22px;background:{BG};border-bottom:3px solid {GOLD};">
-          <span style="font-size:19px;font-weight:700;color:{GOLD};letter-spacing:0.02em;">LogicLab</span>
+          <span style="font-size:20px;font-weight:800;letter-spacing:0.02em;line-height:1;">
+            <span style="color:{GOLD};">Logic</span><span style="color:{FG};">Lab</span>
+          </span>
         </div>
         <div style="padding:22px 22px 26px;color:{FG};">
 {content}
@@ -137,7 +139,7 @@ class EmailService:
     ):
         sn, cn = _h(student_name), _h(course_name)
         le, pw = _h(login_email), _h(temp_password)
-        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Բարի գալուստ LogicLab ընտանիք ✨</p>
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Բարի գալուստ <span style="color:{GOLD};">Logic</span><span style="color:{FG};">Lab</span> ընտանիք ✨</p>
           <p style="margin:0 0 16px;color:{MUTED};">Ձեր մասնակցությունը <strong style="color:{GOLD};">{cn}</strong> դասընթացին հաստատված է։ Ահա Ձեր մուտքային տվյալները՝ անձնական էջ մուտք գործելու համար.</p>
           <div style="background:{INNER};border:1px solid {BORDER};border-radius:8px;padding:16px 18px;margin:0 0 14px;">
             <p style="margin:0 0 8px;font-size:15px;color:{FG};"><strong style="color:{GOLD};">Էլ. հասցե՝</strong> {le}</p>
@@ -188,6 +190,46 @@ class EmailService:
             html=True,
         )
 
+    async def send_project_published(
+        self,
+        to_email: str,
+        student_name: str,
+        project_title: str,
+        project_id: int,
+    ):
+        """Project owner notification: admin approved & published their project."""
+        sn, pt = _h(student_name), _h(project_title)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Շնորհավորում ենք, {sn} 🎉</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ձեր նախագիծը՝ <strong style="color:{GOLD};">{pt}</strong>, հաստատվել և հրապարակվել է LogicLab-ի կայքում։</p>
+          <p style="margin:0;color:{MUTED};">Այժմ բոլոր այցելուները կարող են ծանոթանալ Ձեր աշխատանքին։ Շնորհակալություն ձեր ներդրման համար։</p>"""
+        url = f"{settings.FRONTEND_URL}/projects/{project_id}"
+        return await self.send_email(
+            to_email,
+            "Ձեր նախագիծը հրապարակված է — LogicLab",
+            self._get_themed_html(content, url, "Դիտել նախագիծը"),
+            html=True,
+        )
+
+    async def send_daily_life_published(
+        self,
+        to_email: str,
+        student_name: str,
+        story_title: str,
+        story_id: int,
+    ):
+        """Notify a student that a new Daily Life story is live."""
+        sn, st = _h(student_name), _h(story_title)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Նոր պատմություն ունենք ✨</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ողջույն, {sn}։ Հենց նոր հրապարակվեց նոր պատմություն՝ <strong style="color:{GOLD};">{st}</strong>.</p>
+          <p style="margin:0;color:{MUTED};">Խորհուրդ ենք տալիս մի քանի րոպե հատկացնել ընթերցելու համար։</p>"""
+        url = f"{settings.FRONTEND_URL}/#daily-life"
+        return await self.send_email(
+            to_email,
+            "Նոր պատմություն — LogicLab",
+            self._get_themed_html(content, url, "Բացել"),
+            html=True,
+        )
+
     async def send_material_access_granted(
         self,
         to_email: str,
@@ -195,16 +237,40 @@ class EmailService:
         chapter_title: str,
         course_name: str,
     ):
+        """Chapter-level grant: student now has access to a whole chapter."""
         sn, ch, cn = _h(student_name), _h(chapter_title), _h(course_name)
-        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Նոր ուսումնական նյութեր 📚</p>
-          <p style="margin:0 0 10px;color:{MUTED};">Ողջույն {sn}։ <strong style="color:{GOLD};">{cn}</strong> դասընթացում արդեն հասանելի է նոր բաժինը.</p>
-          <p style="margin:0;color:{MUTED};"><strong style="color:{GOLD};">Թեմա՝</strong> {ch}</p>
-          <p style="margin:10px 0 0;color:{MUTED};">Ժամանակն է անցնել նոր գիտելիքների ձեռքբերմանը։</p>"""
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Նոր գլուխ է հասանելի 📚</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ողջույն {sn}։ <strong style="color:{GOLD};">{cn}</strong> դասընթացում Ձեզ համար արդեն հասանելի է նոր թեմա.</p>
+          <p style="margin:0;color:{MUTED};"><strong style="color:{GOLD};">Գլուխ՝</strong> {ch}</p>
+          """
         url = f"{settings.FRONTEND_URL}/student/materials"
         return await self.send_email(
             to_email,
-            "Նոր նյութեր են հասանելի — LogicLab",
-            self._get_themed_html(content, url, "Անցնել դասին"),
+            "Նոր գլուխ է հասանելի — LogicLab",
+            self._get_themed_html(content, url, "Բացել"),
+            html=True,
+        )
+
+    async def send_lesson_access_granted(
+        self,
+        to_email: str,
+        student_name: str,
+        lesson_title: str,
+        chapter_title: str,
+        course_name: str,
+    ):
+        """Lesson-level grant: a single lesson within a chapter is now available."""
+        sn, ls, ch, cn = _h(student_name), _h(lesson_title), _h(chapter_title), _h(course_name)
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Նոր դաս է հասանելի ✨</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ողջույն {sn}։ <strong style="color:{GOLD};">{cn}</strong> դասընթացում Ձեզ համար բացվել է նոր դաս.</p>
+          <p style="margin:0;color:{MUTED};"><strong style="color:{GOLD};">Դաս՝</strong> {ls}</p>
+          <p style="margin:4px 0 0;color:{MUTED};"><strong style="color:{GOLD};">Գլուխ՝</strong> {ch}</p>
+          """
+        url = f"{settings.FRONTEND_URL}/student/materials"
+        return await self.send_email(
+            to_email,
+            "Նոր դաս է հասանելի — LogicLab",
+            self._get_themed_html(content, url, "Բացել"),
             html=True,
         )
 

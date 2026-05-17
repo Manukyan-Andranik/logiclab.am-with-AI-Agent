@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -725,17 +725,33 @@ async def update_student_progress_admin(
 async def mark_material_accessed_admin(
     student_id: int,
     chapter_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Mark a chapter as accessed/grant access (Admin only)"""
-    # Verify student exists
-    student = db.query(Student).filter(Student.id == student_id).first()
+    """Mark a chapter as accessed/grant access (Admin only).
+
+    On a brand-new grant the student is notified by email (non-blocking via
+    BackgroundTasks). An already-existing access record is treated as an
+    "update" and does NOT re-notify, so admins can re-mark without spam.
+    """
+    # Verify student exists (load user for the email below)
+    student = (
+        db.query(Student)
+        .options(joinedload(Student.user))
+        .filter(Student.id == student_id)
+        .first()
+    )
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    
-    # Verify chapter exists
-    chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
+
+    # Verify chapter exists (load course for the email body)
+    chapter = (
+        db.query(Chapter)
+        .options(joinedload(Chapter.course))
+        .filter(Chapter.id == chapter_id)
+        .first()
+    )
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
 
@@ -763,6 +779,31 @@ async def mark_material_accessed_admin(
     db.commit()
     db.refresh(material_access)
     invalidate_progress_cache(student_id)
+
+    # Notify student of newly-available material (skip if no email / inactive).
+    if (
+        student.user is not None
+        and student.user.email
+        and student.user.is_active
+    ):
+        course_title = ""
+        if chapter.course is not None:
+            t = chapter.course.title
+            if isinstance(t, dict):
+                course_title = (
+                    (t.get("hy") or "").strip()
+                    or (t.get("en") or "").strip()
+                    or (t.get("ru") or "").strip()
+                )
+            else:
+                course_title = str(t or "")
+        background_tasks.add_task(
+            email_service.send_material_access_granted,
+            student.user.email,
+            student.user.first_name or "",
+            chapter.title or "",
+            course_title,
+        )
 
     return {
         "message": "Material (chapter) access granted",
