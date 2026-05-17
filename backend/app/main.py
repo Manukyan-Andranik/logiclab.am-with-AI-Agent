@@ -161,6 +161,7 @@ app.include_router(materials.router, prefix="/materials", tags=["Materials"])
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
 app.include_router(daily_life.router, prefix="/daily-life", tags=["Daily Life"])
 app.include_router(visits.router, tags=["Visits"])
+app.include_router(visits.analytics_router)  # /admin/analytics/*
 app.include_router(contact_messages.router, prefix="/contact-messages", tags=["Contact Messages"])
 app.include_router(certificates.router, prefix="/certificates", tags=["Certificates"])
 app.include_router(enrollments.router, prefix="/enrollments", tags=["Enrollments"])

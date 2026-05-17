@@ -1,5 +1,5 @@
 # models.py
-from sqlalchemy import Column, Index, Integer, String, Boolean, DateTime, Float, ForeignKey, Text, JSON, Enum as SQLEnum
+from sqlalchemy import Column, Date, Index, Integer, String, Boolean, DateTime, Float, ForeignKey, Text, JSON, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
@@ -288,18 +288,98 @@ class EmailLog(Base):
     sent_at = Column(DateTime, default=_utc_now)
     error_message = Column(Text, nullable=True)
 
+class VisitorClass(str, enum.Enum):
+    """Three-way visitor classification used across analytics."""
+    HUMAN = "human"
+    VERIFIED_BOT = "verified_bot"
+    SUSPICIOUS_BOT = "suspicious_bot"
+
+
 class Visit(Base):
     __tablename__ = "visits"
 
     id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime, default=_utc_now)
-    ip_address = Column(String(50), nullable=False)
+    timestamp = Column(DateTime, default=_utc_now, nullable=False)
+
+    # Network
+    ip_address = Column(String(64), nullable=False)
+    ip_hash = Column(String(64), nullable=True)            # SHA-256 of (ip+salt), for unique counting under anonymization
+    session_id = Column(String(64), nullable=True)         # rolling hash (ip + UA + day-bucket) for visit grouping
+
+    # Request
     page_url = Column(String(500), nullable=False)
+    path = Column(String(255), nullable=True)              # normalized path (query stripped) — primary group-by key
+    query_string = Column(String(500), nullable=True)
+    method = Column(String(10), nullable=True)
+    status_code = Column(Integer, nullable=True)
+    referrer = Column(String(500), nullable=True)
+    referrer_host = Column(String(255), nullable=True)     # source bucket: "google.com", "(direct)", etc.
+
+    # User-Agent derived
     user_agent = Column(String(500), nullable=True)
+    browser = Column(String(64), nullable=True)
+    os = Column(String(64), nullable=True)
+    device_type = Column(String(16), nullable=True)        # "mobile" | "tablet" | "desktop" | "bot"
+
+    # Geo (filled by an upstream proxy header or a geo provider; nullable)
     country = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
-    referrer = Column(String(500), nullable=True)
-    is_bot = Column(Boolean, default=False)
+
+    # Classification
+    is_bot = Column(Boolean, default=False, nullable=False)              # kept for backwards compat
+    visitor_class = Column(String(20), nullable=True)                    # values from VisitorClass
+
+    # Duration / engagement (optional, may be filled by a JS ping)
+    duration_ms = Column(Integer, nullable=True)
+
+    __table_args__ = (
+        Index("ix_visits_timestamp", "timestamp"),
+        Index("ix_visits_ts_isbot", "timestamp", "is_bot"),
+        Index("ix_visits_ip_ts", "ip_address", "timestamp"),
+        Index("ix_visits_path_ts", "path", "timestamp"),
+        Index("ix_visits_session", "session_id"),
+        Index("ix_visits_class_ts", "visitor_class", "timestamp"),
+    )
+
+
+class VisitDaily(Base):
+    """Pre-aggregated per-day counters.
+
+    Populated by the rollup job. Lets the admin overview render in O(days)
+    even when the raw visits table has millions of rows.
+    """
+    __tablename__ = "visits_daily"
+
+    id = Column(Integer, primary_key=True, index=True)
+    day = Column(Date, nullable=False)
+    path = Column(String(255), nullable=True)              # NULL = global row for the day
+    visitor_class = Column(String(20), nullable=True)      # NULL = all classes
+    total_visits = Column(Integer, default=0, nullable=False)
+    unique_visitors = Column(Integer, default=0, nullable=False)
+    bot_visits = Column(Integer, default=0, nullable=False)
+    human_visits = Column(Integer, default=0, nullable=False)
+
+    __table_args__ = (
+        Index("ix_visits_daily_day", "day"),
+        Index("ix_visits_daily_day_path", "day", "path"),
+        Index("ix_visits_daily_day_class", "day", "visitor_class"),
+    )
+
+
+class VisitMonthly(Base):
+    """Pre-aggregated per-month counters (built from VisitDaily)."""
+    __tablename__ = "visits_monthly"
+
+    id = Column(Integer, primary_key=True, index=True)
+    month = Column(Date, nullable=False)                   # first-of-month
+    total_visits = Column(Integer, default=0, nullable=False)
+    unique_visitors = Column(Integer, default=0, nullable=False)
+    bot_visits = Column(Integer, default=0, nullable=False)
+    human_visits = Column(Integer, default=0, nullable=False)
+
+    __table_args__ = (
+        Index("ix_visits_monthly_month", "month"),
+    )
 
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
