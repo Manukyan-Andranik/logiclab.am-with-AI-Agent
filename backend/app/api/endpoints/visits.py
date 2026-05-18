@@ -11,6 +11,7 @@ Two route groups live here:
 from __future__ import annotations
 
 import csv
+import functools
 import io
 import json
 import logging
@@ -20,6 +21,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import Date, Integer, cast, distinct, func
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 from ...analytics import queries as aq
@@ -114,7 +116,50 @@ def _label(v) -> str:
     return "" if v is None else str(v)
 
 
+def _schema_drift_guard(scope: str):
+    """Catch the specific class of DB errors caused by visits schema drift.
+
+    Returns an HTTP 503 with an operator-actionable message instead of letting
+    Uvicorn render a SQLAlchemy stacktrace into the response. The fix is to
+    run `alembic upgrade head`; the body says so explicitly.
+
+    IMPORTANT: uses `functools.wraps` so FastAPI's signature introspection
+    (which drives Depends / Query / Path parameter resolution) sees the
+    *original* function via `__wrapped__`. Without that, FastAPI would treat
+    the route as having zero parameters and reject every request with 422.
+    """
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(*args, **kwargs):
+            try:
+                return await fn(*args, **kwargs)
+            except (ProgrammingError, OperationalError) as exc:
+                # Roll back so the session is reusable for subsequent requests.
+                db = kwargs.get("db")
+                if db is not None:
+                    try:
+                        db.rollback()
+                    except Exception:  # pragma: no cover - defensive
+                        pass
+                msg = str(getattr(exc, "orig", exc))
+                logger.error(
+                    "analytics.schema_drift scope=%s err=%s — run `alembic upgrade head`",
+                    scope, msg,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "error": "analytics_schema_drift",
+                        "scope": scope,
+                        "hint": "Database schema is out of date. Run `alembic upgrade head`.",
+                    },
+                )
+        return wrapper
+    return decorator
+
+
 @router.get("/visits/stats/summary", response_model=VisitSummaryResponse)
+@_schema_drift_guard("visits.summary")
 async def get_visit_summary(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -244,6 +289,7 @@ async def get_visit_summary(
 
 
 @router.get("/visits/stats/by-path", response_model=List[VisitAggregationItem])
+@_schema_drift_guard("visits.by_path")
 async def get_visits_by_path(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -265,6 +311,7 @@ async def get_visits_by_path(
 
 
 @router.get("/visits/stats/by-date", response_model=List[VisitAggregationItem])
+@_schema_drift_guard("visits.by_date")
 async def get_visits_by_date(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -281,6 +328,7 @@ async def get_visits_by_date(
 
 
 @router.get("/visits/stats/by-day", response_model=List[DailyVisitGroup])
+@_schema_drift_guard("visits.by_day")
 async def get_visits_by_day(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -372,6 +420,7 @@ analytics_router = APIRouter(prefix="/admin/analytics", tags=["Analytics"])
 
 
 @analytics_router.get("/overview", response_model=OverviewResponse)
+@_schema_drift_guard("analytics.overview")
 async def analytics_overview(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -382,6 +431,7 @@ async def analytics_overview(
 
 
 @analytics_router.get("/visits", response_model=AnalyticsVisitListResponse)
+@_schema_drift_guard("analytics.visits")
 async def analytics_visits(
     skip: int = 0,
     limit: int = 100,
@@ -400,6 +450,7 @@ async def analytics_visits(
 
 
 @analytics_router.get("/pages")
+@_schema_drift_guard("analytics.pages")
 async def analytics_pages(
     limit: int = 20,
     start_date: Optional[datetime] = None,
@@ -411,6 +462,7 @@ async def analytics_pages(
 
 
 @analytics_router.get("/bots", response_model=BotActivityResponse)
+@_schema_drift_guard("analytics.bots")
 async def analytics_bots(
     limit: int = 100,
     start_date: Optional[datetime] = None,
@@ -422,6 +474,7 @@ async def analytics_bots(
 
 
 @analytics_router.get("/unique", response_model=TopIPResponse)
+@_schema_drift_guard("analytics.unique")
 async def analytics_unique(
     limit: int = 50,
     visitor_class: Optional[str] = None,
