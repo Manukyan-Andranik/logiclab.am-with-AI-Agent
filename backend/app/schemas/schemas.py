@@ -762,6 +762,17 @@ class MaterialAccessCreate(BaseModel):
     chapter_id: Optional[int] = None
     lesson_id: Optional[int] = None
     resource_link_index: Optional[int] = None  # Index of the resource link in lesson.resource_links
+    send_email: bool = True
+
+class AccessSummaryItem(BaseModel):
+    chapter_title: str
+    lesson_title: Optional[str] = None
+    resource_name: Optional[str] = None
+
+class AccessSummaryNotify(BaseModel):
+    student_id: int
+    course_name: str
+    items: List[AccessSummaryItem]
 
 class MaterialAccessResponse(BaseModel):
     id: int

@@ -10,7 +10,8 @@ from ...models.models import (
 )
 from ...schemas.schemas import (
     MaterialCreate, MaterialUpdate, MaterialResponse, MaterialLink,
-    MaterialAccessCreate, MaterialAccessResponse, MaterialAccessListResponse
+    MaterialAccessCreate, MaterialAccessResponse, MaterialAccessListResponse,
+    AccessSummaryNotify
 )
 from ..deps import get_current_admin
 
@@ -318,7 +319,8 @@ async def grant_material_access(
     # Notify the student. Pick the lesson-specific email when the grant
     # targets a single lesson; otherwise send the chapter-wide notification.
     if (
-        chapter_for_email is not None
+        access_data.send_email
+        and chapter_for_email is not None
         and student.user is not None
         and student.user.email
     ):
@@ -342,6 +344,33 @@ async def grant_material_access(
             )
 
     return {"message": "Access granted successfully"}
+
+@router.post("/notify-summary")
+async def notify_access_summary(
+    data: AccessSummaryNotify,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Send a summary notification email to a student about multiple material grants."""
+    student = db.query(Student).options(joinedload(Student.user)).filter(Student.id == data.student_id).first()
+    if not student or not student.user:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    if not student.user.email:
+        raise HTTPException(status_code=400, detail="Student has no email address")
+
+    items_payload = [item.model_dump() for item in data.items]
+    
+    background_tasks.add_task(
+        email_service.send_cumulative_access_granted,
+        student.user.email,
+        student.user.first_name or "",
+        data.course_name,
+        items_payload
+    )
+    
+    return {"message": "Summary notification sent"}
 
 @router.delete("/revoke-access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_material_access(

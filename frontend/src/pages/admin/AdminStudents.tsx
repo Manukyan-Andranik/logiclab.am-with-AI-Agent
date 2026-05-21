@@ -13,8 +13,9 @@ import {
   getStudentEnrollments,
   addStudentEnrollment,
   removeStudentEnrollment,
+  notifyAccessSummary,
 } from "@/api/admin";
-import type { AdminEnrollmentSummary } from "@/api/admin";
+import type { AdminEnrollmentSummary, AccessSummaryItem } from "@/api/admin";
 import { createStudent } from "@/api/auth";
 import { getCourses } from "@/api/courses";
 import { getCourseCurriculum } from "@/api/courses";
@@ -71,6 +72,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -156,6 +158,10 @@ const AdminStudents = () => {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isManageOpen, setIsManageOpen] = useState(false);
   const [manageTab, setManageTab] = useState("personal");
+
+  // Summary notification state
+  const [pendingNotifications, setPendingNotifications] = useState<AccessSummaryItem[]>([]);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
 
   // Personal edit form state
   const [isEditing, setIsEditing] = useState(false);
@@ -286,11 +292,12 @@ const AdminStudents = () => {
   };
 
   const grantChapterMutation = useMutation({
-    mutationFn: (chapterId: number) =>
-      assignChapterToStudent(selectedStudent.id, chapterId),
-    onSuccess: () => {
+    mutationFn: ({ chapterId }: { chapterId: number; title: string }) =>
+      assignChapterToStudent(selectedStudent.id, chapterId, false),
+    onSuccess: (_, variables) => {
       refetchAccess();
       invalidateProgress();
+      setPendingNotifications(prev => [...prev, { chapter_title: variables.title }]);
       toast({ title: "Granted", description: "Chapter access granted." });
     },
     onError: (error: any) => {
@@ -299,15 +306,40 @@ const AdminStudents = () => {
   });
 
   const grantLessonMutation = useMutation({
-    mutationFn: ({ lessonId, resourceLinkIndex }: { lessonId: number, resourceLinkIndex?: number }) =>
-      grantLessonAccess(selectedStudent.id, lessonId, resourceLinkIndex),
-    onSuccess: () => {
+    mutationFn: ({ lessonId, resourceLinkIndex }: { lessonId: number, resourceLinkIndex?: number; chapterTitle: string; lessonTitle: string; resourceName?: string }) =>
+      grantLessonAccess(selectedStudent.id, lessonId, resourceLinkIndex, false),
+    onSuccess: (_, variables) => {
       refetchAccess();
       invalidateProgress();
+      setPendingNotifications(prev => [...prev, {
+        chapter_title: variables.chapterTitle,
+        lesson_title: variables.lessonTitle,
+        resource_name: variables.resourceName
+      }]);
       toast({ title: "Granted", description: "Access granted." });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to grant access", variant: "destructive" });
+    },
+  });
+
+  const sendSummaryMutation = useMutation({
+    mutationFn: () => {
+      const course = courses?.find(c => c.id === parseInt(selectedAccessCourseId));
+      return notifyAccessSummary(
+        selectedStudent.id,
+        course?.title?.hy || course?.title?.en || "LogicLab Course",
+        pendingNotifications
+      );
+    },
+    onSuccess: () => {
+      setPendingNotifications([]);
+      setIsSummaryDialogOpen(false);
+      setIsManageOpen(false);
+      toast({ title: "Sent", description: "Summary notification sent to student." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to send notification", variant: "destructive" });
     },
   });
 
@@ -426,6 +458,7 @@ const AdminStudents = () => {
     setSelectedStudent(student);
     setManageTab("personal");
     setIsEditing(false);
+    setPendingNotifications([]);
     setEditForm({
       first_name: student.user?.first_name || "",
       last_name: student.user?.last_name || "",
@@ -463,6 +496,14 @@ const AdminStudents = () => {
     setTempPassword(null);
     setShowPassword(false);
     setCreateForm({ first_name: "", last_name: "", email: "", course_id: "" });
+  };
+
+  const handleDoneManage = () => {
+    if (pendingNotifications.length > 0) {
+      setIsSummaryDialogOpen(true);
+    } else {
+      setIsManageOpen(false);
+    }
   };
 
   const getAccessRecord = (chapterId?: number, lessonId?: number, resourceLinkIndex?: number) => {
@@ -1138,7 +1179,7 @@ const AdminStudents = () => {
                                 variant="outline"
                                 className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10 gap-2 border-primary/30"
                                 onClick={() =>
-                                  grantChapterMutation.mutate(chapter.chapter.id)
+                                  grantChapterMutation.mutate({ chapterId: chapter.chapter.id, title: chapter.chapter.title })
                                 }
                               >
                                 <ShieldCheck size={14} />
@@ -1248,7 +1289,7 @@ const AdminStudents = () => {
                                         variant="ghost"
                                         className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
                                         onClick={() =>
-                                          grantLessonMutation.mutate({ lessonId: lesson.id })
+                                          grantLessonMutation.mutate({ lessonId: lesson.id, chapterTitle: chapter.chapter.title, lessonTitle: lesson.title })
                                         }
                                       >
                                         Grant All
@@ -1307,7 +1348,7 @@ const AdminStudents = () => {
                                                 size="sm"
                                                 variant="ghost"
                                                 className="h-5 px-1.5 text-[8px] font-bold uppercase text-primary hover:bg-primary/10"
-                                                onClick={() => grantLessonMutation.mutate({ lessonId: lesson.id, resourceLinkIndex: linkIdx })}
+                                                onClick={() => grantLessonMutation.mutate({ lessonId: lesson.id, resourceLinkIndex: linkIdx, chapterTitle: chapter.chapter.title, lessonTitle: lesson.title, resourceName: link.name })}
                                               >
                                                 Grant
                                               </Button>
@@ -1445,7 +1486,7 @@ const AdminStudents = () => {
           <div className="p-6 border-t border-border bg-secondary/10 shrink-0">
             <DialogFooter>
               <Button
-                onClick={() => setIsManageOpen(false)}
+                onClick={handleDoneManage}
                 className="w-full sm:w-auto"
               >
                 Done
@@ -1454,6 +1495,59 @@ const AdminStudents = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Summary Notification Dialog ── */}
+      <AlertDialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Send className="text-primary" size={18} />
+              Send Access Notification?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You have granted access to <strong>{pendingNotifications.length}</strong> items.
+              Would you like to send a summary email to <strong>{selectedStudent?.user?.first_name}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="max-h-[300px] overflow-y-auto space-y-2 my-4 border rounded-lg p-3 bg-secondary/10">
+            {pendingNotifications.map((item, i) => (
+              <div key={i} className="text-xs flex flex-col border-b last:border-0 pb-1.5 mb-1.5 last:pb-0 last:mb-0 border-border/50">
+                <span className="font-bold text-foreground">
+                  {item.chapter_title}
+                </span>
+                {(item.lesson_title || item.resource_name) && (
+                  <span className="text-muted-foreground mt-0.5">
+                    {item.lesson_title}{item.resource_name ? ` › ${item.resource_name}` : ""}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsSummaryDialogOpen(false);
+                setIsManageOpen(false);
+                setPendingNotifications([]);
+              }}
+            >
+              Finish without Email
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => sendSummaryMutation.mutate()}
+              disabled={sendSummaryMutation.isPending}
+            >
+              <Send size={14} />
+              {sendSummaryMutation.isPending ? "Sending..." : "Send Summary Email"}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Create Student Dialog ── */}
       <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) handleCloseCreate(); else setIsCreateOpen(true); }}>

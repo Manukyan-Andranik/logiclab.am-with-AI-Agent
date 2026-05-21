@@ -270,7 +270,47 @@ class EmailService:
         return await self.send_email(
             to_email,
             "Նոր դաս է հասանելի — LogicLab",
-            self._get_themed_html(content, url, "Բացել"),
+            self._get_themed_html(content, url, "Մուտք գործել"),
+            html=True,
+        )
+
+    async def send_cumulative_access_granted(
+        self,
+        to_email: str,
+        student_name: str,
+        course_name: str,
+        items: list,
+    ):
+        """Send a single email summarizing multiple granted access records."""
+        sn, cn = _h(student_name), _h(course_name)
+
+        items_html = ""
+        for item in items:
+            ct = _h(item.get("chapter_title", ""))
+            lt = _h(item.get("lesson_title", ""))
+            rn = _h(item.get("resource_name", ""))
+
+            if rn:
+                label = f"Ռեսուրս՝ <strong>{rn}</strong> ({lt}, {ct})"
+            elif lt:
+                label = f"Դաս՝ <strong>{lt}</strong> ({ct})"
+            else:
+                label = f"Գլուխ՝ <strong>{ct}</strong>"
+
+            items_html += f'<li style="margin-bottom:8px;color:{MUTED};">{label}</li>'
+
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Ուսումնական նյութերի թարմացում 📚</p>
+          <p style="margin:0 0 10px;color:{MUTED};">Ողջույն {sn}։ <strong style="color:{GOLD};">{cn}</strong> դասընթացում Ձեզ համար արդեն հասանելի են հետևյալ նյութերը.</p>
+          <ul style="margin:16px 0;padding-left:20px;">
+            {items_html}
+          </ul>
+          <p style="margin:0;color:{MUTED};">Հաջողություն ենք մաղթում ուսման մեջ:</p>
+          """
+        url = f"{settings.FRONTEND_URL}/student/materials"
+        return await self.send_email(
+            to_email,
+            "Նոր ուսումնական նյութեր — LogicLab",
+            self._get_themed_html(content, url, "Մուտք գործել"),
             html=True,
         )
 

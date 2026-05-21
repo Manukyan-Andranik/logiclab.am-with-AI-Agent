@@ -19,6 +19,7 @@ export type MaterialAccess = {
   student_id: number;
   chapter_id: number | null;
   lesson_id: number | null;
+  resource_link_index: number | null;
 };
 
 export type MaterialAccessListResponse = {
@@ -238,13 +239,31 @@ export const createOrUpdateLessonMaterials = async (
   }
 };
 
-export const grantLessonAccess = async (studentId: number, lessonId: number, resourceLinkIndex?: number) => {
+export const grantLessonAccess = async (studentId: number, lessonId: number, resourceLinkIndex?: number, sendEmail: boolean = true) => {
   return apiClient('/materials/grant-access', {
     method: 'POST',
     body: JSON.stringify({
       student_id: studentId,
       lesson_id: lessonId,
-      resource_link_index: resourceLinkIndex
+      resource_link_index: resourceLinkIndex,
+      send_email: sendEmail
+    })
+  });
+};
+
+export interface AccessSummaryItem {
+  chapter_title: string;
+  lesson_title?: string;
+  resource_name?: string;
+}
+
+export const notifyAccessSummary = async (studentId: number, courseName: string, items: AccessSummaryItem[]) => {
+  return apiClient('/materials/notify-summary', {
+    method: 'POST',
+    body: JSON.stringify({
+      student_id: studentId,
+      course_name: courseName,
+      items
     })
   });
 };
@@ -273,9 +292,14 @@ export const updateStudentProgress = async (studentId: number, data: { chapter_i
   });
 };
 
-export const assignChapterToStudent = async (studentId: number, chapterId: number): Promise<void> => {
-  return apiClient(`/admin/students/${studentId}/materials/chapters/${chapterId}/mark-accessed`, {
-    method: 'POST'
+export const assignChapterToStudent = async (studentId: number, chapterId: number, sendEmail: boolean = true): Promise<void> => {
+  return apiClient('/materials/grant-access', {
+    method: 'POST',
+    body: JSON.stringify({
+      student_id: studentId,
+      chapter_id: chapterId,
+      send_email: sendEmail
+    })
   });
 };
 
