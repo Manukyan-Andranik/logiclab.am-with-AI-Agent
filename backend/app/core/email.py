@@ -304,7 +304,7 @@ class EmailService:
           <ul style="margin:16px 0;padding-left:20px;">
             {items_html}
           </ul>
-          <p style="margin:0;color:{MUTED};">Հաջողություն ենք մաղթում ուսման մեջ:</p>
+          <p style="margin:0;color:{MUTED};">Մաղթում ենք հաջողություն ուսման մեջ:</p>
           """
         url = f"{settings.FRONTEND_URL}/student/materials"
         return await self.send_email(
