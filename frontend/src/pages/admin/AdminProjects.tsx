@@ -1,26 +1,20 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getProjects,
-  createProject,
+  listAllProjects,
   updateProject,
   deleteProject,
-  toggleProjectPublished,
   toggleProjectFeatured,
-  uploadProjectImage,
-  ProjectCreate
+  toggleProjectPublished,
 } from "@/api/projects";
-import { getCourses } from "@/api/courses";
-import { getAdminStudents } from "@/api/admin";
-import { Project } from "@/api/types";
-import { getMediaUrl } from "@/api/client";
+import { Project, LocalizedText } from "@/api/types";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
 import Button from "@/components/ui/Button";
 import {
@@ -29,301 +23,190 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Plus,
   Pencil,
   Trash2,
-  Image as ImageIcon,
   ExternalLink,
   Star,
-  CheckCircle2,
-  XCircle,
-  Loader2,
+  Eye,
+  EyeOff,
   Globe,
-  Upload
+  Code,
 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
-
-
+import { getMediaUrl } from "@/api/client";
 
 const AdminProjects = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState<ProjectCreate>({
-    course_id: 0,
-    student_id: 0,
+  const [formData, setFormData] = useState<{
+    title: LocalizedText;
+    subtitle: LocalizedText;
+    description: LocalizedText;
+    image_urls: string[];
+    links: { github?: string; web?: string; colab?: string };
+    is_featured: boolean;
+    is_published: boolean;
+  }>({
     title: { en: "", ru: "", hy: "" },
     subtitle: { en: "", ru: "", hy: "" },
     description: { en: "", ru: "", hy: "" },
     image_urls: [],
-    links: { github: "", web: "" },
+    links: {},
     is_featured: false,
-    is_published: false
+    is_published: false,
   });
 
   // Queries
-  const { data: projects, isLoading: projectsLoading } = useQuery({
+  const { data: projects, isLoading } = useQuery({
     queryKey: ["admin-projects"],
-    queryFn: () => getProjects({ is_admin: true })
-  });
-
-  const { data: courses } = useQuery({
-    queryKey: ["courses-all"],
-    queryFn: () => getCourses()
-  });
-
-  const { data: students } = useQuery({
-    queryKey: ["admin-students"],
-    queryFn: getAdminStudents
+    queryFn: () => listAllProjects({ skip: 0, limit: 100 }),
   });
 
   // Mutations
-  const createMutation = useMutation({
-    mutationFn: createProject,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
-      toast({ title: "Success", description: "Project created successfully." });
-      handleCloseDialog();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create project",
-        variant: "destructive"
-      });
-    }
-  });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => updateProject(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       toast({ title: "Success", description: "Project updated successfully." });
-      handleCloseDialog();
-    }
+      setIsDialogOpen(false);
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteProject,
+    mutationFn: (id: number) => deleteProject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
-      toast({ title: "Success", description: "Project deleted." });
-    }
-  });
-
-  const togglePublishedMutation = useMutation({
-    mutationFn: toggleProjectPublished,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-projects"] })
+      toast({ title: "Deleted", description: "Project removed." });
+    },
   });
 
   const toggleFeaturedMutation = useMutation({
     mutationFn: toggleProjectFeatured,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-projects"] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-projects"] }),
+  });
+
+  const togglePublishedMutation = useMutation({
+    mutationFn: toggleProjectPublished,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-projects"] }),
   });
 
   // Handlers
-  const handleOpenDialog = (project?: Project) => {
-    if (project) {
-      setEditingProject(project);
-      setFormData({
-        course_id: project.course_id,
-        student_id: project.student_id,
-        title: project.title,
-        subtitle: project.subtitle || { en: "", ru: "", hy: "" },
-        description: project.description,
-        image_urls: project.image_urls || [],
-        links: project.links || { github: "", web: "" },
-        is_featured: project.is_featured,
-        is_published: project.is_published
-      });
-    } else {
-      setEditingProject(null);
-      setFormData({
-        course_id: 0,
-        student_id: 0,
-        title: { en: "", ru: "", hy: "" },
-        subtitle: { en: "", ru: "", hy: "" },
-        description: { en: "", ru: "", hy: "" },
-        image_urls: [],
-        links: { github: "", web: "" },
-        is_featured: false,
-        is_published: false
-      });
-    }
+  const handleEdit = (project: Project) => {
+    setEditingProject(project);
+    setFormData({
+      title: project.title,
+      subtitle: project.subtitle || { en: "", ru: "", hy: "" },
+      description: project.description,
+      image_urls: project.image_urls || [],
+      links: project.links || {},
+      is_featured: project.is_featured,
+      is_published: project.is_published,
+    });
     setIsDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingProject(null);
-  };
-
-  // Update handleFileChange to support multiple files
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsUploading(true);
-    try {
-      const uploadedUrls: string[] = [];
-
-      // Upload all selected files sequentially
-      for (let i = 0; i < files.length; i++) {
-        const { url } = await uploadProjectImage(files[i]);
-        uploadedUrls.push(url);
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        image_urls: [...(prev.image_urls || []), ...uploadedUrls]
-      }));
-
-      toast({ title: "Images Uploaded", description: `${uploadedUrls.length} image(s) added to project gallery.` });
-    } catch (error) {
-      toast({ title: "Upload Failed", description: "Could not upload some images.", variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-      // Clear the input so the same files can be selected again if needed
-      e.target.value = "";
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      image_urls: prev.image_urls?.filter((_, i) => i !== index)
-    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const s = formData.subtitle;
-    const hasSubtitle = !!(s?.en || s?.ru || s?.hy);
-    if (editingProject) {
-      updateMutation.mutate({
-        id: editingProject.id,
-        data: { ...formData, subtitle: hasSubtitle ? s : null },
-      });
-    } else {
-      createMutation.mutate({ ...formData, subtitle: hasSubtitle ? s : undefined });
-    }
+    if (!editingProject) return;
+
+    updateMutation.mutate({
+      id: editingProject.id,
+      data: formData,
+    });
   };
 
-  if (projectsLoading) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin text-primary" size={48} /></div>;
-  }
+  if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Student Projects</h1>
-          <p className="text-muted-foreground">Manage and showcase the best work from your students.</p>
+          <p className="text-muted-foreground">Approve and feature student work</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2">
-          <Plus size={18} /> Add Project
-        </Button>
       </div>
 
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+      <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <th className="px-6 py-4">Project</th>
-              <th className="px-6 py-4">Student</th>
-              <th className="px-6 py-4">Course</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Featured</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <TableHead>Project</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Course</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Featured</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {projects?.map((project) => (
               <TableRow key={project.id}>
-                <TableCell className="px-6 py-4">
+                <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center overflow-hidden border">
-                      {project.image_urls?.[0] ? (
-                        <img src={getMediaUrl(project.image_urls[0])} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <ImageIcon size={20} className="text-muted-foreground" />
-                      )}
-                    </div>
+                    {project.image_urls?.[0] && (
+                      <img
+                        src={getMediaUrl(project.image_urls[0])}
+                        alt=""
+                        className="w-10 h-10 rounded object-cover border"
+                      />
+                    )}
                     <div>
-                      <div className="font-semibold">{project.title.en}</div>
-                      <div className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">{project.description.en}</div>
+                      <div className="font-medium">{project.title.en}</div>
+                      <div className="flex gap-2 mt-1">
+                        {project.links?.github && <FaGithub size={12} className="text-muted-foreground" />}
+                        {project.links?.web && <Globe size={12} className="text-muted-foreground" />}
+                        {project.links?.colab && <Code size={12} className="text-muted-foreground" />}
+                      </div>
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="px-6 py-4">
+                <TableCell>
                   {project.student?.user?.first_name} {project.student?.user?.last_name}
                 </TableCell>
-                <TableCell className="px-6 py-4">
-                  <Badge variant="outline">{project.course?.title?.en || "N/A"}</Badge>
+                <TableCell className="text-muted-foreground text-xs">
+                  {project.course?.title?.en}
                 </TableCell>
-                <TableCell className="px-6 py-4">
-                  <button
-                    onClick={() => togglePublishedMutation.mutate(project.id)}
-                    className="focus:outline-none"
-                  >
-                    {project.is_published ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20 gap-1">
-                        <CheckCircle2 size={12} /> Published
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <XCircle size={12} /> Draft
-                      </Badge>
-                    )}
+                <TableCell>
+                  <button onClick={() => togglePublishedMutation.mutate(project.id)}>
+                    <Badge variant={project.is_published ? "default" : "secondary"} className="gap-1 cursor-pointer">
+                      {project.is_published ? <Eye size={12} /> : <EyeOff size={12} />}
+                      {project.is_published ? "Published" : "Draft"}
+                    </Badge>
                   </button>
                 </TableCell>
-                <TableCell className="px-6 py-4 text-center">
+                <TableCell>
                   <button
                     onClick={() => toggleFeaturedMutation.mutate(project.id)}
-                    className={`p-2 rounded-full transition-colors ${project.is_featured ? 'text-amber-500 bg-amber-500/10' : 'text-muted-foreground hover:bg-secondary'}`}
+                    className={`transition-colors ${project.is_featured ? "text-yellow-500" : "text-gray-300 hover:text-yellow-200"}`}
                   >
-                    <Star size={18} fill={project.is_featured ? "currentColor" : "none"} />
+                    <Star size={20} fill={project.is_featured ? "currentColor" : "none"} />
                   </button>
                 </TableCell>
-                <TableCell className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(project)}>
-                      <Pencil size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        if (confirm("Are you sure you want to delete this project?")) {
-                          deleteMutation.mutate(project.id);
-                        }
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(project)}>
+                    <Pencil size={16} />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      if (confirm("Delete this project?")) deleteMutation.mutate(project.id);
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -332,183 +215,93 @@ const AdminProjects = () => {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle>{editingProject ? "Edit Project" : "Create New Project"}</DialogTitle>
+            <DialogTitle>Edit Project: {editingProject?.title.en}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Course</Label>
-                <Select
-                  value={formData.course_id.toString()}
-                  onValueChange={(val) => setFormData({ ...formData, course_id: parseInt(val) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Course" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses?.map(course => (
-                      <SelectItem key={course.id} value={course.id.toString()}>{course.title.en}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Student</Label>
-                <Select
-                  value={formData.student_id.toString()}
-                  onValueChange={(val) => setFormData({ ...formData, student_id: parseInt(val) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Student" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students?.map((student: any) => (
-                      <SelectItem key={student.id} value={student.id.toString()}>
-                        {student.user.first_name} {student.user.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <Tabs defaultValue="en">
-              <TabsList className="grid grid-cols-3 w-[300px]">
-                <TabsTrigger value="en">English</TabsTrigger>
-                <TabsTrigger value="ru">Russian</TabsTrigger>
-                <TabsTrigger value="hy">Armenian</TabsTrigger>
-              </TabsList>
-
-              {(['en', 'ru', 'hy'] as const).map(lang => (
-                <TabsContent key={lang} value={lang} className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label>Title ({lang.toUpperCase()})</Label>
-                    <Input
-                      value={formData.title[lang] || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        title: { ...formData.title, [lang]: e.target.value }
-                      })}
-                      placeholder={`Project title in ${lang}`}
-                      required={lang === 'en'}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Subtitle ({lang.toUpperCase()})</Label>
-                    <Input
-                      value={formData.subtitle?.[lang] || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        subtitle: { ...formData.subtitle, [lang]: e.target.value }
-                      })}
-                      placeholder={`Project subtitle in ${lang}`}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description ({lang.toUpperCase()})</Label>
-                    <Textarea
-                      value={formData.description[lang] || ""}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        description: { ...formData.description, [lang]: e.target.value }
-                      })}
-                      placeholder={`Project description in ${lang}`}
-                      rows={4}
-                      required={lang === 'en'}
-                    />
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><FaGithub size={14} /> GitHub Repository</Label>
-                <Input
-                  value={formData.links?.github || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    links: { ...formData.links, github: e.target.value }
-                  })}
-                  placeholder="https://github.com/..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Globe size={14} /> Live Demo URL</Label>
-                <Input
-                  value={formData.links?.web || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    links: { ...formData.links, web: e.target.value }
-                  })}
-                  placeholder="https://project-demo.com"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Label>Project Images</Label>
-              <div className="grid grid-cols-4 gap-4">
-                {formData.image_urls?.map((url, index) => (
-                  <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
-                    <img src={getMediaUrl(url)} alt="" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                ))}
-                <label className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center cursor-pointer hover:bg-secondary/50 transition-colors">
-                  {isUploading ? (
-                    <Loader2 className="animate-spin text-muted-foreground" />
-                  ) : (
-                    <>
-                      <Upload size={24} className="text-muted-foreground mb-2" />
-                      <span className="text-xs text-muted-foreground">Upload Image</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    multiple   
-                    onChange={handleFileChange}
-                    disabled={isUploading}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column: Multilingual Content */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Project Title (EN/RU/HY)</Label>
+                  <Input
+                    value={formData.title.en}
+                    onChange={(e) => setFormData({ ...formData, title: { ...formData.title, en: e.target.value } })}
+                    placeholder="English Title"
                   />
-                </label>
-              </div>
-            </div>
+                  <Input
+                    value={formData.title.ru}
+                    onChange={(e) => setFormData({ ...formData, title: { ...formData.title, ru: e.target.value } })}
+                    placeholder="Russian Title"
+                  />
+                  <Input
+                    value={formData.title.hy}
+                    onChange={(e) => setFormData({ ...formData, title: { ...formData.title, hy: e.target.value } })}
+                    placeholder="Armenian Title"
+                  />
+                </div>
 
-            <div className="flex items-center gap-8 py-2 border-t pt-6">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="featured"
-                  checked={formData.is_featured}
-                  onCheckedChange={(val) => setFormData({ ...formData, is_featured: val })}
-                />
-                <Label htmlFor="featured">Featured Project</Label>
+                <div className="space-y-2">
+                  <Label>Project Description (EN)</Label>
+                  <Textarea
+                    value={formData.description.en}
+                    onChange={(e) => setFormData({ ...formData, description: { ...formData.description, en: e.target.value } })}
+                    rows={4}
+                  />
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="published"
-                  checked={formData.is_published}
-                  onCheckedChange={(val) => setFormData({ ...formData, is_published: val })}
-                />
-                <Label htmlFor="published">Published</Label>
+
+              {/* Right Column: Links & Media */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><FaGithub size={14} /> GitHub URL</Label>
+                  <Input
+                    value={formData.links.github || ""}
+                    onChange={(e) => setFormData({ ...formData, links: { ...formData.links, github: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Globe size={14} /> Live Demo URL</Label>
+                  <Input
+                    value={formData.links.web || ""}
+                    onChange={(e) => setFormData({ ...formData, links: { ...formData.links, web: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Code size={14} /> Google Colab URL</Label>
+                  <Input
+                    value={formData.links.colab || ""}
+                    onChange={(e) => setFormData({ ...formData, links: { ...formData.links, colab: e.target.value } })}
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="featured"
+                      checked={formData.is_featured}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
+                    />
+                    <Label htmlFor="featured">Featured</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="published"
+                      checked={formData.is_published}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })}
+                    />
+                    <Label htmlFor="published">Published</Label>
+                  </div>
+                </div>
               </div>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingProject ? "Update Project" : "Create Project"}
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>

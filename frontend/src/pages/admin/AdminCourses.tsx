@@ -409,7 +409,7 @@ const AdminCourses = () => {
               Add Course
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>{editingCourse ? "Edit Course" : "Add New Course"}</DialogTitle>
             </DialogHeader>

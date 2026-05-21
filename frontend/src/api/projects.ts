@@ -75,3 +75,8 @@ export const uploadProjectImage = async (file: File): Promise<{ url: string }> =
 export const getProjectStatistics = async (): Promise<any> => {
   return apiClient<any>('/projects/statistics/overview');
 };
+
+// Backwards-compatible alias expected by some admin pages
+export const listAllProjects = async (params: Record<string, any> = {}): Promise<Project[]> => {
+  return getProjects(params);
+};

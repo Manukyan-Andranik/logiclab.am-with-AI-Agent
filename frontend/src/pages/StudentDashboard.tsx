@@ -39,7 +39,9 @@ const StudentDashboard = () => {
   const t = useT();
   const localized = useLocalized();
   const { pathname } = useLocation();
-  const isMaterialsPage = pathname === "/student/materials";
+  // Treat any route under /student/materials (e.g. /student/materials/:courseId)
+  // as the materials page so navigation to that path will render the materials view.
+  const isMaterialsPage = pathname.startsWith("/student/materials");
   const queryClient = useQueryClient();
   const [openChapter, setOpenChapter] = useState<number | null>(null);
 
@@ -180,6 +182,13 @@ const StudentDashboard = () => {
             grid-template-columns: 1fr;
             gap: 1.25rem;
           }
+          .clickable-course-button {
+            display: block;
+            width: 100%;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+          }
+          .clickable-course-button:hover { transform: translateY(-4px); box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6); }
+          .clickable-course-button:focus-visible { outline: 3px solid rgba(255,215,0,0.25); }
         `}</style>
 
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: "2rem" }}>
@@ -223,13 +232,22 @@ const StudentDashboard = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.13 + courseIdx * 0.07 }}
-                    style={{
-                      position: "relative", overflow: "hidden", borderRadius: "2.5rem",
-                      background: C.surface, border: `1px solid ${C.border}`, padding: "2.5rem",
-                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-                    }}
                   >
-                    <div style={{ position: "absolute", top: 0, right: 0, width: "256px", height: "256px", background: C.goldBg, borderRadius: "50%", filter: "blur(100px)", marginRight: "-128px", marginTop: "-128px", pointerEvents: "none" }} />
+                    <div style={{
+                      position: 'relative', borderRadius: '2.5rem', overflow: 'hidden'
+                    }}>
+                      <button
+                        className="clickable-course-button"
+                        onClick={() => navigate(`/student/materials`)} // /${enrolled.course_id}`)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/student/materials/${enrolled.course_id}`); }}
+                        aria-label={`Open materials for ${localized(enrolled.course.title)}`}
+                        style={{
+                          width: '100%', textAlign: 'left', background: C.surface, border: `1px solid ${C.border}`,
+                          padding: '2.5rem', borderRadius: '2.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                          cursor: 'pointer', transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+                        }}
+                      >
+                        <div style={{ position: "absolute", top: 0, right: 0, width: "256px", height: "256px", background: C.goldBg, borderRadius: "50%", filter: "blur(100px)", marginRight: "-128px", marginTop: "-128px", pointerEvents: "none" }} />
                     <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                         <div style={{ background: C.goldBg, color: C.gold, border: `1px solid ${C.goldBorder}`, fontSize: "10px", textTransform: "uppercase", fontWeight: 900, padding: "0.25rem 0.75rem", borderRadius: "4px" }}>
@@ -253,6 +271,8 @@ const StudentDashboard = () => {
                           <motion.div initial={{ width: 0 }} animate={{ width: `${enrolled.progress.percentage}%` }} transition={{ duration: 1, delay: 0.2 + courseIdx * 0.1 }} style={{ height: "100%", background: C.gold }} />
                         </div>
                       </div>
+                        </div>
+                      </button>
                     </div>
                   </motion.div>
                 ))

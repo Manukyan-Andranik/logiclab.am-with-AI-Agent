@@ -1,141 +1,147 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getRegistrations, updateRegistrationStatus, deleteRegistration } from "@/api/admin";
+import { useLocalized } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-// import { Button } from "@/components/ui/button";
 import Button from "@/components/ui/Button";
+import { CheckCircle, XCircle, Clock, Trash2, Mail, Phone, MessageSquare, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Check, X, Clock, Eye, Trash2 } from "lucide-react";
-import { useLocalized } from "@/i18n";
-import { useState } from "react";
 
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const tx = useLocalized();
-  const [registrationToDelete, setRegistrationToDelete] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [registrationToDelete, setRegistrationToDelete] = useState<any>(null);
 
-  const { data: registrationsResponse, isLoading } = useQuery({
+  const { data: registrations, isLoading } = useQuery({
     queryKey: ["admin-registrations"],
     queryFn: () => getRegistrations(),
   });
 
-  const registrations = registrationsResponse?.data || [];
-
-  const mutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) => updateRegistrationStatus(id, status),
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      updateRegistrationStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-registrations"] });
-      toast({ title: "Success", description: "Registration status updated." });
+      toast({ title: "Updated", description: "Registration status changed." });
     },
   });
 
-  const deleteRegistrationMutation = useMutation({
-    mutationFn: (registrationId: number) => deleteRegistration(registrationId),
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteRegistration(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-registrations"] });
+      toast({ title: "Deleted", description: "Registration removed." });
       setIsDeleteDialogOpen(false);
-      setRegistrationToDelete(null);
-      toast({
-        title: "Success",
-        description: "Registration has been deleted."
-      });
     },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete registration",
-        variant: "destructive"
-      });
-    }
   });
 
-  if (isLoading) return <div className="animate-pulse space-y-4 text-foreground"><div className="h-12 bg-secondary rounded-lg w-full" /><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
+  const handleDeleteClick = (registration: any) => {
+    setRegistrationToDelete(registration);
+    setIsDeleteDialogOpen(true);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "pending": return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">Pending</Badge>;
-      case "confirmed": return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Confirmed</Badge>;
-      case "rejected": return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">Rejected</Badge>;
+      case "pending": return <Badge variant="secondary" className="gap-1"><Clock size={12} /> Pending</Badge>;
+      case "confirmed": return <Badge variant="default" className="bg-emerald-500 gap-1"><CheckCircle size={12} /> Confirmed</Badge>;
+      case "rejected": return <Badge variant="destructive" className="gap-1"><XCircle size={12} /> Rejected</Badge>;
+      case "completed": return <Badge variant="outline" className="border-emerald-500 text-emerald-500 gap-1"><CheckCircle size={12} /> Completed</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
 
+  if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
+
   return (
-    <div className="space-y-8 text-foreground">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Registrations</h1>
-        <p className="text-muted-foreground">Manage student course applications.</p>
+        <h1 className="text-3xl font-bold">Course Registrations</h1>
+        <p className="text-muted-foreground">Manage incoming course applications.</p>
       </div>
 
-      <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm min-w-[640px]">
-          <thead className="bg-secondary/50 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
+        <table className="w-full text-left text-sm min-w-[1000px]">
+          <thead className="bg-secondary/50 text-muted-foreground uppercase text-[11px] font-bold tracking-widest">
             <tr>
-              <th className="px-6 py-4">Student</th>
-              <th className="px-6 py-4">Course</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Date</th>
-              <th className="px-6 py-4 text-right">Actions</th>
+              <th className="px-6 py-5">Student</th>
+              <th className="px-6 py-5">Contact</th>
+              <th className="px-6 py-5">Course</th>
+              <th className="px-6 py-5">Message</th>
+              <th className="px-6 py-5">Status</th>
+              <th className="px-6 py-5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {registrations.map((reg: any) => (
-              <tr key={reg.id} className="hover:bg-secondary/20 transition-colors">
+            {registrations?.map((reg: any) => (
+              <tr key={reg.id} className="group hover:bg-secondary/20 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="font-semibold">{tx(reg.student?.user?.first_name)} {tx(reg.student?.user?.last_name)}</div>
-                  <div className="text-xs text-muted-foreground">{reg.student?.user?.email}</div>
+                  <div className="font-bold text-foreground">
+                    {reg.student?.user?.first_name} {reg.student?.user?.last_name}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-tight">ID: {reg.student_id}</div>
                 </td>
-                <td className="px-6 py-4">{tx(reg.course?.title)}</td>
-                <td className="px-6 py-4">{getStatusBadge(reg.status)}</td>
-                <td className="px-6 py-4 text-muted-foreground">
-                  {new Date(reg.registration_date).toLocaleDateString()}
+                <td className="px-6 py-4">
+                  <div className="flex flex-col gap-1 text-xs">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Mail size={12} /> {reg.student?.user?.email}</span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Phone size={12} /> {reg.student?.user?.phone || 'N/A'}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="font-semibold text-primary">{tx(reg.course?.title)}</div>
+                </td>
+                <td className="px-6 py-4">
+                  {reg.message ? (
+                    <div className="flex items-start gap-2 max-w-[200px] group/msg">
+                      <MessageSquare size={14} className="text-muted-foreground shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground line-clamp-2 italic">"{reg.message}"</p>
+                    </div>
+                  ) : <span className="text-xs italic text-muted-foreground/50">No message</span>}
+                </td>
+                <td className="px-6 py-4">
+                  {getStatusBadge(reg.status)}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     {reg.status === "pending" && (
                       <>
                         <Button
-                          size="icon"
+                          size="sm"
                           variant="outline"
-                          className="h-8 w-8 text-green-500 border-green-500/20 hover:bg-green-500/10"
-                          onClick={() => mutation.mutate({ id: reg.id, status: "confirmed" })}
+                          className="h-8 text-[10px] uppercase font-bold border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                          onClick={() => statusMutation.mutate({ id: reg.id, status: "confirmed" })}
                         >
-                          <Check size={14} />
+                          Confirm
                         </Button>
                         <Button
-                          size="icon"
+                          size="sm"
                           variant="outline"
-                          className="h-8 w-8 text-destructive border-destructive/20 hover:bg-destructive/10"
-                          onClick={() => mutation.mutate({ id: reg.id, status: "rejected" })}
+                          className="h-8 text-[10px] uppercase font-bold border-destructive/20 text-destructive hover:bg-destructive hover:text-white"
+                          onClick={() => statusMutation.mutate({ id: reg.id, status: "rejected" })}
                         >
-                          <X size={14} />
+                          Reject
                         </Button>
                       </>
                     )}
-                    <Button size="icon" variant="ghost" className="h-8 w-8">
-                      <Eye size={14} />
-                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        setRegistrationToDelete(reg);
-                        setIsDeleteDialogOpen(true);
-                      }}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteClick(reg)}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} />
                     </Button>
                   </div>
                 </td>
@@ -148,7 +154,7 @@ const AdminRegistrations = () => {
 
       {/* Delete Registration Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-md" aria-describedby={undefined}>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive">Delete Registration</AlertDialogTitle>
           </AlertDialogHeader>
@@ -164,11 +170,11 @@ const AdminRegistrations = () => {
           <div className="flex gap-3 pt-4">
             <AlertDialogCancel className="flex-1">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteRegistrationMutation.mutate(registrationToDelete.id)}
-              disabled={deleteRegistrationMutation.isPending}
               className="flex-1 bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate(registrationToDelete.id)}
+              disabled={deleteMutation.isPending}
             >
-              {deleteRegistrationMutation.isPending ? "Deleting..." : "Delete Registration"}
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

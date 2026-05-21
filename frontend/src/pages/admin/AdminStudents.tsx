@@ -719,7 +719,7 @@ const AdminStudents = () => {
 
       {/* ── Manage Student Dialog ── */}
       <Dialog open={isManageOpen} onOpenChange={setIsManageOpen}>
-        <DialogContent className="sm:max-w-[860px] max-h-[92vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="sm:max-w-[860px] max-h-[92vh] overflow-hidden flex flex-col p-0" aria-describedby={undefined}>
           <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <GraduationCap className="text-primary" />
@@ -1551,7 +1551,7 @@ const AdminStudents = () => {
 
       {/* ── Create Student Dialog ── */}
       <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) handleCloseCreate(); else setIsCreateOpen(true); }}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[480px]" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus size={18} className="text-primary" />

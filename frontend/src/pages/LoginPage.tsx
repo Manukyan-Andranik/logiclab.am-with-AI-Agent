@@ -49,7 +49,7 @@ const LoginPage = () => {
   const finishLogin = (data: LoginResponse) => {
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("role", data.role);
-    toast({ title: t("login.welcome_toast", { name: data.role }), description: "" });
+    // toast({ title: t("login.welcome_toast", { name: data.role }), description: "" });
     const fallback = data.role === "admin" ? "/admin" : "/student/dashboard";
     navigate(nextPath || fallback, { replace: true });
   };

@@ -189,7 +189,7 @@ const AdminInstructors = () => {
               Add Instructor
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>{editingInstructor ? "Edit Instructor Profile" : "Create New Instructor"}</DialogTitle>
             </DialogHeader>
