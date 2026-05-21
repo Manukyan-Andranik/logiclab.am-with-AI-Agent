@@ -115,6 +115,86 @@ export const getVisits = async (params: {
   return apiClient<VisitListResponse>('/visits', { params: params as Record<string, any> });
 };
 
+// ---------------------------------------------------------------------------
+// New analytics endpoints (POST /api/admin/analytics/*)
+// ---------------------------------------------------------------------------
+export type AnalyticsLabelCount = { label: string; count: number };
+export type AnalyticsTimeseriesPoint = { label: string; count: number };
+export type AnalyticsClassBreakdown = {
+  human: number;
+  verified_bot: number;
+  suspicious_bot: number;
+};
+export type AnalyticsOverview = {
+  range_start?: string | null;
+  range_end?: string | null;
+  today_visits: number;
+  week_visits: number;
+  month_visits: number;
+  total_visits: number;
+  unique_visitors: number;
+  human_visits: number;
+  bot_visits: number;
+  human_pct: number;
+  bot_pct: number;
+  avg_visits_per_unique: number;
+  classification: AnalyticsClassBreakdown;
+  visits_over_time: AnalyticsTimeseriesPoint[];
+  unique_over_time: AnalyticsTimeseriesPoint[];
+  top_pages: AnalyticsLabelCount[];
+  top_referrers: AnalyticsLabelCount[];
+  top_countries: AnalyticsLabelCount[];
+  browsers: AnalyticsLabelCount[];
+  devices: AnalyticsLabelCount[];
+  operating_systems: AnalyticsLabelCount[];
+};
+
+export const getAnalyticsOverview = async (
+  params: { start_date?: string; end_date?: string } = {}
+): Promise<AnalyticsOverview> => {
+  return apiClient<AnalyticsOverview>('/admin/analytics/overview', {
+    params: params as Record<string, any>,
+  });
+};
+
+export type AnalyticsBotItem = {
+  user_agent: string | null;
+  visitor_class: string;
+  count: number;
+  last_seen: string;
+  unique_ips: number;
+};
+export const getAnalyticsBots = async (
+  params: { start_date?: string; end_date?: string; limit?: number } = {}
+): Promise<{ data: AnalyticsBotItem[]; total: number }> => {
+  return apiClient('/admin/analytics/bots', { params: params as Record<string, any> });
+};
+
+export type AnalyticsTopIP = {
+  ip_address: string;
+  count: number;
+  first_seen: string;
+  last_seen: string;
+  visitor_class?: string | null;
+  user_agent?: string | null;
+};
+export const getAnalyticsTopIPs = async (
+  params: { start_date?: string; end_date?: string; limit?: number; visitor_class?: string } = {}
+): Promise<{ data: AnalyticsTopIP[]; total: number }> => {
+  return apiClient('/admin/analytics/unique', { params: params as Record<string, any> });
+};
+
+export const analyticsExportUrl = (
+  format: 'csv' | 'json',
+  params: { start_date?: string; end_date?: string; visitor_class?: string } = {},
+): string => {
+  const qs = new URLSearchParams({ format });
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && String(v).length) qs.append(k, String(v));
+  });
+  return `/api/admin/analytics/export?${qs.toString()}`;
+};
+
 export const trackPageView = async (pageUrl: string, referrer: string | null): Promise<void> => {
   await apiClient('/visits/track', {
     method: 'POST',
@@ -158,10 +238,14 @@ export const createOrUpdateLessonMaterials = async (
   }
 };
 
-export const grantLessonAccess = async (studentId: number, lessonId: number) => {
+export const grantLessonAccess = async (studentId: number, lessonId: number, resourceLinkIndex?: number) => {
   return apiClient('/materials/grant-access', {
     method: 'POST',
-    body: JSON.stringify({ student_id: studentId, lesson_id: lessonId })
+    body: JSON.stringify({
+      student_id: studentId,
+      lesson_id: lessonId,
+      resource_link_index: resourceLinkIndex
+    })
   });
 };
 

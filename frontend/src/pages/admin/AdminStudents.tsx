@@ -299,12 +299,12 @@ const AdminStudents = () => {
   });
 
   const grantLessonMutation = useMutation({
-    mutationFn: (lessonId: number) =>
-      grantLessonAccess(selectedStudent.id, lessonId),
+    mutationFn: ({ lessonId, resourceLinkIndex }: { lessonId: number, resourceLinkIndex?: number }) =>
+      grantLessonAccess(selectedStudent.id, lessonId, resourceLinkIndex),
     onSuccess: () => {
       refetchAccess();
       invalidateProgress();
-      toast({ title: "Granted", description: "Lesson access granted." });
+      toast({ title: "Granted", description: "Access granted." });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to grant access", variant: "destructive" });
@@ -465,11 +465,11 @@ const AdminStudents = () => {
     setCreateForm({ first_name: "", last_name: "", email: "", course_id: "" });
   };
 
-  const getAccessRecord = (chapterId?: number, lessonId?: number) => {
+  const getAccessRecord = (chapterId?: number, lessonId?: number, resourceLinkIndex?: number) => {
     if (!accessData?.data) return null;
     return accessData.data.find(
       (a: any) =>
-        (lessonId && a.lesson_id === lessonId) ||
+        (lessonId && a.lesson_id === lessonId && (a.resource_link_index === (resourceLinkIndex ?? null))) ||
         (!lessonId && chapterId && a.chapter_id === chapterId && !a.lesson_id)
     );
   };
@@ -1164,97 +1164,160 @@ const AdminStudents = () => {
                                 : null);
 
                             return (
-                              <div
-                                key={lesson.id}
-                                className={`flex items-center justify-between p-2 pl-4 rounded-lg border transition-all duration-200 ${
-                                  isEffectivelyGranted
-                                    ? "bg-emerald-500/5 border-emerald-500/20"
-                                    : "bg-secondary/5 border-border/50 opacity-70"
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {isEffectivelyGranted ? (
-                                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                                      <CheckCircle2
-                                        className="text-emerald-500"
-                                        size={12}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="w-5 h-5 rounded-full bg-secondary/50 flex items-center justify-center">
-                                      <XCircle
-                                        className="text-muted-foreground/30"
-                                        size={12}
-                                      />
-                                    </div>
-                                  )}
-                                  <div className="flex flex-col">
-                                    <span
-                                      className={`text-[11px] font-bold uppercase tracking-tight ${
-                                        isEffectivelyGranted
-                                          ? "text-foreground"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    >
-                                      {lesson.title}
-                                    </span>
-                                    {accessedAt && (
-                                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
-                                        <History size={10} />
-                                        Last accessed: {formatDate(accessedAt)}
+                              <div key={lesson.id} className="space-y-1">
+                                <div
+                                  className={`flex items-center justify-between p-2 pl-4 rounded-lg border transition-all duration-200 ${
+                                    isEffectivelyGranted
+                                      ? "bg-emerald-500/5 border-emerald-500/20"
+                                      : "bg-secondary/5 border-border/50 opacity-70"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {isEffectivelyGranted ? (
+                                      <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                        <CheckCircle2
+                                          className="text-emerald-500"
+                                          size={12}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full bg-secondary/50 flex items-center justify-center">
+                                        <XCircle
+                                          className="text-muted-foreground/30"
+                                          size={12}
+                                        />
                                       </div>
                                     )}
+                                    <div className="flex flex-col">
+                                      <span
+                                        className={`text-[11px] font-bold uppercase tracking-tight ${
+                                          isEffectivelyGranted
+                                            ? "text-foreground"
+                                            : "text-muted-foreground"
+                                        }`}
+                                      >
+                                        {lesson.title}
+                                      </span>
+                                      {accessedAt && (
+                                        <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                                          <History size={10} />
+                                          Last accessed: {formatDate(accessedAt)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {isChapterGranted && isLessonGranted && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[8px] h-4 px-1 opacity-50"
+                                      >
+                                        Duplicate
+                                      </Badge>
+                                    )}
                                   </div>
-                                  {isChapterGranted && isLessonGranted && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[8px] h-4 px-1 opacity-50"
-                                    >
-                                      Duplicate
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {isChapterGranted ? (
-                                    <span className="text-[9px] font-black uppercase text-emerald-500/60 pr-2 tracking-tighter italic">
-                                      Chapter Access
-                                    </span>
-                                  ) : isLessonGranted ? (
-                                    <div className="flex items-center gap-3">
-                                      <div className="text-[9px] text-right">
-                                        <div className="text-muted-foreground opacity-50 uppercase font-bold tracking-tighter">
-                                          Granted
+                                  <div className="flex items-center gap-2">
+                                    {isChapterGranted ? (
+                                      <span className="text-[9px] font-black uppercase text-emerald-500/60 pr-2 tracking-tighter italic">
+                                        Chapter Access
+                                      </span>
+                                    ) : isLessonGranted ? (
+                                      <div className="flex items-center gap-3">
+                                        <div className="text-[9px] text-right">
+                                          <div className="text-muted-foreground opacity-50 uppercase font-bold tracking-tighter">
+                                            Granted
+                                          </div>
+                                          <div className="text-foreground font-black tracking-tighter">
+                                            {formatDate(lessonAccess.granted_at)}
+                                          </div>
                                         </div>
-                                        <div className="text-foreground font-black tracking-tighter">
-                                          {formatDate(lessonAccess.granted_at)}
-                                        </div>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                          onClick={() =>
+                                            revokeAccessMutation.mutate(
+                                              lessonAccess.id
+                                            )
+                                          }
+                                        >
+                                          Revoke
+                                        </Button>
                                       </div>
+                                    ) : (
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                                        className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
                                         onClick={() =>
-                                          revokeAccessMutation.mutate(
-                                            lessonAccess.id
-                                          )
+                                          grantLessonMutation.mutate({ lessonId: lesson.id })
                                         }
                                       >
-                                        Revoke
+                                        Grant All
                                       </Button>
-                                    </div>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 px-2 text-[9px] font-bold uppercase tracking-widest text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
-                                      onClick={() =>
-                                        grantLessonMutation.mutate(lesson.id)
-                                      }
-                                    >
-                                      Grant
-                                    </Button>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
+                                
+                                {/* Resource Links Granular Access */}
+                                {lesson.resource_links && lesson.resource_links.length > 0 && (
+                                  <div className="pl-10 space-y-1 pb-1">
+                                    {lesson.resource_links.map((link: any, linkIdx: number) => {
+                                      const resourceAccess = getAccessRecord(undefined, lesson.id, linkIdx);
+                                      const isResourceGranted = !!resourceAccess;
+                                      const isEffectivelyResourceGranted = isChapterGranted || isLessonGranted || isResourceGranted;
+
+                                      return (
+                                        <div 
+                                          key={linkIdx}
+                                          className={`flex items-center justify-between p-1.5 pl-3 rounded-md border text-[10px] transition-all ${
+                                            isEffectivelyResourceGranted 
+                                              ? "bg-emerald-500/5 border-emerald-500/10" 
+                                              : "bg-secondary/5 border-border/30 opacity-60"
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${isEffectivelyResourceGranted ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
+                                            <div className="flex flex-col min-w-0">
+                                              <span className="font-medium text-muted-foreground truncate max-w-[150px]" title={link.name}>
+                                                {link.name}
+                                              </span>
+                                              {resourceAccess?.accessed_at && (
+                                                <span className="text-[8px] text-muted-foreground/60 leading-none">
+                                                  Accessed: {formatShortDate(resourceAccess.accessed_at)}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="flex items-center gap-2">
+                                            {isChapterGranted ? (
+                                              <span className="text-[8px] uppercase text-emerald-500/40 italic">Chapter</span>
+                                            ) : isLessonGranted ? (
+                                              <span className="text-[8px] uppercase text-emerald-500/40 italic">Lesson</span>
+                                            ) : isResourceGranted ? (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-5 px-1.5 text-[8px] font-bold uppercase text-destructive hover:bg-destructive/10"
+                                                onClick={() => revokeAccessMutation.mutate(resourceAccess.id)}
+                                              >
+                                                Revoke
+                                              </Button>
+                                            ) : (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-5 px-1.5 text-[8px] font-bold uppercase text-primary hover:bg-primary/10"
+                                                onClick={() => grantLessonMutation.mutate({ lessonId: lesson.id, resourceLinkIndex: linkIdx })}
+                                              >
+                                                Grant
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}

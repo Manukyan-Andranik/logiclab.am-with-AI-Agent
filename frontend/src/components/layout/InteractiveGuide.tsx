@@ -1,33 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, Transition } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, MessageSquare, Navigation, MousePointer2, Sparkles } from 'lucide-react';
-
-const GUIDE_STEPS = [
-  { 
-    title: "Ինչ է Logic AI Navigation-ը?", 
-    desc: "Սա LogicLab-ի նորարարական մոտեցումն է։ Այստեղ չկան սովորական մենյուներ։ Դուք կառավարում եք կայքը LOGIC-ի միջոցով, որը հասկանում է ձեր ցանկությունները:", 
-    icon: <Navigation size={30} />,
-    color: "border-primary text-primary"
-  },
-  { 
-    title: "Ինչպես հարցնել?", 
-    desc: "Գրեք LOGIC-ին. «Ցույց տուր Python-ի դասերը» կամ «Ովքեր են դասախոսները»։ Նա ակնթարթորեն կտանի ձեզ համապատասխան էջ, կարծես ունենաք անձնական օգնական:", 
-    icon: <MessageSquare size={30} />,
-    color: "border-primary text-primary"
-  },
-  { 
-    title: "Իսկ եթե նախընտրում եմ դասականը?", 
-    desc: "Դուք միշտ կարող եք ընտրել 'Դասական Տեսք' տարբերակը, եթե ցանկանում եք տեսնել սովորական կայքի կառուցվածքը և ինքնուրույն բացահայտել այն:", 
-    icon: <MousePointer2 size={30} />,
-    color: "border-white text-white"
-  }
-];
+import { useT } from '@/i18n';
 
 interface InteractiveGuideProps { onClose: () => void; }
 
 const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
   const [activeStep, setActiveStep] = useState(0);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const t = useT();
+
+  const GUIDE_STEPS = [
+    { title: t("guide.step1_title"), desc: t("guide.step1_desc"), icon: <Navigation size={30} />,    color: "border-primary text-primary" },
+    { title: t("guide.step2_title"), desc: t("guide.step2_desc"), icon: <MessageSquare size={30} />, color: "border-primary text-primary" },
+    { title: t("guide.step3_title"), desc: t("guide.step3_desc"), icon: <MousePointer2 size={30} />, color: "border-white text-white" },
+  ];
 
   const transition: Transition = { type: 'spring', stiffness: 300, damping: 28 };
 
@@ -119,7 +106,7 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
                   onClick={() => setActiveStep(s => s - 1)}
                   className="px-6 py-3 text-white font-black text-sm uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2"
                 >
-                  <ChevronLeft size={20} strokeWidth={3} /> Հետ
+                  <ChevronLeft size={20} strokeWidth={3} /> {t("guide.back")}
                 </button>
               )}
               
@@ -127,7 +114,7 @@ const InteractiveGuide: React.FC<InteractiveGuideProps> = ({ onClose }) => {
                 onClick={() => activeStep === GUIDE_STEPS.length - 1 ? finish() : setActiveStep(s => s + 1)}
                 className="bg-primary text-black px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-[var(--primary)]/20"
               >
-                {activeStep === GUIDE_STEPS.length - 1 ? 'Պարզ է' : 'Հաջորդը'} 
+                {activeStep === GUIDE_STEPS.length - 1 ? t("guide.finish") : t("guide.next")}
                 <ChevronRight size={20} strokeWidth={3} />
               </button>
             </div>

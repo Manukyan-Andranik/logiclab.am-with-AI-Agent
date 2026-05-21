@@ -4,24 +4,26 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { contactApi, ContactFormData } from "@/api/contact";
 import { useToast } from "@/hooks/use-toast";
+import { useT } from "@/i18n";
 
 const ContactSection = () => {
   const [form, setForm] = useState<ContactFormData>({ name: "", email: "", phone: "", message: "" });
   const { toast } = useToast();
+  const t = useT();
 
   const mutation = useMutation({
     mutationFn: (data: ContactFormData) => contactApi.submitForm(data),
     onSuccess: () => {
       toast({
-        title: "Հաջողություն",
-        description: "Ձեր հաղորդագրությունը ուղարկվեց!",
+        title: t("home.contact_success"),
+        description: t("home.contact_success"),
       });
       setForm({ name: "", email: "", phone: "", message: "" });
     },
     onError: (error: any) => {
       toast({
-        title: "Սխալ",
-        description: error.message || "Տեղի է ունեցել սխալ հաղորդագրությունը ուղարկելիս։",
+        title: t("common.error_generic"),
+        description: error.message || t("home.contact_error"),
         variant: "destructive",
       });
     },
@@ -43,7 +45,7 @@ const ContactSection = () => {
           className="mb-16"
         >
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--primary-alt)] uppercase tracking-tighter">
-            Կապվեք <span className="text-[var(--white)]">մեզ հետ</span>
+            {t("home.contact_heading")}
           </h2>
         </motion.div>
 
@@ -93,7 +95,7 @@ const ContactSection = () => {
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                 <MapPin className="w-5 h-5 text-primary" />
               </div>
-              <span>{"Վանաձոր, Հայաստան"}</span>
+              <span>{t("home.contact_location")}</span>
             </div>
 
             {/* Social links */}
@@ -125,14 +127,14 @@ const ContactSection = () => {
             className="glass-card rounded-xl p-8 space-y-5"
           >
             <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-              {"Ուղարկեք հաղորդագրություն"}
+              {t("home.contact_form_title")}
             </h3>
 
             {/* Name */}
             <div>
               <input
                 type="text"
-                placeholder={"Անուն"}
+                placeholder={t("home.contact_name")}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300"
@@ -144,7 +146,7 @@ const ContactSection = () => {
             <div>
               <input
                 type="email"
-                placeholder={"Email"}
+                placeholder={t("home.contact_email")}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300"
@@ -156,7 +158,7 @@ const ContactSection = () => {
             <div>
               <input
                 type="tel"
-                placeholder={"Հեռախոսահամար (ըստ ցանկության)"}
+                placeholder={t("home.contact_phone_optional")}
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 className="w-full bg-secondary/40 backdrop-blur-sm border border-white/20 hover:border-primary/50 focus:border-primary rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all duration-300"
@@ -166,7 +168,7 @@ const ContactSection = () => {
             {/* Message */}
             <div>
               <textarea
-                placeholder={"Հաղորդագրություն"}
+                placeholder={t("home.contact_message")}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 rows={4}
@@ -185,7 +187,7 @@ const ContactSection = () => {
               ) : (
                 <Send className="w-4 h-4" />
               )}
-              {mutation.isPending ? "Ուղարկվում է..." : "Ուղարկել"}
+              {mutation.isPending ? t("home.contact_sending") : t("home.contact_submit")}
             </button>
           </motion.form>
         </div>

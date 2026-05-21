@@ -9,66 +9,7 @@ import {
 } from "lucide-react";
 import Container from "../components/layout/Container";
 import InstructorsSection from "@/components/InstructorsSection";
-
-/* ── DATA ──────────────────────────────────────────────────── */
-
-const stats = [
-  { icon: TrendingUp,    value: "100%",      label: "Գործնական ուսուցում" },
-  { icon: Users,         value: "3+",        label: "Ոլորտներ" },
-  { icon: GraduationCap, value: "Դպրոցական", label: "և սկսնակների համար" },
-  { icon: Award,         value: "TOP",       label: "Մրցունակ հմտություններ" },
-];
-
-const courses = [
-  {
-    icon: BrainCircuit,
-    title: "AI & ML",
-    desc: "Տիրապետեք Python-ին և արհեստական բանականության հիմունքներին:",
-    tag: "Պահանջված",
-  },
-  {
-    icon: Box,
-    title: "3D Մոդելավորում",
-    desc: "3ds Max վիզուալիզացիա և թվային աշխարհների ստեղծում:",
-    tag: "Ստեղծագործական",
-  },
-  {
-    icon: Camera,
-    title: "Լուսանկարչություն",
-    desc: "Էքսպոզիցիայի հիմունքներից մինչև պրոֆեսիոնալ Photoshop:",
-    tag: "Արվեստ",
-  },
-  {
-    icon: Zap,
-    title: "Գործնական Փորձ",
-    desc: "Իրական նախագծեր և անմիջապես կիրառելի գիտելիքներ:",
-    tag: "Կիրառական",
-  },
-];
-
-const audiences = [
-  {
-    icon: Target,
-    title: "Դպրոցականներ",
-    desc: "Ովքեր ցանկանում են ձեռք բերել մրցունակ մասնագիտություն վաղ տարիքից:",
-  },
-  {
-    icon: Lightbulb,
-    title: "Սկսնակներ",
-    desc: "Ովքեր ցանկանում են հիմնարար կերպով խորացնել իրենց գիտելիքները:",
-  },
-  {
-    icon: Heart,
-    title: "Բոլորը",
-    desc: "Ովքեր ձգտում են տիրապետել նոր ու ժամանակակից մասնագիտությունների:",
-  },
-];
-
-const formats = [
-  { icon: MapPin,   label: "Առկա",    sub: "Վանաձոր" },
-  { icon: Monitor,  label: "Առցանց",  sub: "Zoom / Teams" },
-  { icon: BookOpen, label: "Հիբրիդ",  sub: "Ձեր ընտրությամբ" },
-];
+import { useT } from "@/i18n";
 
 /* ── HELPERS ───────────────────────────────────────────────── */
 
@@ -115,6 +56,33 @@ const numLabel = (n: number) => String(n + 1).padStart(2, "0");
 
 const AboutPage = () => {
   const { hash } = useLocation();
+  const t = useT();
+
+  const stats: { icon: typeof TrendingUp; value: string; label: string }[] = [
+    { icon: TrendingUp,    value: "100%",                              label: t("about_page.stat_practice_label") },
+    { icon: Users,         value: "3+",                                label: t("about_page.stat_industries_label") },
+    { icon: GraduationCap, value: t("about_page.stat_school_value"),    label: t("about_page.stat_school_label") },
+    { icon: Award,         value: "TOP",                               label: t("about_page.stat_top_label") },
+  ];
+
+  const courses: { icon: typeof BrainCircuit; title: string; desc: string; tag: string }[] = [
+    { icon: BrainCircuit, title: t("about_page.course_ai_title"),       desc: t("about_page.course_ai_desc"),       tag: t("about_page.course_ai_tag") },
+    { icon: Box,          title: t("about_page.course_3d_title"),       desc: t("about_page.course_3d_desc"),       tag: t("about_page.course_3d_tag") },
+    { icon: Camera,       title: t("about_page.course_photo_title"),    desc: t("about_page.course_photo_desc"),    tag: t("about_page.course_photo_tag") },
+    { icon: Zap,          title: t("about_page.course_practice_title"), desc: t("about_page.course_practice_desc"), tag: t("about_page.course_practice_tag") },
+  ];
+
+  const audiences: { icon: typeof Target; title: string; desc: string }[] = [
+    { icon: Target,    title: t("about_page.audience_school_title"),    desc: t("about_page.audience_school_desc") },
+    { icon: Lightbulb, title: t("about_page.audience_beginner_title"),  desc: t("about_page.audience_beginner_desc") },
+    { icon: Heart,     title: t("about_page.audience_all_title"),       desc: t("about_page.audience_all_desc") },
+  ];
+
+  const formats: { icon: typeof MapPin; label: string; sub: string }[] = [
+    { icon: MapPin,   label: t("about_page.format_in_person"), sub: t("about_page.format_in_person_sub") },
+    { icon: Monitor,  label: t("about_page.format_online"),    sub: t("about_page.format_online_sub") },
+    { icon: BookOpen, label: t("about_page.format_hybrid"),    sub: t("about_page.format_hybrid_sub") },
+  ];
 
   useEffect(() => {
     if (!hash) return;
@@ -142,19 +110,18 @@ const AboutPage = () => {
             />
 
             <FadeIn direction="none">
-              <SectionLabel>Logic Lab — Մտածիր Խորը. Ստեղծի՛ր Վառ</SectionLabel>
+              <SectionLabel>{t("about_page.hero_eyebrow")}</SectionLabel>
             </FadeIn>
 
             <FadeIn delay={0.1}>
               <h1 className="text-hero text-foreground mb-8">
-                ՄԵՐ <span className="text-primary italic">ՄԱՍԻՆ</span>
+                {t("about_page.hero_title_a")} <span className="text-primary italic">{t("about_page.hero_title_b")}</span>
               </h1>
             </FadeIn>
 
             <FadeIn delay={0.2}>
               <p className="text-secondary-foreground/90 text-lg sm:text-xl lg:text-2xl font-medium leading-relaxed max-w-2xl">
-                Logic Lab-ը միավորում է տրամաբանությունն ու ստեղծագործությունը,
-                գիտությունն ու արվեստը՝ կերտելով թվային ապագա և զինելով նոր սերնդին մրցունակ հմտություններով:
+                {t("about_page.hero_intro")}
               </p>
             </FadeIn>
 
@@ -214,21 +181,16 @@ const AboutPage = () => {
             {/* Left — content */}
             <div className="lg:sticky lg:top-32">
               <FadeIn direction="left">
-                <SectionLabel>Ինչո՞ւ ընտրել Logic Lab-ը</SectionLabel>
+                <SectionLabel>{t("about_page.mission_eyebrow")}</SectionLabel>
                 <h2 className="text-h1 mb-8">
-                  ԾՐԱԳՐԱՎՈՐԻ՛Ր <br />
-                  <span className="text-primary italic">ՄՏԱԾՈՂՈՒԹՅՈՒՆԴ</span>
+                  {t("about_page.mission_title_a")} <br />
+                  <span className="text-primary italic">{t("about_page.mission_title_b")}</span>
                 </h2>
                 <div className="space-y-6 text-muted-foreground text-lg font-medium leading-relaxed max-w-xl">
-                  <p>
-                    Մենք առաջարկում ենք դասընթացներ Արհեստական բանականության,
-                    3D մոդելավորման և Լուսանկարչության ոլորտներում: Մեզ մոտ դուք
-                    կսովորեք ոչ միայն տեխնիկական հմտություններ, այլև թվային
-                    աշխարհներ ձևավորելու արվեստը:
-                  </p>
+                  <p>{t("about_page.mission_body")}</p>
                   <p className="text-primary font-black text-sm uppercase tracking-[0.2em] flex items-center gap-3">
                     <MapPin className="w-4 h-4" />
-                    Վանաձոր · Առցանց · Առկա
+                    {t("about_page.mission_locations")}
                   </p>
                 </div>
               </FadeIn>
@@ -278,9 +240,9 @@ const AboutPage = () => {
 
         <Container className="relative z-10">
           <FadeIn className="mb-16 sm:mb-20 text-center mx-auto">
-            <SectionLabel>Մեր ուսանողները</SectionLabel>
+            <SectionLabel>{t("about_page.audiences_eyebrow")}</SectionLabel>
             <h2 className="text-h1">
-              Ո՞ՒՄ ՀԱՄԱՐ ԵՆ <span className="text-primary">ԴԱՍԸՆԹԱՑՆԵՐԸ</span>
+              {t("about_page.audiences_title_a")} <span className="text-primary">{t("about_page.audiences_title_b")}</span>
             </h2>
           </FadeIn>
 
@@ -322,14 +284,13 @@ const AboutPage = () => {
               
               <div className="relative flex flex-col lg:flex-row items-center justify-between gap-12">
                 <div className="max-w-2xl text-center lg:text-left">
-                  <SectionLabel>Հաջորդ քայլը</SectionLabel>
+                  <SectionLabel>{t("about_page.cta_eyebrow")}</SectionLabel>
                   <h2 className="text-h1 mb-6 leading-[0.9]">
-                    ՊԱՏՐԱ՞ՍՏ ԵՔ <br />
-                    <span className="text-primary italic">ՍԿՍԵԼ ՁԵՐ ՈՒՂԻՆ</span>
+                    {t("about_page.cta_title_a")} <br />
+                    <span className="text-primary italic">{t("about_page.cta_title_b")}</span>
                   </h2>
                   <p className="text-lg text-muted-foreground font-medium leading-relaxed">
-                    Միացիր LogicLab-ին և ձեռք բեր մրցունակ մասնագիտություն այսօր
-                    իսկ։ Փոքր խմբեր, գործնական նախագծեր, անհատական ուշադրություն։
+                    {t("about_page.cta_body")}
                   </p>
                 </div>
 
@@ -338,14 +299,14 @@ const AboutPage = () => {
                     to="/register"
                     className="group flex items-center justify-center gap-3 bg-primary text-primary-foreground px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
                   >
-                    Գրանցվել հիմա
+                    {t("about_page.cta_register")}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                   <Link
                     to="/courses"
                     className="flex items-center justify-center gap-3 border-2 border-border hover:border-primary/50 text-foreground px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-white/5 active:scale-[0.98] transition-all"
                   >
-                    Դասընթացներ
+                    {t("about_page.cta_courses")}
                   </Link>
                 </div>
               </div>

@@ -4,26 +4,33 @@ import {
   Sparkles, MessageCircle, Users, FolderOpen, Phone, HelpCircle,
 } from 'lucide-react';
 import { useLogic } from '../../hooks/useLogic';
+import { useT } from '@/i18n';
 
 interface LogicAgentProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }
 
-const FAQ_ITEMS = [
-  { icon: <Sparkles size={15} />, label: 'Դասընթացներ', question: 'Ի՞նչ դասընթացներ ունեք:', color: 'faq-yellow' },
-  { icon: <Users size={15} />, label: 'Դասախոսներ', question: 'Ովքե՞ր են դասախոսները:', color: 'faq-blue' },
-  { icon: <FolderOpen size={15} />, label: 'Նախագծեր', question: 'Տեսնել ուսանողական նախագծերը:', color: 'faq-green' },
-  { icon: <Phone size={15} />, label: 'Կապ', question: 'Ինչպե՞ս կապվել ձեզ հետ:', color: 'faq-purple' },
-];
-
-const QUICK_CHIPS = ['Գին', 'Ժամանակացույց', 'Հավաստագիր', 'Անվճար'];
-
 const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
   const [input, setInput] = useState('');
   const [showFAQ, setShowFAQ] = useState(true);
   const { messages, isLoading, sendMessage } = useLogic();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const t = useT();
+
+  const FAQ_ITEMS = [
+    { icon: <Sparkles size={15} />, label: t('logic_agent.chip_courses'),     question: t('logic_agent.q_courses'),     color: 'faq-yellow' },
+    { icon: <Users size={15} />,    label: t('logic_agent.chip_instructors'), question: t('logic_agent.q_instructors'), color: 'faq-blue' },
+    { icon: <FolderOpen size={15} />, label: t('logic_agent.chip_projects'),  question: t('logic_agent.q_projects'),    color: 'faq-green' },
+    { icon: <Phone size={15} />,    label: t('logic_agent.chip_contact'),     question: t('logic_agent.q_contact'),     color: 'faq-purple' },
+  ];
+
+  const QUICK_CHIPS = [
+    t('logic_agent.quick_price'),
+    t('logic_agent.quick_schedule'),
+    t('logic_agent.quick_certificate'),
+    t('logic_agent.quick_free'),
+  ];
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -213,9 +220,9 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[rgba(255,215,0,0.09)] border border-[rgba(255,215,0,0.18)] mb-4">
                 <MessageCircle size={24} className="text-primary-alt" />
               </div>
-              <h4 className="text-white text-lg font-black mb-2.5 tracking-tight">ԻՆՉՊԵ՞Ս ԿԱՐՈՂ ԵՄ ՕԳՆԵԼ</h4>
+              <h4 className="text-white text-lg font-black mb-2.5 tracking-tight">{t('logic_agent.help_title')}</h4>
               <p className="text-[var(--gray-light)] opacity-55 text-sm px-6 leading-relaxed">
-                Ես ձեր LOGIC նավիգացիոն օգնականն եմ։ Հարցրեք ինձ դասընթացների, դասախոսների կամ LogicLab-ի մասին։
+                {t('logic_agent.help_body')}
               </p>
             </div>
           )}
@@ -263,7 +270,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
           >
             <HelpCircle size={13} className="text-primary-alt shrink-0" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-alt flex-1 text-left">
-              Հաճախ տրվող հարցեր
+              {t('logic_agent.faq_heading')}
             </span>
             {!showFAQ && <span className="faq-badge">{FAQ_ITEMS.length}</span>}
             <ChevronDown
@@ -310,7 +317,7 @@ const LogicAgent: React.FC<LogicAgentProps> = ({ isOpen, setIsOpen }) => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Մուտքագրեք հրամանը..."
+              placeholder={t('logic_agent.input_placeholder')}
               rows={1}
               className="w-full bg-black border-2 border-gray-dark text-white text-sm rounded-2xl p-4 pr-14 focus:outline-none focus:border-primary transition-[var(--transition)] resize-none shadow-inner min-h-[54px] font-semibold placeholder:opacity-35"
             />

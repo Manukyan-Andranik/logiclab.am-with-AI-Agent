@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa';
 import { useNavigationMode } from '../../hooks/useNavigationMode';
 import { useNavigationContext } from './NavigationProvider';
+import { useT } from '@/i18n';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,7 @@ interface FooterProps {
 }
 
 const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
+  const t = useT();
   const { mode, selectMode } = useNavigationMode();
   const { navigationSystem: configNavigationSystem } = useNavigationContext();
   const [showComingSoonDialog, setShowComingSoonDialog] = useState(false);
@@ -72,9 +74,9 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
 
           {/* Brand Section */}
           <div className="md:col-span-2 space-y-8">
-            <h2 className="text-4xl font-black text-primary">LOGIC LAB ACADEMY</h2>
+            <h2 className="text-4xl font-black text-primary">{t('footer_extra.brand')}</h2>
             <p className="text-[var(--gray-light)] opacity-70 max-w-md text-lg leading-relaxed">
-              Ապագայի կրթական հարթակ, որտեղ արհեստական բանականությունը և տեխնոլոգիաները դառնում են հասանելի բոլորին:
+              {t('footer_extra.tagline')}
             </p>
 
             {/* Social Links Container */}
@@ -97,31 +99,31 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
 
           {/* Useful Links Section */}
           <div className="space-y-6">
-            <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">ՕԳՏԱԿԱՐ ՀՂՈՒՄՆԵՐ</h4>
+            <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">{t('footer_extra.useful_links_heading')}</h4>
             <ul className="space-y-4 text-[var(--gray-light)] font-semibold">
               <li>
                 <Link to="/" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
-                  Գլխավոր
+                  {t('nav.home')}
                 </Link>
               </li>
               <li>
                 <Link to="/courses#all" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
-                  Դասընթացներ
+                  {t('nav.courses')}
                 </Link>
               </li>
               <li>
                 <Link to="/about" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
-                  Մեր Մասին
+                  {t('nav.about')}
                 </Link>
               </li>
               <li>
                 <Link to="/about#instructors" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
-                  Դասախոսներ
+                  {t('nav.instructors')}
                 </Link>
               </li>
               <li>
                 <Link to="/#projects" className="opacity-70 hover:opacity-100 hover:text-primary transition-all">
-                  Նախագծեր
+                  {t('nav.projects')}
                 </Link>
               </li>
             </ul>
@@ -129,7 +131,7 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
 
           {/* Navigation Mode Section */}
           <div className="space-y-6">
-            <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">ՆԱՎԻԳԱՑԻԱՅԻ ՌԵԺԻՄ</h4>
+            <h4 className="text-xl font-bold text-primary-alt border-l-4 border-primary pl-4">{t('footer_extra.nav_mode_heading')}</h4>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => handleNavigationModeChange('modern')}
@@ -139,7 +141,7 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
                   }`}
               >
                 <Bot size={18} />
-                LogicAI Agent
+                {t('footer_extra.mode_agent')}
               </button>
               <button
                 onClick={() => handleNavigationModeChange('traditional')}
@@ -149,7 +151,7 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
                   }`}
               >
                 <Layout size={18} />
-                Traditional
+                {t('footer_extra.mode_traditional')}
               </button>
             </div>
           </div>
@@ -158,11 +160,11 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
         {/* Bottom Bar */}
         <div className="pt-10 border-t border-gray-dark flex flex-col md:flex-row items-center justify-between gap-6">
           <p className="text-xs font-mono tracking-widest uppercase opacity-40">
-            © 2026 LOGIC LAB ACADEMY. ALL RIGHTS RESERVED.
+            {t('footer_extra.copyright', { year: new Date().getFullYear() })}
           </p>
           <div className="flex gap-8 text-xs font-mono uppercase tracking-widest opacity-40">
-            <Link to="/privacy-policy" className="hover:text-primary-alt hover:opacity-100 transition-colors">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="hover:text-primary-alt hover:opacity-100 transition-colors">Terms of Service</Link>
+            <Link to="/privacy-policy" className="hover:text-primary-alt hover:opacity-100 transition-colors">{t('footer.privacy')}</Link>
+            <Link to="/terms-of-service" className="hover:text-primary-alt hover:opacity-100 transition-colors">{t('footer.terms')}</Link>
           </div>
         </div>
       </Container>
@@ -170,15 +172,15 @@ const Footer: React.FC<FooterProps> = ({ navigationSystem }) => {
       {/* "Coming Soon" Dialog for Traditional Mode */}
       <AlertDialog open={showComingSoonDialog} onOpenChange={setShowComingSoonDialog}>
         <AlertDialogContent className="bg-gray-dark border border-gray-dark"> {/* changed from bg-black */}
-          <AlertDialogTitle className="text-primary">Շուտով հասանելի կլինի</AlertDialogTitle>
+          <AlertDialogTitle className="text-primary">{t('footer_extra.coming_soon_title')}</AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground">
-            Navigation համակարգի փոփոխումը այս պահին հասանելի չէ։ Այս հնարավորությունը կավելացվի առաջիկա թարմացումներում։ Ներկայում դուք օգտագործում եք Traditional նավիգացիոն համակարգը։
+            {t('footer_extra.coming_soon_body')}
           </AlertDialogDescription>
           <AlertDialogAction
             onClick={() => setShowComingSoonDialog(false)}
             className="w-fit px-6 py-3 rounded-xl bg-primary hover:bg-[hsl(var(--accent-strong))] text-primary-foreground text-sm font-semibold uppercase tracking-wide transition-all duration-200 ease-in-out hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
-            Հասկացա
+            {t('footer_extra.coming_soon_ack')}
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>

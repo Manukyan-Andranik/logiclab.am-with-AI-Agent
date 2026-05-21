@@ -203,6 +203,11 @@ async def grant_material_access(
             status_code=400,
             detail="Either chapter_id or lesson_id is required",
         )
+    if access_data.resource_link_index is not None and access_data.lesson_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="resource_link_index requires lesson_id",
+        )
 
     student = (
         db.query(Student)
@@ -224,25 +229,51 @@ async def grant_material_access(
             raise HTTPException(status_code=404, detail="Lesson not found")
 
         chapter_id = lesson.chapter_id
-        existing = (
-            db.query(MaterialAccess)
-            .filter(
-                MaterialAccess.student_id == access_data.student_id,
-                MaterialAccess.lesson_id == access_data.lesson_id,
+        # If resource_link_index is provided, check for per-resource access
+        if access_data.resource_link_index is not None:
+            if not (0 <= access_data.resource_link_index < len(lesson.effective_links)):
+                raise HTTPException(status_code=400, detail="Invalid resource_link_index")
+            existing = (
+                db.query(MaterialAccess)
+                .filter(
+                    MaterialAccess.student_id == access_data.student_id,
+                    MaterialAccess.lesson_id == access_data.lesson_id,
+                    MaterialAccess.resource_link_index == access_data.resource_link_index,
+                )
+                .first()
             )
-            .first()
-        )
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail="Access already granted for this lesson",
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Access already granted for this resource link",
+                )
+            new_access = MaterialAccess(
+                chapter_id=chapter_id,
+                lesson_id=access_data.lesson_id,
+                resource_link_index=access_data.resource_link_index,
+                student_id=access_data.student_id,
             )
-
-        new_access = MaterialAccess(
-            chapter_id=chapter_id,
-            lesson_id=access_data.lesson_id,
-            student_id=access_data.student_id,
-        )
+        else:
+            # Grant for the whole lesson
+            existing = (
+                db.query(MaterialAccess)
+                .filter(
+                    MaterialAccess.student_id == access_data.student_id,
+                    MaterialAccess.lesson_id == access_data.lesson_id,
+                    MaterialAccess.resource_link_index.is_(None),
+                )
+                .first()
+            )
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Access already granted for this lesson",
+                )
+            new_access = MaterialAccess(
+                chapter_id=chapter_id,
+                lesson_id=access_data.lesson_id,
+                student_id=access_data.student_id,
+            )
         chapter_for_email = lesson.chapter
         lesson_for_email = lesson
     else:
@@ -264,6 +295,7 @@ async def grant_material_access(
                 MaterialAccess.chapter_id == chapter_id,
                 MaterialAccess.student_id == access_data.student_id,
                 MaterialAccess.lesson_id.is_(None),
+                MaterialAccess.resource_link_index.is_(None),
             )
             .first()
         )

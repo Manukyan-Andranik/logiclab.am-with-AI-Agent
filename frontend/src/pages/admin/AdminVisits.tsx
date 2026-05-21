@@ -1,9 +1,14 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Search, Bot, UserCircle, X } from "lucide-react";
+import { Activity, Search, Bot, UserCircle, X, Download, Users, Globe, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/Button";
-import { getVisits, VisitRecord } from "@/api/admin";
+import {
+  getVisits,
+  VisitRecord,
+  getAnalyticsOverview,
+  analyticsExportUrl,
+} from "@/api/admin";
 
 const PAGE_SIZE = 50;
 
@@ -52,6 +57,32 @@ const AdminVisits = () => {
     placeholderData: (prev) => prev,
   });
 
+  // Date-aware overview (uses the new /admin/analytics/overview endpoint).
+  const overviewParams = useMemo(() => {
+    const p: { start_date?: string; end_date?: string } = {};
+    const sd = toApiDate(startDate);
+    const ed = toApiDate(endDate, true);
+    if (sd) p.start_date = sd;
+    if (ed) p.end_date = ed;
+    return p;
+  }, [startDate, endDate]);
+  const { data: overview } = useQuery({
+    queryKey: ["admin-analytics-overview", overviewParams],
+    queryFn: () => getAnalyticsOverview(overviewParams),
+    placeholderData: (prev) => prev,
+    staleTime: 60_000,
+  });
+
+  const handleExport = (format: "csv" | "json") => {
+    const exportParams: Record<string, string> = {};
+    if (overviewParams.start_date) exportParams.start_date = overviewParams.start_date;
+    if (overviewParams.end_date) exportParams.end_date = overviewParams.end_date;
+    if (botFilter === "bot") exportParams.visitor_class = "suspicious_bot";
+    const url = analyticsExportUrl(format, exportParams);
+    // Open in a new tab so the browser handles the download.
+    window.open(url, "_blank", "noopener");
+  };
+
   const visits = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -90,10 +121,97 @@ const AdminVisits = () => {
           </h1>
           <p className="text-muted-foreground">All website visits. Filter by date, search, or visitor type.</p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {total.toLocaleString()} total
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            {total.toLocaleString()} total
+          </Badge>
+          <button
+            onClick={() => handleExport("csv")}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-secondary"
+            title="Export filtered visits as CSV"
+          >
+            <Download size={12} /> CSV
+          </button>
+          <button
+            onClick={() => handleExport("json")}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-secondary"
+          >
+            <Download size={12} /> JSON
+          </button>
+        </div>
       </div>
+
+      {/* Overview cards (date-range aware) */}
+      {overview && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { label: "Today", value: overview.today_visits, icon: Activity },
+            { label: "This week", value: overview.week_visits, icon: Activity },
+            { label: "This month", value: overview.month_visits, icon: Activity },
+            { label: "Unique", value: overview.unique_visitors, icon: Users },
+            { label: "Human %", value: `${overview.human_pct.toFixed(1)}%`, icon: UserCircle },
+            { label: "Bot %", value: `${overview.bot_pct.toFixed(1)}%`, icon: Bot },
+          ].map((c) => (
+            <div
+              key={c.label}
+              className="bg-background border border-border rounded-xl px-4 py-3 flex flex-col gap-1"
+            >
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                <c.icon size={11} />
+                {c.label}
+              </div>
+              <div className="text-xl font-bold tabular-nums">
+                {typeof c.value === "number" ? c.value.toLocaleString() : c.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Classification breakdown */}
+      {overview && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {[
+            { label: "Humans", value: overview.classification.human, color: "text-emerald-500", icon: UserCircle },
+            { label: "Verified bots", value: overview.classification.verified_bot, color: "text-sky-500", icon: Bot },
+            { label: "Suspicious bots", value: overview.classification.suspicious_bot, color: "text-amber-500", icon: ShieldAlert },
+          ].map((b) => (
+            <div key={b.label} className="bg-background border border-border rounded-xl px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <b.icon className={b.color} size={16} />
+                <span className="text-sm font-medium">{b.label}</span>
+              </div>
+              <span className="text-lg font-bold tabular-nums">{b.value.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Top pages & referrers (compact lists from overview) */}
+      {overview && (overview.top_pages.length > 0 || overview.top_referrers.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { title: "Top pages", icon: Activity, items: overview.top_pages.slice(0, 8) },
+            { title: "Top referrers", icon: Globe, items: overview.top_referrers.slice(0, 8) },
+          ].map((card) => (
+            <div key={card.title} className="bg-background border border-border rounded-xl p-4">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-2">
+                <card.icon size={11} /> {card.title}
+              </div>
+              <div className="space-y-1.5">
+                {card.items.length === 0 ? (
+                  <div className="text-xs text-muted-foreground italic">No data.</div>
+                ) : card.items.map((it) => (
+                  <div key={it.label} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="truncate font-mono text-muted-foreground" title={it.label}>{it.label || "(empty)"}</span>
+                    <span className="tabular-nums font-semibold">{it.count.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-background rounded-xl border border-border p-4 space-y-4">

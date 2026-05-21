@@ -17,8 +17,8 @@ import {
 import VideoHero from "@/components/VideoHero";
 import { useQuery } from "@tanstack/react-query";
 import { getCourses } from "@/api/courses";
-import { getLocalizedContent } from "@/lib/localization";
 import { getMediaUrl } from "@/api/client";
+import { useT, useLocalized } from "@/i18n";
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -35,6 +35,8 @@ const coursesVideo = "https://res.cloudinary.com/dujmbcltl/video/upload/v1772482
 
 const CoursesPage = () => {
   const { hash } = useLocation();
+  const t = useT();
+  const tx = useLocalized();
   const { data: courses, isLoading } = useQuery({
     queryKey: ["courses"],
     queryFn: () => getCourses(true),
@@ -68,9 +70,9 @@ const CoursesPage = () => {
     <div className="min-h-screen bg-black selection:bg-primary selection:text-black">
       <VideoHero
         videoSrc={coursesVideo}
-        titleHighlight={"ԿԵՐՏԻ՛Ր"}
-        title={"ՔՈ ԱՊԱԳԱՆ"}
-        subtitle={"Տիրապետիր ամենապահանջված հմտություններին և դարձիր գլոբալ շուկայի մրցունակ մասնագետ Logic Lab-ի հետ:"}
+        titleHighlight={t("courses.hero_title_highlight")}
+        title={t("courses.hero_title_main")}
+        subtitle={t("courses.hero_subtitle")}
       />
 
       {/* Courses Section */}
@@ -88,15 +90,15 @@ const CoursesPage = () => {
           >
             <div className="max-w-2xl">
               <h2 className="text-[var(--primary-alt)] font-display text-4xl sm:text-5xl lg:text-6xl font-black  uppercase tracking-tighter leading-none">
-                ԲՈԼՈՐ <br />
+                {t("courses.all_heading_a")} <br />
                 <span className="text-foreground">
-                  ԴԱՍԸՆԹԱՑՆԵՐԸ
+                  {t("courses.all_heading_b")}
                 </span>
               </h2>
             </div>
-            
+
             <p className="text-[var(--gray-light)] font-medium max-w-xs border-l-2 border-primary pl-6 py-2 opacity-80">
-              Մենք ստեղծում ենք միջավայր, որտեղ տեսությունը վերածվում է իրական փորձի:
+              {t("courses.all_subtitle")}
             </p>
           </motion.div>
 
@@ -124,20 +126,20 @@ const CoursesPage = () => {
                         )}
                       </div>
                       <span className="text-[10px] font-black text-[var(--primary-alt)] bg-[var(--gray-dark)] px-4 py-2 rounded-full uppercase tracking-[0.2em]">
-                        {course.duration_months} ամիս
+                        {t("courses.duration_short", { count: course.duration_months })}
                       </span>
                     </div>
 
                     <h3 className="font-display text-xl font-black mb-4 text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
-                      {getLocalizedContent(course.title)}
+                      {tx(course.title)}
                     </h3>
 
                     <p className="text-sm text-[var(--gray-light)] opacity-60 leading-relaxed mb-8 line-clamp-3 font-medium">
-                      {getLocalizedContent(course.description)}
+                      {tx(course.description)}
                     </p>
 
                     <div className="flex items-center gap-3 text-xs font-black text-[var(--primary)] uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-[var(--gray-dark)] pt-6">
-                      {"ծանոթանալ"}
+                      {t("courses.explore")}
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   </Link>

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from enum import Enum
@@ -330,7 +330,6 @@ class LessonUpdate(BaseModel):
     title: Optional[str] = None
     order_index: Optional[int] = None
     resource_links: Optional[List[Dict[str, str]]] = None
-
 class LessonResponse(BaseModel):
     id: int
     chapter_id: int
@@ -338,9 +337,30 @@ class LessonResponse(BaseModel):
     order_index: int
     resource_links: List[Dict[str, str]]
     created_at: datetime
-    
+    updated_at: datetime
+
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def set_resource_links(cls, data: Any) -> Any:
+        if hasattr(data, 'effective_links'):
+            # If it's an ORM object, inject resource_links from effective_links property
+            # This is a bit tricky with Pydantic v2 model_validate
+            # We can return a dict instead
+            if not isinstance(data, dict):
+                return {
+                    "id": data.id,
+                    "chapter_id": data.chapter_id,
+                    "title": data.title,
+                    "order_index": data.order_index,
+                    "resource_links": data.effective_links,
+                    "created_at": data.created_at,
+                    "updated_at": data.updated_at
+                }
+        return data
+
 
 # Registration Schemas
 class RegistrationCreate(BaseModel):
@@ -741,6 +761,7 @@ class MaterialAccessCreate(BaseModel):
     student_id: int
     chapter_id: Optional[int] = None
     lesson_id: Optional[int] = None
+    resource_link_index: Optional[int] = None  # Index of the resource link in lesson.resource_links
 
 class MaterialAccessResponse(BaseModel):
     id: int
@@ -749,6 +770,7 @@ class MaterialAccessResponse(BaseModel):
     student_id: int
     chapter_id: Optional[int] = None
     lesson_id: Optional[int] = None
+    resource_link_index: Optional[int] = None
     
     class Config:
         from_attributes = True

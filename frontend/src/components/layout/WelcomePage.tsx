@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Bot, Navigation, Sparkles, ArrowRight, HelpCircle, Zap, Layout, Home, Heart, Coffee } from 'lucide-react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import InteractiveGuide from './InteractiveGuide';
+import { useT } from '@/i18n';
 
 type NavigationMode = 'modern' | 'traditional';
 interface WelcomePageProps { onSelect: (mode: NavigationMode) => void; }
 
 const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
   const [showGuide, setShowGuide] = useState(false);
+  const t = useT();
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -54,9 +56,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
             variants={itemVariants}
             className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-[0.85] mb-8 uppercase"
           >
-            Ընտրեք Ձեր <br />
+            {t("welcome.pick_a")} <br />
             <span className="text-primary drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-              Ռեժիմը
+              {t("welcome.pick_b")}
             </span>
           </motion.h1>
           
@@ -64,7 +66,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
             variants={itemVariants}
             className="text-lg md:text-2xl text-white font-bold max-w-2xl mx-auto leading-snug opacity-80 border-l-8 border-primary pl-8 text-left md:text-center md:border-l-0 md:pl-0"
           >
-            Մենք ստեղծել ենք ձեր ուսումնական տարածքը: Ինչպե՞ս եք ցանկանում նավարկել այսօր:
+            {t("welcome.intro")}
           </motion.p>
         </header>
 
@@ -84,13 +86,13 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
             </div>
             
             <div className="relative z-10">
-              <h2 className="text-4xl font-black mb-6 tracking-tighter uppercase text-white">AI Նավիգացիա</h2>
+              <h2 className="text-4xl font-black mb-6 tracking-tighter uppercase text-white">{t("welcome.ai_title")}</h2>
               <p className="text-white opacity-60 mb-12 text-lg leading-relaxed font-medium">
-                Հաղորդակցվեք հարթակի հետ բնական լեզվով։ Logic Agent-ը հասկանում է ձեր մտադրությունը։
+                {t("welcome.ai_desc")}
               </p>
-              
+
               <div className="flex items-center gap-4 text-primary font-black text-sm uppercase tracking-widest group-hover:gap-6 transition-all duration-300">
-                Գործարկել AI 
+                {t("welcome.ai_cta")}
                 <ArrowRight size={24} />
               </div>
             </div>
@@ -115,13 +117,13 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
             </div>
             
             <div className="relative z-10">
-              <h2 className="text-4xl font-black mb-6 tracking-tighter uppercase text-white">Դասական Տեսք</h2>
+              <h2 className="text-4xl font-black mb-6 tracking-tighter uppercase text-white">{t("welcome.classic_title")}</h2>
               <p className="text-white opacity-60 mb-12 text-lg leading-relaxed font-medium">
-                Ավանդական վեբ-փորձ կառուցվածքային ընտրացանկերով և ինտուիտիվ բաժիններով։
+                {t("welcome.classic_desc")}
               </p>
-              
+
               <div className="flex items-center gap-4 text-white font-black text-sm uppercase tracking-widest group-hover:gap-6 transition-all duration-300">
-                Մուտք գործել 
+                {t("welcome.classic_cta")}
                 <ArrowRight size={24} />
               </div>
             </div>
@@ -168,7 +170,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSelect }) => {
         >
           <HelpCircle size={32} strokeWidth={2.5} />
           <span className="absolute right-full mr-6 bg-black border-2 border-primary text-primary text-[10px] font-black uppercase py-2 px-4 rounded-lg tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-            Օգնություն ( ? )
+            {t("welcome.help_label")}
           </span>
         </button>
       </motion.div>

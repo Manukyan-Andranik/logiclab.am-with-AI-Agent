@@ -1,21 +1,27 @@
 import React from 'react';
 import Container from './Container';
-import { ChevronRight, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useT } from '@/i18n';
 
 import { useState, useEffect } from "react";
 
-const roles = [
-  { slug: 'ml', lines: ['ML', 'ENGINEER'] },
-  { slug: 'photography', lines: ['ՊՐՈՖԵՍԻՈՆԱԼ', 'ԼՈւՍԱՆԿԱՐԻՉ'] },
-  { slug: '3dsmax', lines: ['3D', 'ԴԻԶԱՅՆԵՐ'] },
-  { slug: 'web', lines: ['WEB', 'DEVELOPER'] },
-];
+function useRoles() {
+  const t = useT();
+  // ML and WEB stay in English (industry terms); photographer and 3d localize.
+  return [
+    { slug: 'ml',          lines: ['ML', 'ENGINEER'] },
+    { slug: 'photography', lines: [t('hero.role_photographer_1'), t('hero.role_photographer_2')] },
+    { slug: '3dsmax',      lines: [t('hero.role_3d_1'), t('hero.role_3d_2')] },
+    { slug: 'web',         lines: ['WEB', 'DEVELOPER'] },
+  ];
+}
 
 function AnimatedRole() {
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(true);
   const navigate = useNavigate();
+  const roles = useRoles();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -54,6 +60,7 @@ function AnimatedRole() {
 }
 
 const Hero: React.FC = () => {
+  const t = useT();
   return (
     <div
       className="relative min-h-[90vh] flex items-center overflow-hidden"
@@ -74,7 +81,7 @@ const Hero: React.FC = () => {
         <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
 
           <span className="inline-block text-foreground font-black text-xl uppercase tracking-widest animate-bounce">
-            ԱՐԻ՜ ԴԱՌՆԱԼՈւ
+            {t('hero.eyebrow')}
           </span>
           <AnimatedRole />
 
@@ -82,7 +89,7 @@ const Hero: React.FC = () => {
             className="text-foreground text-xl md:text-2xl font-bold max-w-1xl leading-snug opacity-95 pl-8"
             style={{ borderLeft: '8px solid hsl(var(--surface-1))' }}
           >
-            Ստեղծիր ապագան այսօր։ Միացիր LogicLab-ին և տիրապետիր աշխարհի ամենապահանջված մասնագիտություններին
+            {t('hero.tagline')}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6">
@@ -90,7 +97,7 @@ const Hero: React.FC = () => {
               onClick={() => (window.location.href = "/register")}
               className="text-foreground pl-0 pr-10 py-4 rounded-2xl font-black text-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-4 group"
             >
-              Գրանցվել հիմա
+              {t('hero.cta_register_now')}
               <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </button>
           </div>

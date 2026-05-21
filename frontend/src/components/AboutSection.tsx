@@ -1,44 +1,17 @@
 import { motion } from "framer-motion";
 import { BrainCircuit, Box, Camera, Rocket } from "lucide-react";
-
-const features = [
-  {
-    icon: BrainCircuit, // Or Lightbulb
-    title: "Արհեստական Բանականություն",
-    desc: "Սովորեք Python և Machine Learning՝ ստեղծելով ալգորիթմներ, որոնք «մտածում են»:",
-  },
-  {
-    icon: Box, // Or Layers
-    title: "3D Մոդելավորում",
-    desc: "3dsMax-ի և դիզայնի հիմունքների միջոցով սովորեք կառուցել թվային աշխարհներ:",
-  },
-  {
-    icon: Camera,
-    title: "Պրոֆեսիոնալ Լուսանկարչություն",
-    desc: "Տիրապետեք էքսպոզիցիայի արվեստին և Photoshop-ին՝ պատմելով պատմություններ լուսանկարով:",
-  },
-  {
-    icon: Rocket,
-    title: "Մրցունակ Ապագա",
-    desc: "Մեր դասընթացները նախատեսված են դպրոցականների և սկսնակների համար, ովքեր ձգտում են առաջնորդության:",
-  },
-];
-
-// const stats = [
-//   { icon: TrendingUp, value: "95%", label: "Գիրք Կնաբատին" },
-//   { icon: Users, value: "500+", label: "Մեկնաբաններ" },
-//   { icon: Clock, value: "8+", label: "Դասընթացներ" },
-//   { icon: Award, value: "80%+", label: "Բարձրաթն Ակադեմիկ Ակտիվ" },
-// ];
-
-const aboutText = "«Logic Lab»-ը կրթական և տեխնոլոգիական լուծումների կենտրոն է, որտեղ միահյուսվում են տրամաբանությունն ու ստեղծագործությունը։ Մենք մասնագիտացած ենք Արհեստական Բանականության, 3D մոդելավորման և թվային արվեստի ոլորտներում՝ օգնելով սկսնակներին և պատանիներին կառուցել մրցունակ ապագա։";
-const locationText = "Վանաձոր, Հայաստան";
+import { useT } from "@/i18n";
 
 const AboutSection = () => {
-  // Check if content exists before rendering
-  if (!aboutText && !locationText && features.length === 0) {
-    return null;
-  }
+  const t = useT();
+  const features = [
+    { icon: BrainCircuit, title: t('home.feature_ai_title'),     desc: t('home.feature_ai_desc') },
+    { icon: Box,          title: t('home.feature_3d_title'),     desc: t('home.feature_3d_desc') },
+    { icon: Camera,       title: t('home.feature_photo_title'),  desc: t('home.feature_photo_desc') },
+    { icon: Rocket,       title: t('home.feature_future_title'), desc: t('home.feature_future_desc') },
+  ];
+  const aboutText = t('home.about_body');
+  const locationText = t('home.about_location');
 
   return (
     <section id="about" className="py-24">
@@ -51,10 +24,10 @@ const AboutSection = () => {
             viewport={{ once: true }}
           >
             <span className="text-[var(--primary-alt)] font-display font-bold text-base uppercase tracking-widest mb-4 block">
-              Ինչո՞ւ ընտրել հենց
+              {t('home.about_eyebrow')}
             </span>
             <h2 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold mb-8 text-[var(--white)] uppercase tracking-tighter leading-tight">
-              Logic <span className="text-[#FFD700]">Lab-ը</span>?
+              {t('home.about_heading_a')} <span className="text-[#FFD700]">{t('home.about_heading_b')}</span>
             </h2>
             {aboutText && (
               <p className="text-[var(--gray-light)] text-xl mb-6 leading-relaxed opacity-90">

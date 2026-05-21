@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logicApi, Message } from '../services/logicApi';
+import { useT } from '@/i18n';
 
 export const useLogic = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -8,6 +9,7 @@ export const useLogic = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const t = useT();
 
   const handleIntent = useCallback((intent: string, courseId?: string | number) => {
     // We use a small timeout to allow React to finish processing the state update
@@ -88,13 +90,13 @@ export const useLogic = () => {
       setError(err instanceof Error ? err.message : 'An error occurred');
       const errorMessage: Message = { 
         role: 'assistant', 
-        content: 'Ցավոք, կապի խնդիր առաջացավ։ Խնդրում եմ փորձեք մի փոքր ուշ։' 
+        content: t('logic_agent.connection_error')
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [messages, handleIntent]);
+  }, [messages, handleIntent, t]);
 
   return {
     messages,

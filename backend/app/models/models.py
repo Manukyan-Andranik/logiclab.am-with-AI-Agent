@@ -169,6 +169,12 @@ class Lesson(Base):
     created_at = Column(DateTime, default=_utc_now)
     updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     
+    @property
+    def effective_links(self):
+        if self.materials:
+            return self.materials.links
+        return self.resource_links or []
+
     # Relationships
     chapter = relationship("Chapter", back_populates="lessons")
     materials = relationship("Material", back_populates="lesson", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
@@ -219,6 +225,7 @@ class MaterialAccess(Base):
     id = Column(Integer, primary_key=True, index=True)
     chapter_id = Column(Integer, ForeignKey("chapters.id", ondelete="CASCADE"), nullable=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True)
+    resource_link_index = Column(Integer, nullable=True)  # Index of the resource link in lesson.resource_links
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     granted_at = Column(DateTime, default=_utc_now)
     accessed_at = Column(DateTime, nullable=True)
@@ -234,6 +241,7 @@ class MaterialAccess(Base):
         # from sequential scans into index range scans.
         Index("ix_material_access_student_chapter", "student_id", "chapter_id"),
         Index("ix_material_access_student_lesson", "student_id", "lesson_id"),
+        Index("ix_material_access_student_lesson_resource", "student_id", "lesson_id", "resource_link_index"),
     )
 
 

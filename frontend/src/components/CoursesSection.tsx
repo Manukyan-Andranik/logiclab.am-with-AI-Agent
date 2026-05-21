@@ -3,11 +3,9 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Clock, Signal, Brain, Code, BarChart3, Globe, Calculator, Box, Camera, Database } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getCourses } from "@/api/courses";
-import { getLocalizedContent } from "@/lib/localization";
-import Card from "./ui/Card"
+import { useT, useLocalized } from "@/i18n";
 import Button from "./ui/Button";
 import Loader from "./ui/Loader";
-import { User } from "lucide-react";
 import { getMediaUrl } from "@/api/client";
 
 const iconMap: Record<string, any> = {
@@ -22,6 +20,8 @@ const iconMap: Record<string, any> = {
 };
 
 const CoursesSection = () => {
+  const t = useT();
+  const localized = useLocalized();
   const { data: coursesData, isLoading } = useQuery({
     queryKey: ["courses"],
     queryFn: () => getCourses(true),
@@ -35,8 +35,6 @@ const CoursesSection = () => {
     );
   }
 
-  const courses = Array.isArray(coursesData) ? coursesData : [];
-
   return (
     <div>
       <motion.div
@@ -46,7 +44,7 @@ const CoursesSection = () => {
         className="mb-16"
       >
         <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--primary-alt)] uppercase tracking-tighter">
-          Պահանջված <span className="text-[var(--white)]">Ուղղություններ</span>
+          {t('home.courses_heading_a')} <span className="text-[var(--white)]">{t('home.courses_heading_b')}</span>
         </h2>
       </motion.div>
 
@@ -75,20 +73,20 @@ const CoursesSection = () => {
                     )}
                   </div>
                   <span className="text-[10px] font-black text-[var(--primary-alt)] bg-[var(--gray-dark)] px-4 py-2 rounded-full uppercase tracking-[0.2em]">
-                    {course.duration_months} ամիս
+                    {t('home.courses_duration_months', { months: course.duration_months ?? 0 })}
                   </span>
                 </div>
 
                 <h3 className="font-display text-xl font-black mb-4 text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
-                  {getLocalizedContent(course.title)}
+                  {localized(course.title)}
                 </h3>
 
                 <p className="text-sm text-[var(--gray-light)] opacity-60 leading-relaxed mb-8 line-clamp-3 font-medium">
-                  {getLocalizedContent(course.description)}
+                  {localized(course.description)}
                 </p>
 
                 <div className="flex items-center gap-3 text-xs font-black text-[var(--primary)] uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-[var(--gray-dark)] pt-6">
-                  {"ծանոթանալ"}
+                  {t('home.courses_see_card')}
                   <ArrowRight className="w-4 h-4" />
                 </div>
               </Link>
@@ -106,7 +104,7 @@ const CoursesSection = () => {
       >
         <Link to="/courses">
           <Button className="px-6 py-3 rounded-xl bg-[var(--primary-alt)] hover:bg-[#FFD700] text-[#222] text-sm font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">
-            Դիտել բոլորը
+            {t('common.view_all')}
             <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         </Link>

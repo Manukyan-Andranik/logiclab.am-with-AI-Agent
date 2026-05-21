@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getFeaturedProjects } from "@/api/projects";
-import { getLocalizedContent } from "@/lib/localization";
+import { useT, useLocalized } from "@/i18n";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -41,6 +41,8 @@ const ProjectCover = ({ project }: { project: any }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
+  const t = useT();
+  const localized = useLocalized();
 
   const images =
     project.image_urls?.length > 0 ? project.image_urls : ["/placeholder.svg"];
@@ -58,9 +60,9 @@ const ProjectCover = ({ project }: { project: any }) => {
     return () => clearInterval(interval);
   }, [images.length]);
 
-  const title = getLocalizedContent(project.title);
-  const subtitle = getLocalizedContent(project.subtitle);
-  const description = getLocalizedContent(project.description);
+  const title = localized(project.title);
+  const subtitle = localized(project.subtitle);
+  const description = localized(project.description);
 
   return (
     <motion.div
@@ -100,7 +102,7 @@ const ProjectCover = ({ project }: { project: any }) => {
           className="absolute inset-0 flex items-end p-6 bg-black/0 hover:bg-black/40 transition"
         >
           <span className="opacity-0 group-hover:opacity-100 text-primary flex items-center gap-2 text-xs font-black uppercase tracking-widest">
-            Տեսնել ավելին <ExternalLink className="w-4 h-4" />
+            {t('home.projects_see_more')} <ExternalLink className="w-4 h-4" />
           </span>
         </Link>
       </div>
@@ -136,7 +138,7 @@ const ProjectCover = ({ project }: { project: any }) => {
             onClick={() => navigate(`/projects/${project.id}`)}
             className="mt-4 text-gold text-[12px] font-black uppercase tracking-widest hover:opacity-80"
           >
-            Կարդալ ավելին →
+            {t('home.projects_read_more')}
           </button>
         )}
       </div>
@@ -159,7 +161,9 @@ const ProjectPreview = ({
   index: number;
 }) => {
   const image = project.image_urls?.[0] || "/placeholder.svg";
-  const title = getLocalizedContent(project.title);
+  // Preview cards are tiny — okay to use the page-level localized helper.
+  const localized = useLocalized();
+  const title = localized(project.title);
 
   return (
     <motion.div
@@ -198,6 +202,7 @@ const ProjectPreview = ({
    MAIN COMPONENT
 ======================= */
 const FeaturedProjects = () => {
+  const t = useT();
   const { data: projects, isLoading } = useQuery({
     queryKey: ["featured-projects"],
     queryFn: getFeaturedProjects,
@@ -224,7 +229,7 @@ const FeaturedProjects = () => {
           className="mb-16"
         >
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-[var(--primary-alt)] uppercase tracking-tighter">
-            Ուսանողների <span className="text-[var(--white)]">նախագծերից</span>
+            {t('home.projects_heading_a')} <span className="text-[var(--white)]">{t('home.projects_heading_b')}</span>
           </h2>
         </motion.div>
 

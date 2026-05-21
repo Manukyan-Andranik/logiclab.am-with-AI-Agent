@@ -1,80 +1,19 @@
 # app/api/endpoints/daily_life.py
-import logging
-from typing import Any, List, Optional
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
-from ...core.database import SessionLocal, get_db
+from typing import List, Optional
+from datetime import datetime, timezone
+from ...core.database import get_db
 from ...core.cloudinary import (
     delete_cloudinary_by_url,
     delete_cloudinary_urls,
     delete_removed_cloudinary_urls,
 )
-from ...core.email import email_service
-from ...models.models import DailyLife, UserPersonal, UserRole
+from ...models.models import DailyLife
 from ...schemas.schemas import DailyLifeCreate, DailyLifeUpdate, DailyLifeResponse
 from ..deps import get_current_admin
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def _localized_title(value: Any) -> str:
-    """Best-effort multilingual-dict → single string."""
-    if isinstance(value, dict):
-        for lang in ("hy", "en", "ru"):
-            v = (value.get(lang) or "").strip()
-            if v:
-                return v
-        for v in value.values():
-            if v:
-                return str(v).strip()
-        return ""
-    return str(value or "")
-
-
-async def _broadcast_daily_life_published(story_id: int, title_label: str) -> None:
-    """Send the 'new daily life story' email to every active student.
-
-    Runs inside a FastAPI BackgroundTask — opens its own short-lived session
-    so it doesn't reuse the request-scoped one (which is closed by the time
-    the task runs).
-    """
-    session: Session = SessionLocal()
-    try:
-        recipients = (
-            session.query(UserPersonal.email, UserPersonal.first_name)
-            .filter(
-                UserPersonal.role == UserRole.STUDENT,
-                UserPersonal.is_active.is_(True),
-                UserPersonal.email.isnot(None),
-            )
-            .all()
-        )
-    finally:
-        try:
-            session.close()
-        except Exception:
-            pass
-
-    sent = 0
-    for email, first_name in recipients:
-        if not email:
-            continue
-        try:
-            ok = await email_service.send_daily_life_published(
-                email, first_name or "", title_label, story_id,
-            )
-            if ok:
-                sent += 1
-        except Exception:
-            logger.exception("daily_life broadcast: failed to email %s", email)
-    logger.info(
-        "daily_life broadcast: story_id=%s recipients=%d sent=%d",
-        story_id, len(recipients), sent,
-    )
 
 @router.get("/", response_model=List[DailyLifeResponse])
 async def get_daily_life_stories(
@@ -156,15 +95,12 @@ async def get_daily_life(
 @router.post("/", response_model=DailyLifeResponse, status_code=status.HTTP_201_CREATED)
 async def create_daily_life(
     story_data: DailyLifeCreate,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Create new daily life story (Admin only).
-
-    If the story is created already published, every active student gets a
-    notification email (non-blocking via BackgroundTasks).
-    """
+    """Create new daily life story (Admin only)"""
+    
+    # Create daily life story
     new_story = DailyLife(
         title=story_data.title.model_dump(),
         subtitle=story_data.subtitle.model_dump() if story_data.subtitle else None,
@@ -172,19 +108,12 @@ async def create_daily_life(
         image_urls=story_data.image_urls or [],
         video_url=story_data.video_url,
         is_published=story_data.is_published,
-        published_date=datetime.now(timezone.utc)
+        published_date=datetime.now(timezone.utc)  # Set published date when story is created
     )
     db.add(new_story)
     db.commit()
     db.refresh(new_story)
-
-    if new_story.is_published:
-        background_tasks.add_task(
-            _broadcast_daily_life_published,
-            new_story.id,
-            _localized_title(new_story.title),
-        )
-
+    
     return new_story
 
 @router.put("/{story_id}", response_model=DailyLifeResponse)
@@ -245,24 +174,18 @@ async def delete_daily_life(
 @router.patch("/{story_id}/toggle-published", response_model=DailyLifeResponse)
 async def toggle_daily_life_published(
     story_id: int,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
-    """Toggle daily life story published status (Admin only).
-
-    On a False → True transition, every active student gets a notification
-    email (non-blocking via BackgroundTasks).
-    """
-    prior = db.query(DailyLife.id, DailyLife.is_published).filter(
-        DailyLife.id == story_id
-    ).first()
-    if not prior:
+    """Toggle daily life story published status (Admin only)"""
+    # Atomic flip via UPDATE ... SET is_published = NOT is_published — closes
+    # the read-modify-write race when two admins toggle concurrently.
+    exists = db.query(DailyLife.id).filter(DailyLife.id == story_id).first()
+    if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Daily life story not found"
         )
-    was_published = bool(prior.is_published)
 
     db.query(DailyLife).filter(DailyLife.id == story_id).update(
         {DailyLife.is_published: ~DailyLife.is_published},
@@ -271,12 +194,4 @@ async def toggle_daily_life_published(
     db.commit()
 
     story = db.query(DailyLife).filter(DailyLife.id == story_id).first()
-
-    if story and story.is_published and not was_published:
-        background_tasks.add_task(
-            _broadcast_daily_life_published,
-            story.id,
-            _localized_title(story.title),
-        )
-
     return story

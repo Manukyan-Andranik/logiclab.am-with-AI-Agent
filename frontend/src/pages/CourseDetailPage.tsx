@@ -9,7 +9,6 @@ import VideoHero from "@/components/VideoHero";
 import detailVideo from "@/assets/course-detail-video.mp4";
 import { useQuery } from "@tanstack/react-query";
 import { getCourse, getCourses, getCourseCurriculum } from "@/api/courses";
-import { getLocalizedContent } from "@/lib/localization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Accordion,
@@ -18,6 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { getMediaUrl } from "@/api/client";
+import { useT, useLocalized } from "@/i18n";
 
 const iconMap: Record<string, LucideIcon> = {
   brain: Brain,
@@ -33,6 +33,8 @@ const iconMap: Record<string, LucideIcon> = {
 const CourseDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const courseSlug = slug || "0";
+  const t = useT();
+  const tx = useLocalized();
 
   const { data: course, isLoading: isCourseLoading } = useQuery({
     queryKey: ["course", courseSlug],
@@ -64,10 +66,10 @@ const CourseDetailPage = () => {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <h1 className="font-display text-3xl font-bold text-white mb-4">
-            Դասընթացը չի գտնվել
+            {t("course_detail.not_found")}
           </h1>
           <Link to="/courses" className="text-primary hover:underline">
-            Վերադառնալ դասընթացներին
+            {t("course_detail.back_to_courses")}
           </Link>
         </div>
       </div>
@@ -82,15 +84,15 @@ const CourseDetailPage = () => {
 
       <VideoHero
         videoSrc={course.hero_video_url}
-        title={getLocalizedContent(course.title)}>
+        title={tx(course.title)}>
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black border-2 border-primary-alt text-primary-alt text-sm font-black uppercase tracking-widest">
             <Clock className="w-4 h-4" />
-            {course.duration_months} ամիս
+            {t("course_detail.duration_value", { count: course.duration_months })}
           </span>
           <span className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black border-2 border-primary text-primary text-sm font-black uppercase tracking-widest">
             <Signal className="w-4 h-4" />
-            {course.level || "Բոլոր"}
+            {course.level || t("course_detail.level_default")}
           </span>
         </div>
       </VideoHero>
@@ -103,7 +105,7 @@ const CourseDetailPage = () => {
             className="inline-flex items-center gap-2 text-primary-alt font-black text-xs uppercase tracking-widest hover:text-white transition-colors mb-16"
           >
             <ArrowLeft className="w-4 h-4" />
-            Բոլոր դասընթացները
+            {t("course_detail.back_to_courses")}
           </Link>
 
           <div className="grid lg:grid-cols-3 gap-16">
@@ -112,11 +114,11 @@ const CourseDetailPage = () => {
               {/* About */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <h2 className="font-display text-4xl font-black mb-8 uppercase tracking-tighter">
-                  <span className="text-primary">Դասընթացի</span>{" "}
-                  <span className="text-white">մասին</span>
+                  <span className="text-primary">{t("course_detail.about_a")}</span>{" "}
+                  <span className="text-white">{t("course_detail.about_b")}</span>
                 </h2>
                 <p className="text-[var(--gray-light)] opacity-80 text-lg leading-relaxed font-medium whitespace-pre-wrap">
-                  {getLocalizedContent(course.description)}
+                  {tx(course.description)}
                 </p>
               </motion.div>
 
@@ -127,7 +129,7 @@ const CourseDetailPage = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}>
                   <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter">
-                    <span className="text-primary-alt">ԾՐԱԳԻՐԸ</span>
+                    <span className="text-primary-alt">{t("course_detail.syllabus_title")}</span>
                   </h2>
                   <Accordion type="single" collapsible className="w-full space-y-6">
                     {curriculum.map((item: any, i: number) => (
@@ -172,7 +174,7 @@ const CourseDetailPage = () => {
                   viewport={{ once: true }}
                 >
                   <h2 className="font-display text-4xl font-black text-white mb-12 uppercase tracking-tighter italic">
-                    ԴԱՍԱԽՈՍՆԵՐ
+                    {t("course_detail.instructors_title")}
                   </h2>
                   <div className="grid sm:grid-cols-2 gap-8">
                     {course.instructors.map((instructor) => (
@@ -180,7 +182,7 @@ const CourseDetailPage = () => {
                         <div className="flex items-center gap-6">
                           <div className="w-20 h-20 rounded-2xl overflow-hidden grayscale-[0.5] group-hover:grayscale-0 transition-all duration-500 bg-gray-dark border border-white/10">
                             {instructor.user.profile_image ? (
-                              <img src={getMediaUrl(instructor.user.profile_image)} alt={instructor.user.first_name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                              <img src={getMediaUrl(instructor.user.profile_image)} alt={tx(instructor.user.first_name)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-white/10">
                                 <Users size={32} />
@@ -189,16 +191,16 @@ const CourseDetailPage = () => {
                           </div>
                           <div>
                             <h3 className="font-black text-xl text-white uppercase tracking-tighter italic">
-                              {instructor.user.first_name} <br /> {instructor.user.last_name}
+                              {tx(instructor.user.first_name)} <br /> {tx(instructor.user.last_name)}
                             </h3>
                             <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">
-                              {instructor.proficiency?.[0] || instructor.skills?.[0] || "Մասնագետ"}
+                              {instructor.proficiency?.[0] || instructor.skills?.[0] || t("course_detail.default_proficiency")}
                             </p>
                           </div>
                         </div>
                         {instructor.bio && (
                           <p className="text-sm text-gray-light opacity-60 leading-relaxed italic group-hover:opacity-100 transition-opacity">
-                            {instructor.bio}
+                            {tx(instructor.bio)}
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-auto">
@@ -227,15 +229,15 @@ const CourseDetailPage = () => {
                 {/* Schedule and Details */}
                 <div className="space-y-8 mb-12">
                   <h3 className="text-[var(--primary-alt)] font-display text-2xl font-black uppercase tracking-tighter">
-                    Մանրամասներ
+                    {t("course_detail.details_title")}
                   </h3>
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-primary shadow-inner">
                       <BookOpen size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">Տևողությունը</p>
-                      <p className="text-lg text-primary-alt font-black">{course.duration_months} ամիս</p>
+                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">{t("course_detail.duration_label")}</p>
+                      <p className="text-lg text-primary-alt font-black">{t("course_detail.duration_value", { count: course.duration_months })}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-5">
@@ -243,8 +245,8 @@ const CourseDetailPage = () => {
                       <Signal size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">Մակարդակ</p>
-                      <p className="text-lg text-primary-alt font-black">{course.level || "Բոլոր"}</p>
+                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">{t("course_detail.level_label")}</p>
+                      <p className="text-lg text-primary-alt font-black">{course.level || t("course_detail.level_default")}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-5">
@@ -252,8 +254,8 @@ const CourseDetailPage = () => {
                       <Laptop size={24} />
                     </div>
                     <div>
-                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">Ֆորմատ</p>
-                      <p className="text-lg text-primary-alt font-black">Առցանց / Առկա</p>
+                      <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest">{t("course_detail.format_label")}</p>
+                      <p className="text-lg text-primary-alt font-black">{t("course_detail.format_value")}</p>
                     </div>
                   </div>
                 </div>
@@ -261,15 +263,15 @@ const CourseDetailPage = () => {
                 {/* CTA */}
                 <div className="space-y-6 pt-10 border-t-4 border-black">
                   <div>
-                    <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest mb-2">Ամսական վճար</p>
-                    <p className="text-4xl font-black text-white tracking-tighter">{course.monthly_payment.toLocaleString()} <span className="text-sm font-bold opacity-90">AMD</span></p>
+                    <p className="text-[10px] text-white opacity-90 font-black uppercase tracking-widest mb-2">{t("course_detail.monthly_label")}</p>
+                    <p className="text-4xl font-black text-white tracking-tighter">{course.monthly_payment.toLocaleString()} <span className="text-sm font-bold opacity-90">{t("course_detail.currency")}</span></p>
                   </div>
 
                   <Link
                     to={`/register?course=${course.slug}`}
                     className="block w-full px-6 py-3 rounded-xl bg-[#FFC700] hover:bg-[#FFD000] text-[#222] text-sm font-black uppercase tracking-widest text-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,215,0,0.2)]"
                   >
-                    Գրանցվել
+                    {t("course_detail.enroll")}
                   </Link>
                 </div>
               </div>
@@ -288,7 +290,7 @@ const CourseDetailPage = () => {
             className="mb-16"
           >
             <h2 className="font-display text-4xl font-black text-white uppercase tracking-tighter">
-              ԱՅԼ <span className="text-[var(--primary-alt)]">ԴԱՍԸՆԹԱՑՆԵՐ</span>
+              {t("course_detail.other_courses_a")} <span className="text-[var(--primary-alt)]">{t("course_detail.other_courses_b")}</span>
             </h2>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -315,20 +317,20 @@ const CourseDetailPage = () => {
                         )}
                       </div>
                       <span className="text-[10px] font-black text-[var(--primary-alt)] bg-[var(--gray-dark)] px-4 py-2 rounded-full uppercase tracking-[0.2em]">
-                        {course.duration_months} ամիս
+                        {t("course_detail.duration_value", { count: course.duration_months })}
                       </span>
                     </div>
 
                     <h3 className="font-display text-xl font-black mb-4 text-[var(--white)] group-hover:text-[var(--primary-alt)] transition-colors uppercase tracking-tighter">
-                      {getLocalizedContent(course.title)}
+                      {tx(course.title)}
                     </h3>
 
                     <p className="text-sm text-[var(--gray-light)] opacity-60 leading-relaxed mb-8 line-clamp-3 font-medium">
-                      {getLocalizedContent(course.description)}
+                      {tx(course.description)}
                     </p>
 
                     <div className="flex items-center gap-3 text-xs font-black text-[var(--primary)] uppercase tracking-widest group-hover:gap-5 transition-all mt-auto border-t-2 border-[var(--gray-dark)] pt-6">
-                      {"ծանոթանալ"}
+                      {t("courses.explore")}
                       <ArrowRight className="w-4 h-4" />
                     </div>
                   </Link>

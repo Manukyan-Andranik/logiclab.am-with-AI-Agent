@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import type { LoginResponse } from "@/api/types";
+import { useT } from "@/i18n";
 
 // Only honor in-app relative paths. Reject anything that could redirect to
 // an external host (open-redirect guard).
@@ -32,6 +33,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const t = useT();
 
   // Route-aware login:
   //   /login?role=admin   → admin login only (no silent fallback)
@@ -47,15 +49,15 @@ const LoginPage = () => {
   const finishLogin = (data: LoginResponse) => {
     localStorage.setItem("token", data.access_token);
     localStorage.setItem("role", data.role);
-    toast({ title: "Բարի գալուստ", description: "" });
+    toast({ title: t("login.welcome_toast", { name: data.role }), description: "" });
     const fallback = data.role === "admin" ? "/admin" : "/student/dashboard";
     navigate(nextPath || fallback, { replace: true });
   };
 
   const showFailure = (err: Error | null) => {
     toast({
-      title: "Մուտքը ձախողվեց",
-      description: err?.message || "Սխալ էլ. փոստ կամ գաղտնաբառ:",
+      title: t("login.failed_title"),
+      description: err?.message || t("login.invalid_credentials"),
       variant: "destructive",
     });
   };
@@ -115,33 +117,33 @@ const LoginPage = () => {
 
               <div className="mb-8">
                 <h2 className="text-h2 font-black uppercase text-foreground">
-                  Մուտք
+                  {t("login.title")}
                 </h2>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="group">
-                  <label className={labelBase}>Էլ. փոստ</label>
+                  <label className={labelBase}>{t("login.email")}</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
+                    placeholder={t("login.email_placeholder")}
                     autoComplete="username"
                     className={inputBase}
                   />
                 </div>
 
                 <div className="group">
-                  <label className={labelBase}>Գաղտնաբառ</label>
+                  <label className={labelBase}>{t("login.password")}</label>
                   <div className="relative">
                     <input
                       type={showPw ? "text" : "password"}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
+                      placeholder={t("login.password_placeholder")}
                       autoComplete="current-password"
                       className={inputBase + " pr-14"}
                     />
@@ -149,7 +151,7 @@ const LoginPage = () => {
                       type="button"
                       onClick={() => setShowPw((v) => !v)}
                       tabIndex={-1}
-                      aria-label={showPw ? "Hide password" : "Show password"}
+                      aria-label={showPw ? t("login.hide_password") : t("login.show_password")}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -162,13 +164,13 @@ const LoginPage = () => {
                   disabled={isPending}
                   className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[hsl(var(--accent-strong))] active:scale-[0.98] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
                 >
-                  {isPending ? "Մուտք..." : <><span>Մուտք</span><ArrowRight size={16} /></>}
+                  {isPending ? t("login.submitting") : <><span>{t("login.submit")}</span><ArrowRight size={16} /></>}
                 </button>
               </form>
               <p className="mt-8 text-center text-xs text-muted-foreground font-medium">
-                Հաշիվ չունե՞ք կամ մոռացել եք գաղտնաբառը։{" "}
+                {t("login.no_account")}{" "}
                 <a href="/#contact" className="text-foreground underline hover:text-foreground/80">
-                  Կապվեք մեզ հետ
+                  {t("login.contact_us")}
                 </a>
               </p>
 
@@ -177,7 +179,7 @@ const LoginPage = () => {
                   to="/"
                   className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
                 >
-                  ← Գլխավոր էջ
+                  ← {t("login.back_home")}
                 </Link>
               </div>
             </div>

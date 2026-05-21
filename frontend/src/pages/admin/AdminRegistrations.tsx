@@ -14,12 +14,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Check, X, Clock, Eye, Trash2 } from "lucide-react";
-import { getLocalizedContent } from "@/lib/localization";
+import { useLocalized } from "@/i18n";
 import { useState } from "react";
 
 const AdminRegistrations = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const tx = useLocalized();
   const [registrationToDelete, setRegistrationToDelete] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -92,10 +93,10 @@ const AdminRegistrations = () => {
             {registrations.map((reg: any) => (
               <tr key={reg.id} className="hover:bg-secondary/20 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="font-semibold">{reg.student?.user?.first_name} {reg.student?.user?.last_name}</div>
+                  <div className="font-semibold">{tx(reg.student?.user?.first_name)} {tx(reg.student?.user?.last_name)}</div>
                   <div className="text-xs text-muted-foreground">{reg.student?.user?.email}</div>
                 </td>
-                <td className="px-6 py-4">{getLocalizedContent(reg.course?.title)}</td>
+                <td className="px-6 py-4">{tx(reg.course?.title)}</td>
                 <td className="px-6 py-4">{getStatusBadge(reg.status)}</td>
                 <td className="px-6 py-4 text-muted-foreground">
                   {new Date(reg.registration_date).toLocaleDateString()}
@@ -153,7 +154,7 @@ const AdminRegistrations = () => {
           </AlertDialogHeader>
           <div className="space-y-3 text-foreground">
             <AlertDialogDescription>
-              Are you sure you want to delete the registration for <strong>{registrationToDelete?.student?.user?.first_name} {registrationToDelete?.student?.user?.last_name}</strong> in <strong>{getLocalizedContent(registrationToDelete?.course?.title)}</strong>?
+              Are you sure you want to delete the registration for <strong>{tx(registrationToDelete?.student?.user?.first_name)} {tx(registrationToDelete?.student?.user?.last_name)}</strong> in <strong>{tx(registrationToDelete?.course?.title)}</strong>?
             </AlertDialogDescription>
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
               <p className="font-semibold mb-1">⚠️ This action cannot be undone.</p>

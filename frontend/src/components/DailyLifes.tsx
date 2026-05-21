@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getFeaturedDailyLife } from "@/api/daily-life";
-import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
 import { DailyLife } from "@/api/types";
 import { getMediaUrl } from "@/api/client";
+import { useT, useLocalized } from "@/i18n";
 
 const PLACEHOLDER = "/placeholder.svg";
 const IMAGE_INTERVAL_MS = 2000;
@@ -106,10 +106,17 @@ const DailyLifeCover = ({ story }: { story: DailyLife }) => {
   const [expanded, setExpanded] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const t = useT();
+  const tx = useLocalized();
 
   const images = story.image_urls?.length > 0 ? story.image_urls : [PLACEHOLDER];
-  const title = getLocalizedContent(story.title) ?? "";
-  const description = getLocalizedContent(story.description) ?? "";
+  // All three fields are stored as JSONB {en, ru, hy} in the DB
+  // (backend/app/models/models.py:270-272). `tx` picks the active locale and
+  // re-renders when the user switches language.
+  const title = tx(story.title);
+  const subtitle = tx(story.subtitle);
+  const description = tx(story.description);
+
   const isLongDescription = description.length > DESCRIPTION_THRESHOLD;
   const hasMultipleImages = images.length > 1;
 
@@ -208,6 +215,12 @@ const DailyLifeCover = ({ story }: { story: DailyLife }) => {
           {title}
         </h3>
 
+        {subtitle && (
+          <p className="text-gold text-xs sm:text-sm font-black uppercase tracking-[0.18em] -mt-1">
+            {subtitle}
+          </p>
+        )}
+
         <div className="relative">
           <p
             className={`text-muted-foreground text-[14px] sm:text-[15px] leading-relaxed transition-all duration-500 ${
@@ -224,7 +237,7 @@ const DailyLifeCover = ({ story }: { story: DailyLife }) => {
             aria-expanded={expanded}
             className="self-start flex items-center gap-1.5 text-gold text-[11px] font-black uppercase tracking-widest hover:opacity-70 active:opacity-50 transition-opacity focus:outline-none focus-visible:underline"
           >
-            {expanded ? "Փակել" : "Կարդալ ավելին"}
+            {expanded ? t("home.daily_life_close") : t("home.daily_life_read_more")}
             <span
               className={`inline-block transition-transform duration-300 ${expanded ? "rotate-90" : "rotate-0"}`}
               aria-hidden="true"
@@ -253,7 +266,12 @@ const DailyLifePreview = ({
   index: number;
 }) => {
   const image = story.image_urls?.[0] ?? PLACEHOLDER;
-  const title = getLocalizedContent(story.title) ?? "";
+  const tx = useLocalized();
+  // Resolve all multilingual fields up-front from the LocalizedText sources
+  // (DB: backend/app/models/models.py:270-272). Don't re-wrap `title` in tx()
+  // downstream — it is already a plain string in the active locale.
+  const title = tx(story.title);
+  const subtitle = tx(story.subtitle);
 
   return (
     <motion.div
@@ -265,7 +283,7 @@ const DailyLifePreview = ({
       role="button"
       tabIndex={0}
       aria-pressed={isActive}
-      aria-label={title}
+      aria-label={subtitle ? `${title} — ${subtitle}` : title}
       className={`group cursor-pointer relative rounded-xl overflow-hidden border transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-gold ${
         isActive
           ? "border-gold ring-1 ring-gold/40"
@@ -289,6 +307,11 @@ const DailyLifePreview = ({
           <p className="text-white text-[9px] sm:text-[10px] font-black leading-tight line-clamp-2 uppercase tracking-tighter">
             {title}
           </p>
+          {subtitle && (
+            <p className="mt-0.5 text-gold/90 text-[8px] sm:text-[9px] font-bold leading-tight line-clamp-1 uppercase tracking-[0.12em]">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
     </motion.div>
@@ -298,16 +321,20 @@ const DailyLifePreview = ({
 /* =======================
    EMPTY STATE
 ======================= */
-const EmptyState = () => (
-  <div className="flex items-center justify-center py-16">
-    <p className="text-muted-foreground">Բովանդակություն չի գտնվել</p>
-  </div>
-);
+const EmptyState = () => {
+  const t = useT();
+  return (
+    <div className="flex items-center justify-center py-16">
+      <p className="text-muted-foreground">{t("home.daily_life_empty")}</p>
+    </div>
+  );
+};
 
 /* =======================
    MAIN
 ======================= */
 const DailyLifes = () => {
+  const t = useT();
   const { data: stories, isLoading, isError } = useQuery({
     queryKey: ["featured-daily-life"],
     queryFn: getFeaturedDailyLife,
@@ -342,7 +369,7 @@ const DailyLifes = () => {
   }, []);
 
   return (
-    <section className="py-12 sm:py-16 lg:py-24 bg-black-solid overflow-hidden" aria-label="Մեր Առօրյան">
+    <section className="py-12 sm:py-16 lg:py-24 bg-black-solid overflow-hidden" aria-label={t("home.daily_life_section_label")}>
       <div className="container mx-auto px-4 sm:px-6">
 
         {/* HEADER */}
@@ -353,7 +380,7 @@ const DailyLifes = () => {
           className="mb-8 sm:mb-12 lg:mb-16"
         >
           <h2 className="font-display text-2xl sm:text-3xl lg:text-5xl font-bold text-[var(--primary-alt)] uppercase tracking-tighter">
-            Մեր <span className="text-[var(--white)]">Առօրյան</span>
+            {t("home.daily_life_section_label")}
           </h2>
         </motion.div>
 
@@ -389,8 +416,8 @@ const DailyLifes = () => {
                     {activeIndex + 1} / {stories.length}
                   </span>
                   <div className="flex gap-2">
-                    <ArrowBtn direction="prev" onClick={prevStory} label="Previous story" size="sm" />
-                    <ArrowBtn direction="next" onClick={nextStory} label="Next story" size="sm" />
+                    <ArrowBtn direction="prev" onClick={prevStory} label={t("home.daily_life_prev")} size="sm" />
+                    <ArrowBtn direction="next" onClick={nextStory} label={t("home.daily_life_next")} size="sm" />
                   </div>
                 </div>
               )}
@@ -404,7 +431,7 @@ const DailyLifes = () => {
               <div
                 className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-2 gap-2 lg:gap-3"
                 role="list"
-                aria-label="Բոլոր պատմությունները"
+                aria-label={t("home.daily_life_all_stories")}
               >
                 {stories.map((story, index) => (
                   <div key={story.id} role="listitem">

@@ -69,3 +69,53 @@ export const markChapterAccessed = async (chapterId: number): Promise<any> => {
     method: 'POST'
   });
 };
+
+// ---------------------------------------------------------------------------
+// Student-owned projects
+// ---------------------------------------------------------------------------
+export type Multilingual = { en: string; ru?: string; hy?: string };
+
+export interface MyProject {
+  id: number;
+  course_id: number;
+  student_id: number;
+  title: Record<string, string>;
+  subtitle?: Record<string, string> | null;
+  description: Record<string, string>;
+  image_urls: string[];
+  links: Record<string, string>;
+  is_featured: boolean;
+  is_published: boolean;
+  created_at: string;
+  course?: { id: number; title: any; slug?: string };
+}
+
+export interface CreateMyProjectInput {
+  course_id: number;
+  title: Multilingual;
+  description: Multilingual;
+  subtitle?: Multilingual;
+  image_urls?: string[];
+  links?: Record<string, string>;
+}
+
+export const getMyProjects = async (): Promise<MyProject[]> => {
+  return apiClient<MyProject[]>('/projects/me');
+};
+
+export const createMyProject = async (data: CreateMyProjectInput): Promise<MyProject> => {
+  return apiClient<MyProject>('/projects/me', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const uploadMyProjectImage = async (file: File): Promise<{ url: string }> => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return apiClient<{ url: string }>('/projects/me/upload-image', {
+    method: 'POST',
+    body: fd,
+    headers: {}, // browser sets multipart boundary
+  });
+};

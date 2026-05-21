@@ -1,18 +1,18 @@
 import { motion } from "framer-motion";
 import { Users } from "lucide-react";
+import { useT } from "@/i18n";
 
 type Props = {
   count: number;
   className?: string;
 };
 
-const formatEnrollment = (n: number): { headline: string; sublabel: string; live: boolean } => {
+const formatEnrollment = (n: number): { headline: string; live: boolean } => {
   const safe = Math.max(0, n | 0);
   const isRounded = safe >= 10;
   const value = isRounded ? Math.floor(safe / 10) * 10 : safe;
   return {
     headline: `${value}${isRounded ? "+" : ""}`,
-    sublabel: "ուսանող",
     live: safe > 0,
   };
 };
@@ -27,13 +27,15 @@ const AVATAR_VARIANTS = [
 ];
 
 const CourseEnrollmentBadge = ({ count, className = "" }: Props) => {
-  const { headline, sublabel, live } = formatEnrollment(count);
+  const { headline, live } = formatEnrollment(count);
+  const t = useT();
+  const sublabel = t("student_dashboard.role_student").toLowerCase();
   const stackSize = Math.min(3, Math.max(1, count > 0 ? Math.min(3, count) : 1));
 
   return (
     <div
       className={`flex items-center gap-3 ${className}`}
-      aria-label={live ? `${count} students enrolled` : "New course"}
+      aria-label={live ? `${count} ${sublabel}` : t("courses.no_courses")}
     >
       <div className="flex -space-x-2">
         {Array.from({ length: stackSize }).map((_, i) => (

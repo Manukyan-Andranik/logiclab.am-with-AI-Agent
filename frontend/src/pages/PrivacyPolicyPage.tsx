@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Container from "../components/layout/Container";
+import { useT } from "@/i18n";
 
 const FadeIn = ({
   children,
@@ -40,88 +41,73 @@ const Section = ({
 );
 
 const PrivacyPolicyPage: React.FC = () => {
+  const t = useT();
   return (
     <div className="bg-black text-white min-h-screen">
       <Container>
         <div className="py-20 max-w-3xl mx-auto space-y-16">
           <FadeIn>
             <h1 className="text-5xl font-black text-primary-alt">
-              Գաղտնիության{" "}
-              <span className="text-primary">Քաղաքականություն</span>
+              {t("privacy.title_a")}{" "}
+              <span className="text-primary">{t("privacy.title_b")}</span>
             </h1>
             <p className="mt-4 text-[var(--gray-light)] opacity-60 text-sm font-mono uppercase tracking-widest">
-              Վերջին թարմացում՝ Մայիս 2026
+              {t("privacy.updated")}
             </p>
           </FadeIn>
 
-          <Section title="1. Ընդհանուր դրույթներ">
-            <p>
-              Logic Lab Academy-ն պատասխանատու է ձեր անձնական տվյալների
-              պաշտպանության համար: Այս քաղաքականությունը բացատրում է, թե
-              ինչ տվյալներ ենք հավաքում, ինչպես ենք դրանք օգտագործում և
-              ինչ իրավունքներ ունեք դրանց վերաբերյալ:
-            </p>
+          <Section title={t("privacy.s1_title")}>
+            <p>{t("privacy.s1_body")}</p>
           </Section>
 
-          <Section title="2. Հավաքվող տվյալներ">
-            <p>Մենք կարող ենք հավաքել հետևյալ տվյալները.</p>
+          <Section title={t("privacy.s2_title")}>
+            <p>{t("privacy.s2_intro")}</p>
             <ul className="list-disc list-inside space-y-2">
-              <li>Անուն, ազգանուն և կոնտակտային տեղեկատվություն (էլ. փոստ, հեռախոս)</li>
-              <li>Գրանցման և վճարման տվյալներ</li>
-              <li>Կայքի օգտագործման վիճակագրություն (cookies, IP հասցե)</li>
-              <li>Ուղարկված հաղորդագրություններ և հայտեր</li>
+              <li>{t("privacy.s2_item1")}</li>
+              <li>{t("privacy.s2_item2")}</li>
+              <li>{t("privacy.s2_item3")}</li>
+              <li>{t("privacy.s2_item4")}</li>
             </ul>
           </Section>
 
-          <Section title="3. Տվյալների օգտագործում">
-            <p>Հավաքված տվյալները օգտագործվում են.</p>
+          <Section title={t("privacy.s3_title")}>
+            <p>{t("privacy.s3_intro")}</p>
             <ul className="list-disc list-inside space-y-2">
-              <li>Դասընթացների գրանցման և ծառայությունների մատուցման համար</li>
-              <li>Կրթական առաջընթացի հետևողականության ապահովման համար</li>
-              <li>Կայքի բարելավման և անվտանգության ապահովման համար</li>
-              <li>Ձեզ հետ կապ հաստատելու և ծանուցումներ ուղարկելու համար</li>
+              <li>{t("privacy.s3_item1")}</li>
+              <li>{t("privacy.s3_item2")}</li>
+              <li>{t("privacy.s3_item3")}</li>
+              <li>{t("privacy.s3_item4")}</li>
             </ul>
           </Section>
 
-          <Section title="4. Տվյալների պաշտպանություն">
-            <p>
-              Մենք կիրառում ենք ժամանակակից անվտանգության մեթոդներ ձեր
-              տվյալների պաշտպանության համար: Ձեր անձնական տվյալները չեն
-              վաճառվում կամ կիսվում երրորդ կողմերի հետ առանց ձեր
-              համաձայնության, բացառությամբ օրենքով պահանջվող դեպքերի:
-            </p>
+          <Section title={t("privacy.s4_title")}>
+            <p>{t("privacy.s4_body")}</p>
           </Section>
 
-          <Section title="5. Cookies">
-            <p>
-              Մեր կայքը օգտագործում է cookies՝ բրաուզինգի փորձը
-              բարելավելու նպատակով: Դուք կարող եք անջատել cookies-ները
-              ձեր բրաուզերի կարգավորումներում, սակայն դա կարող է
-              ազդել կայքի ֆունկցիոնալության վրա:
-            </p>
+          <Section title={t("privacy.s5_title")}>
+            <p>{t("privacy.s5_body")}</p>
           </Section>
 
-          <Section title="6. Ձեր իրավունքները">
-            <p>Դուք ունեք հետևյալ իրավունքները.</p>
+          <Section title={t("privacy.s6_title")}>
+            <p>{t("privacy.s6_intro")}</p>
             <ul className="list-disc list-inside space-y-2">
-              <li>Ստանալ ձեր պահված տվյալների պատճենը</li>
-              <li>Պահանջել անճշտությունների ուղղում</li>
-              <li>Պահանջել ձեր տվյալների ջնջում</li>
-              <li>Դադարեցնել ձեր տվյալների մշակումը</li>
+              <li>{t("privacy.s6_item1")}</li>
+              <li>{t("privacy.s6_item2")}</li>
+              <li>{t("privacy.s6_item3")}</li>
+              <li>{t("privacy.s6_item4")}</li>
             </ul>
           </Section>
 
-          <Section title="7. Կապ">
+          <Section title={t("privacy.s7_title")}>
             <p>
-              Ձեր անձնական տվյալների վերաբերյալ հարցերի դեպքում
-              կապվեք մեզ հետ՝{" "}
+              {t("privacy.s7_body_prefix")}
               <a
                 href="mailto:info@logiclab.am"
                 className="text-primary hover:text-primary-alt transition-colors"
               >
                 info@logiclab.am
-              </a>{" "}
-              էլ. փոստի միջոցով:
+              </a>
+              {t("privacy.s7_body_suffix")}
             </p>
           </Section>
         </div>

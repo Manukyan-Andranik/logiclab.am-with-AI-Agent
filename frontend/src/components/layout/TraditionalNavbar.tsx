@@ -10,16 +10,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useT, useLocalized } from '@/i18n';
+import type { TKey } from '@/i18n';
+import LanguageSwitcher from './LanguageSwitcher';
 
 type AccountMenuEntry =
-  | { kind: 'route'; name: string; path: string }
-  | { kind: 'logout'; name: string };
+  | { kind: 'route'; nameKey: TKey; path: string }
+  | { kind: 'logout'; nameKey: TKey };
 
 const ACCOUNT_MENU: readonly AccountMenuEntry[] = [
-  { kind: 'route', name: 'Վահանակ', path: '/student/dashboard' },
-  { kind: 'route', name: 'Նյութեր', path: '/student/materials' },
-  { kind: 'route', name: 'Կարգավորումներ', path: '/student/settings' },
-  { kind: 'logout', name: 'Դուրս գալ' },
+  { kind: 'route', nameKey: 'account.dashboard',  path: '/student/dashboard' },
+  { kind: 'route', nameKey: 'account.materials',  path: '/student/materials' },
+  { kind: 'route', nameKey: 'account.settings',   path: '/student/settings' },
+  { kind: 'logout', nameKey: 'account.logout' },
 ];
 
 function pathBaseAndHash(path: string): { base: string; hashId: string | null } {
@@ -37,17 +40,19 @@ function normalizePathname(pathname: string): string {
 }
 
 const TraditionalNavbar: React.FC = () => {
+  const t = useT();
+  const tx = useLocalized();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const publicNavLinks = [
-    { name: 'Գլխավոր', path: '/' },
-    { name: 'Դասընթացներ', path: '/courses#all' },
-    { name: 'Մեր Մասին', path: '/about' },
-    { name: 'Նախագծեր', path: '/#projects' },
-    { name: 'Դասախոսներ', path: '/about#instructors' },
-    { name: 'Կապ', path: '/#contact' },
+  const publicNavLinks: Array<{ nameKey: TKey; path: string }> = [
+    { nameKey: 'nav.home',        path: '/' },
+    { nameKey: 'nav.courses',     path: '/courses#all' },
+    { nameKey: 'nav.about',       path: '/about' },
+    { nameKey: 'nav.projects',    path: '/#projects' },
+    { nameKey: 'nav.instructors', path: '/about#instructors' },
+    { nameKey: 'nav.contact',     path: '/#contact' },
   ];
 
   const [studentLoggedIn, setStudentLoggedIn] = useState(false);
@@ -111,9 +116,11 @@ const TraditionalNavbar: React.FC = () => {
                   isActive(link.path) ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
-                {link.name}
+                {t(link.nameKey)}
               </Link>
             ))}
+
+            <LanguageSwitcher />
 
             {studentLoggedIn ? (
               <DropdownMenu>
@@ -130,11 +137,11 @@ const TraditionalNavbar: React.FC = () => {
                   </span>
                   <span className="flex min-w-0 flex-col items-start leading-tight">
                     <span className="max-w-[7rem] truncate text-[10px] xl:text-xs font-black uppercase tracking-wide text-white">
-                      Հաշիվ
+                      {t('account.title')}
                     </span>
                     {studentMe?.user?.first_name ? (
                       <span className="max-w-[7rem] truncate text-[9px] text-white/45 font-bold">
-                        {studentMe.user.first_name}
+                        {tx(studentMe.user.first_name)}
                       </span>
                     ) : null}
                   </span>
@@ -155,7 +162,7 @@ const TraditionalNavbar: React.FC = () => {
                               : 'text-muted-foreground'
                           }`}
                         >
-                          {entry.name}
+                          {t(entry.nameKey)}
                         </Link>
                       </DropdownMenuItem>
                     ) : (
@@ -164,7 +171,7 @@ const TraditionalNavbar: React.FC = () => {
                         onSelect={() => handleStudentLogout()}
                         className="cursor-pointer rounded-lg px-3 py-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground focus:bg-red-500/15 focus:text-red-300"
                       >
-                        {entry.name}
+                        {t(entry.nameKey)}
                       </DropdownMenuItem>
                     )
                   )}
@@ -178,26 +185,29 @@ const TraditionalNavbar: React.FC = () => {
                     location.pathname === '/login' ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
-                  Մուտք
+                  {t('nav.login')}
                 </Link>
                 <Link
                   to="/register"
                   className="shrink-0 rounded-xl bg-primary px-3 py-2 text-[10px] xl:text-xs 2xl:text-sm font-black uppercase tracking-wide text-primary-foreground transition-colors hover:bg-[hsl(var(--accent-strong))]"
                 >
-                  Գրանցվել
+                  {t('nav.register')}
                 </Link>
               </>
             )}
           </div>
 
-          <button
-            type="button"
-            className="lg:hidden shrink-0 text-white p-2 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Բացել ընտրացանկը"
-            onClick={() => setIsOpen(true)}
-          >
-            <Menu className="h-7 w-7" strokeWidth={2} />
-          </button>
+          <div className="lg:hidden flex items-center gap-2">
+            <LanguageSwitcher variant="compact" />
+            <button
+              type="button"
+              className="shrink-0 text-white p-2 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label={t('nav.open_menu')}
+              onClick={() => setIsOpen(true)}
+            >
+              <Menu className="h-7 w-7" strokeWidth={2} />
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -248,7 +258,7 @@ const TraditionalNavbar: React.FC = () => {
                   : 'text-white hover:text-primary'
               }`}
             >
-              {link.name}
+              {t(link.nameKey)}
             </Link>
           ))}
 
@@ -259,7 +269,7 @@ const TraditionalNavbar: React.FC = () => {
                 className="block text-xl font-bold uppercase text-muted-foreground"
                 onClick={() => setIsOpen(false)}
               >
-                Մուտք
+                {t('nav.login')}
               </Link>
 
               <Link
@@ -267,7 +277,7 @@ const TraditionalNavbar: React.FC = () => {
                 className="block text-xl font-bold uppercase text-primary"
                 onClick={() => setIsOpen(false)}
               >
-                Գրանցվել
+                {t('nav.register')}
               </Link>
             </div>
           ) : (
@@ -282,7 +292,7 @@ const TraditionalNavbar: React.FC = () => {
                       isStudentRouteActive(entry.path) ? 'text-primary' : 'text-white'
                     }`}
                   >
-                    {entry.name}
+                    {t(entry.nameKey)}
                   </Link>
                 ) : (
                   <button
@@ -294,7 +304,7 @@ const TraditionalNavbar: React.FC = () => {
                     }}
                     className="block w-full text-left text-xl font-bold uppercase text-muted-foreground hover:text-red-300"
                   >
-                    {entry.name}
+                    {t(entry.nameKey)}
                   </button>
                 )
               )}

@@ -5,8 +5,11 @@ import { User } from "lucide-react";
 import { FaLinkedinIn, FaEnvelope, FaGithub, FaGlobe } from "react-icons/fa";
 import { getMediaUrl } from "@/api/client";
 import { Instructor } from "@/api/types";
+import { useT, useLocalized } from "@/i18n";
 
 const InstructorCard = ({ instructor, index }: { instructor: Instructor; index: number }) => {
+  const t = useT();
+  const tx = useLocalized();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -20,7 +23,7 @@ const InstructorCard = ({ instructor, index }: { instructor: Instructor; index: 
         {instructor.user.profile_image ? (
           <img
             src={getMediaUrl(instructor.user.profile_image)}
-            alt={`${instructor.user.first_name} ${instructor.user.last_name}`}
+            alt={`${tx(instructor.user.first_name)} ${tx(instructor.user.last_name)}`}
             className="h-full w-full object-cover transition-transform duration-700 scale-[1.01] group-hover:scale-105 grayscale-[0.2] group-hover:grayscale-0"
           />
         ) : (
@@ -39,13 +42,13 @@ const InstructorCard = ({ instructor, index }: { instructor: Instructor; index: 
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2">
               {instructor.proficiency?.[0] ||
                 instructor.skills?.[0] ||
-                "Մասնագետ"}
+                t('home.instructor_default_role')}
             </p>
 
             <h3 className="text-2xl font-black text-foreground uppercase tracking-tighter leading-none mb-1">
-              {instructor.user.first_name} <br />
+              {tx(instructor.user.first_name)} <br />
               <span className="text-foreground/80 font-medium italic">
-                {instructor.user.last_name}
+                {tx(instructor.user.last_name)}
               </span>
             </h3>
           </div>
@@ -99,8 +102,7 @@ const InstructorCard = ({ instructor, index }: { instructor: Instructor; index: 
       {/* Info Below — Refined Typography */}
       <div className="mt-6 px-2">
         <p className="text-sm text-muted-foreground font-medium line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity duration-500">
-          {instructor.bio ||
-            "Logic Lab-ի փորձառու մասնագետ, ով պատրաստ է կիսվել իր գիտելիքներով և փորձով:"}
+          {tx(instructor.bio) || t('home.instructor_default_bio')}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -119,6 +121,7 @@ const InstructorCard = ({ instructor, index }: { instructor: Instructor; index: 
 };
 
 const InstructorsSection = () => {
+  const t = useT();
   const { data: instructors, isLoading } = useQuery({
     queryKey: ["instructors"],
     queryFn: getInstructors,
@@ -158,10 +161,10 @@ const InstructorsSection = () => {
         >
           <span className="inline-flex items-center gap-2.5 text-primary font-mono font-bold text-[10px] sm:text-xs uppercase tracking-[0.3em] mb-4">
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Փորձառու Մասնագետներ
+            {t('home.instructors_eyebrow')}
           </span>
           <h2 className="text-h1 uppercase leading-[0.9]">
-            ՄԵՐ <span className="text-primary italic">ԹԻՄԸ</span>
+            {t('home.instructors_heading_a')} <span className="text-primary italic">{t('home.instructors_heading_b')}</span>
           </h2>
         </motion.div>
 

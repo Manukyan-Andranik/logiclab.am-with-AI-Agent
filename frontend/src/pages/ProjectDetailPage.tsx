@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { getProject } from "@/api/projects";
-import { getLocalizedContent } from "@/lib/localization";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaGithub } from "react-icons/fa";
 import { ArrowLeft, ArrowRight, ExternalLink, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT, useLocalized } from "@/i18n";
 
 // --- Lightbox ---
 const Lightbox = ({
@@ -95,16 +95,10 @@ interface ImageGalleryProps {
 export const ImageGallery = ({ images }: ImageGalleryProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const t = useT();
 
   return (
     <div className="flex flex-col gap-4 mt-8">
-      <button
-        className="text-primary font-bold uppercase text-xs mb-2"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? "Փակել" : "Բացել"}
-      </button>
-
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -148,6 +142,8 @@ export const ImageGallery = ({ images }: ImageGalleryProps) => {
 const ProjectDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const projectId = parseInt(id || "0");
+  const t = useT();
+  const tx = useLocalized();
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -180,31 +176,33 @@ const ProjectDetailPage = () => {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-black mb-4 text-white uppercase tracking-tighter">
-            Նախագիծը չի գտնվել
+            {t("project_detail.not_found")}
           </h1>
           <Link
             to="/"
             className="text-primary font-black uppercase text-xs tracking-widest hover:underline flex items-center justify-center gap-2"
           >
-            <ArrowLeft size={20} /> Գլխավոր էջ
+            <ArrowLeft size={20} /> {t("project_detail.back_home")}
           </Link>
         </div>
       </div>
     );
   }
 
+  // first_name/last_name are plain strings today but routed through tx() so a
+  // future backend migration to LocalizedText needs no FE change here.
   const studentName = project.student?.user
-    ? `${project.student.user.first_name} ${project.student.user.last_name}`
+    ? `${tx(project.student.user.first_name)} ${tx(project.student.user.last_name)}`
     : `Student #${project.student_id}`;
 
   const courseTitle = project.course?.title
-    ? getLocalizedContent(project.course.title)
+    ? tx(project.course.title)
     : `Course #${project.course_id}`;
 
   const links = project.links as { demo?: string; github?: string; colab?: string } | null;
 
   const projectImages = project.image_urls;
-  const subtitle = getLocalizedContent(project.subtitle);
+  const subtitle = tx(project.subtitle);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -212,14 +210,14 @@ const ProjectDetailPage = () => {
         {/* --- Project Info --- */}
         <div className="space-y-6">
           <h1 className="text-3xl font-black uppercase tracking-tighter">
-            {getLocalizedContent(project.title)}
+            {tx(project.title)}
           </h1>
           {subtitle && (
             <p className="text-xl font-bold text-primary uppercase tracking-tight">
               {subtitle}
             </p>
           )}
-          <p className="text-[var(--gray-light)]">{getLocalizedContent(project.description)}</p>
+          <p className="text-[var(--gray-light)]">{tx(project.description)}</p>
 
           <div className="flex flex-wrap gap-2">
             <Badge>{studentName}</Badge>

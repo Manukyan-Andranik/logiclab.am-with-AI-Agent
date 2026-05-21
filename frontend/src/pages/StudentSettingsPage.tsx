@@ -12,6 +12,7 @@ import Button from "@/components/ui/Button";
 import Container from "@/components/layout/Container";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useT, useLocalized } from "@/i18n";
 import {
   ArrowLeft,
   Camera,
@@ -41,24 +42,26 @@ const StudentSettingsPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const t = useT();
+  const tx = useLocalized();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Synchronous render guard — returning <Navigate /> before the queries
-  // fire prevents the brief flash of the settings page (and the redundant
-  // 401-bound request) for unauthenticated visitors.
+  // Auth gate, but DON'T early-return before the hooks below — that would
+  // change the hook call count between renders and crash React with
+  // "Rendered fewer hooks than expected" the moment localStorage flips
+  // (e.g. on logout while this page is mounted).
   const _token = localStorage.getItem("token");
   const _role = localStorage.getItem("role");
-  if (!_token || _role !== "student") {
-    return <Navigate to="/login?role=student" replace />;
-  }
+  const isAuthed = !!_token && _role === "student";
 
   const { data: student, isLoading, error } = useQuery({
     queryKey: ["studentMe"],
     queryFn: getStudentMe,
     retry: 1,
+    enabled: isAuthed,
   });
 
   const profileMutation = useMutation({
@@ -68,8 +71,8 @@ const StudentSettingsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["studentDashboard"] });
 
       toast({
-        title: "Պահպանված է",
-        description: "Պրոֆիլի նկարը թարմացվեց։",
+        title: t("student_settings.saved"),
+        description: t("student_settings.saved_image_desc"),
       });
     },
   });
@@ -82,11 +85,15 @@ const StudentSettingsPage = () => {
       setConfirmPassword("");
 
       toast({
-        title: "Պահպանված է",
-        description: "Գաղտնաբառը փոխվեց։",
+        title: t("student_settings.saved"),
+        description: t("student_settings.saved_password_desc"),
       });
     },
   });
+
+  if (!isAuthed) {
+    return <Navigate to="/login?role=student" replace />;
+  }
 
   const handlePickImage = () => fileInputRef.current?.click();
 
@@ -101,8 +108,8 @@ const StudentSettingsPage = () => {
     if (!file.type.startsWith("image/")) {
       toast({
         variant: "destructive",
-        title: "Սխալ",
-        description: "Ընտրեք նկարի ֆայլ։",
+        title: t("common.error_generic"),
+        description: t("student_settings.err_pick_image"),
       });
       return;
     }
@@ -113,8 +120,8 @@ const StudentSettingsPage = () => {
     } catch {
       toast({
         variant: "destructive",
-        title: "Սխալ",
-        description: "Չհաջողվեց վերբեռնել։",
+        title: t("common.error_generic"),
+        description: t("student_settings.err_upload"),
       });
     }
   };
@@ -129,8 +136,8 @@ const StudentSettingsPage = () => {
     if (newPassword.length < 8) {
       toast({
         variant: "destructive",
-        title: "Սխալ",
-        description: "Գաղտնաբառը պետք է լինի առնվազն 8 նիշ։",
+        title: t("common.error_generic"),
+        description: t("student_settings.err_password_short"),
       });
       return;
     }
@@ -138,8 +145,8 @@ const StudentSettingsPage = () => {
     if (newPassword !== confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Սխալ",
-        description: "Գաղտնաբառերը չեն համընկնում։",
+        title: t("common.error_generic"),
+        description: t("student_settings.err_password_mismatch"),
       });
       return;
     }
@@ -195,11 +202,11 @@ const StudentSettingsPage = () => {
               marginBottom: "1rem",
             }}
           >
-            Չհաջողվեց բեռնել էջը
+            {t("student_settings.load_failed")}
           </p>
 
           <Button onClick={() => navigate("/student/dashboard")}>
-            Վերադառնալ
+            {t("student_settings.go_back")}
           </Button>
         </div>
       </div>
@@ -249,7 +256,7 @@ const StudentSettingsPage = () => {
             }}
           >
             <ArrowLeft size={14} />
-            Վերադառնալ
+            {t("student_settings.go_back")}
           </button>
         </div>
       </header>
@@ -319,7 +326,7 @@ const StudentSettingsPage = () => {
                     fontWeight: 800,
                   }}
                 >
-                  Կարգավորումներ
+                  {t("student_settings.page_title")}
                 </h1>
 
                 <p
@@ -329,7 +336,7 @@ const StudentSettingsPage = () => {
                     fontSize: "0.9rem",
                   }}
                 >
-                  {student.user.first_name} {student.user.last_name}
+                  {tx(student.user.first_name)} {tx(student.user.last_name)}
                 </p>
               </div>
             </div>
@@ -371,7 +378,7 @@ const StudentSettingsPage = () => {
                     fontWeight: 700,
                   }}
                 >
-                  Պրոֆիլի նկար
+                  {t("student_settings.profile_image")}
                 </h3>
               </div>
 
@@ -432,7 +439,7 @@ const StudentSettingsPage = () => {
                       marginBottom: 8,
                     }}
                   >
-                    Փոխել նկարը
+                    {t("student_settings.upload_image")}
                   </button>
 
                   {avatarSrc && (
@@ -449,7 +456,7 @@ const StudentSettingsPage = () => {
                         cursor: "pointer",
                       }}
                     >
-                      Հեռացնել
+                      {t("student_settings.remove_image")}
                     </button>
                   )}
                 </div>
@@ -484,7 +491,7 @@ const StudentSettingsPage = () => {
                     fontWeight: 700,
                   }}
                 >
-                  Գաղտնաբառ
+                  {t("student_settings.password_section")}
                 </h3>
               </div>
 
@@ -498,7 +505,7 @@ const StudentSettingsPage = () => {
               >
                 <Input
                   type="password"
-                  placeholder="Ընթացիկ գաղտնաբառ"
+                  placeholder={t("student_settings.placeholder_current_password")}
                   value={currentPassword}
                   onChange={(e) =>
                     setCurrentPassword(e.target.value)
@@ -507,14 +514,14 @@ const StudentSettingsPage = () => {
 
                 <Input
                   type="password"
-                  placeholder="Նոր գաղտնաբառ"
+                  placeholder={t("student_settings.placeholder_new_password")}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
 
                 <Input
                   type="password"
-                  placeholder="Կրկնել գաղտնաբառը"
+                  placeholder={t("student_settings.placeholder_confirm_password")}
                   value={confirmPassword}
                   onChange={(e) =>
                     setConfirmPassword(e.target.value)
@@ -534,7 +541,7 @@ const StudentSettingsPage = () => {
                     cursor: "pointer",
                   }}
                 >
-                  Պահպանել
+                  {t("student_settings.save")}
                 </button>
               </form>
             </motion.div>
@@ -567,7 +574,7 @@ const StudentSettingsPage = () => {
                     fontSize: "0.95rem",
                   }}
                 >
-                  Անվտանգություն
+                  {t("student_settings.security_title")}
                 </span>
               </div>
 
@@ -579,7 +586,7 @@ const StudentSettingsPage = () => {
                   lineHeight: 1.6,
                 }}
               >
-                Օգտագործեք ուժեղ գաղտնաբառ և մի փոխանցեք այն ուրիշներին։
+                {t("student_settings.security_body")}
               </p>
             </motion.div>
           </div>

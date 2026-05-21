@@ -6,7 +6,7 @@ import {
 } from "@/api/courses";
 import { getInstructors } from "@/api/instructors";
 import { uploadFile, getMediaUrl } from "@/api/client";
-import { getLocalizedContent } from "@/lib/localization";
+import { useLocalized } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 import Button from "@/components/ui/Button";
 import { Plus, Edit2, Trash2, Users, BookOpen, X, Loader2, Image as ImageIcon, Calendar, CreditCard, Clock, Video } from "lucide-react";
@@ -34,6 +34,7 @@ import { getLessonMaterials, createOrUpdateLessonMaterials } from "@/api/admin";
 const AdminCourses = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const tx = useLocalized();
   const [isDialogOpen, setIsOpen] = useState(false);
   const [isCurriculumOpen, setIsCurriculumOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -576,7 +577,7 @@ const AdminCourses = () => {
                         htmlFor={`inst-${instructor.id}`}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        {instructor.user.first_name} {instructor.user.last_name}
+                        {tx(instructor.user.first_name)} {tx(instructor.user.last_name)}
                       </label>
                     </div>
                   ))}
@@ -601,7 +602,7 @@ const AdminCourses = () => {
         <Dialog open={isCurriculumOpen} onOpenChange={setIsCurriculumOpen}>
           <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-card text-card-foreground">
             <DialogHeader>
-              <DialogTitle>Manage Curriculum: {curriculumCourse ? getLocalizedContent(curriculumCourse.title) : ""}</DialogTitle>
+              <DialogTitle>Manage Curriculum: {curriculumCourse ? tx(curriculumCourse.title) : ""}</DialogTitle>
             </DialogHeader>
 
             {isCurriculumLoading ? (
@@ -782,7 +783,7 @@ const AdminCourses = () => {
             <div className="aspect-video bg-secondary/50 relative">
               <div className="absolute inset-0 flex items-center justify-center text-primary/20">
                 {course.icon_url ? (
-                  <img src={getMediaUrl(course.icon_url)} alt={getLocalizedContent(course.title)} className="w-1/2 h-auto max-w-full" />
+                  <img src={getMediaUrl(course.icon_url)} alt={tx(course.title)} className="w-1/2 h-auto max-w-full" />
                 ) : (
                   <FaGlobe size={64} />
                 )}
@@ -802,14 +803,14 @@ const AdminCourses = () => {
             <div className="p-6">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-bold group-hover:text-primary transition-colors">
-                  {getLocalizedContent(course.title)}
+                  {tx(course.title)}
                 </h3>
                 <Badge variant={course.is_active ? "default" : "secondary"}>
                   {course.is_active ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                {getLocalizedContent(course.description)}
+                {tx(course.description)}
               </p>
 
               <div className="flex items-center justify-between text-xs font-medium mb-4">

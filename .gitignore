@@ -69,3 +69,9 @@ backend/test_regex_fix.py
 venv_test/
 __pycache__/
 *.pyc
+
+
+review.txt
+MATERIAL_ACCESS_API_REFERENCE.md
+MATERIAL_ACCESS_GUIDE.md
+MATERIAL_ACCESS_IMPLEMENTATION.md

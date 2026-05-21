@@ -6,8 +6,8 @@ import Container from "../components/layout/Container";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getCourses } from "@/api/courses";
 import { registerStudent } from "@/api/auth";
-import { getLocalizedContent } from "@/lib/localization";
 import { useToast } from "@/hooks/use-toast";
+import { useT, useLocalized } from "@/i18n";
 
 const FadeIn = ({ children, delay = 0 }: any) => (
   <motion.div
@@ -23,6 +23,8 @@ const RegisterPage = () => {
   const [searchParams] = useSearchParams();
   const preselectedCourseParam = searchParams.get("course") || "";
   const { toast } = useToast();
+  const t = useT();
+  const tx = useLocalized();
 
   const { data: coursesData, isLoading: isCoursesLoading } = useQuery({
     queryKey: ["courses", true],
@@ -53,8 +55,8 @@ const RegisterPage = () => {
     onSuccess: () => setSubmitted(true),
     onError: (error: any) => {
       toast({
-        title: "Սխալ",
-        description: error?.message || "Տեղի է ունեցել սխալ գրանցման ընթացքում։",
+        title: t("common.error_generic"),
+        description: error?.message || t("register.error_generic"),
         variant: "destructive",
       });
     },
@@ -63,7 +65,7 @@ const RegisterPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.course) {
-      toast({ title: "Ուշադրություն", description: "Խնդրում ենք ընտրել դասընթացը" });
+      toast({ title: t("register.attention_title"), description: t("register.pick_course_required") });
       return;
     }
     mutation.mutate({
@@ -85,16 +87,16 @@ const RegisterPage = () => {
               <CheckCircle2 className="w-10 h-10 text-primary-foreground" />
             </div>
             <h2 className="text-4xl font-black uppercase tracking-tighter text-gold mb-4">
-              ՇՆՈՐՀԱԿԱԼՈՒԹՅՈՒՆ
+              {t("register.success_title")}
             </h2>
             <p className="text-muted-foreground mb-10 font-medium text-lg">
-              Ձեր հայտը հաջողությամբ ուղարկվեց։ Մենք կկապվենք ձեզ հետ շուտով։
+              {t("register.success_body")}
             </p>
             <Link
               to="/"
               className="inline-flex items-center justify-center bg-gold text-primary-foreground px-10 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:brightness-110 transition-all w-full"
             >
-              Գլխավոր Էջ
+              {t("register.back_home")}
             </Link>
           </div>
         </FadeIn>
@@ -118,20 +120,20 @@ const RegisterPage = () => {
 
             <div className="space-y-8 lg:pt-10">
               <FadeIn delay={0.1}>
-                <h1 className="text-gold text-6xl sm:text-7xl lg:text-[110px] font-black uppercase leading-[0.85] tracking-tighter">
-                  ԳՐԱՆՑՎԵԼ<br />ՀԻՄԱ
+                <h1 className="text-gold text-5xl sm:text-7xl lg:text-[80px] font-black uppercase leading-[0.85] tracking-tighter">
+                  {t("register.headline_a")}<br />{t("register.headline_b")}
                 </h1>
               </FadeIn>
               <FadeIn delay={0.2}>
                 <p className="text-foreground text-xl sm:text-2xl font-bold leading-tight max-w-md">
-                  Լրացրեք ձևը և մենք կկապվենք ձեզ հետ՝ քննարկելու ձեր ուսումնական ճանապարհը։
+                  {t("register.intro")}
                 </p>
                 <div className="flex gap-6 text-muted-foreground text-xs font-black uppercase tracking-widest mt-3">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gold" /> Վանաձոր
+                    <MapPin className="w-4 h-4 text-gold" /> {t("register.location_label")}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Monitor className="w-4 h-4 text-gold" /> Առցանց
+                    <Monitor className="w-4 h-4 text-gold" /> {t("register.online_label")}
                   </div>
                 </div>
               </FadeIn>
@@ -142,7 +144,7 @@ const RegisterPage = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-2 gap-5">
                     <div className="group">
-                      <label className={labelBase}>Անուն</label>
+                      <label className={labelBase}>{t("register.first_name")}</label>
                       <input
                         type="text"
                         required
@@ -152,7 +154,7 @@ const RegisterPage = () => {
                       />
                     </div>
                     <div className="group">
-                      <label className={labelBase}>Ազգանուն</label>
+                      <label className={labelBase}>{t("register.last_name")}</label>
                       <input
                         type="text"
                         required
@@ -165,7 +167,7 @@ const RegisterPage = () => {
 
                   <div className="grid grid-cols-2 gap-5">
                     <div className="group">
-                      <label className={labelBase}>Էլ. փոստ</label>
+                      <label className={labelBase}>{t("register.email")}</label>
                       <input
                         type="email"
                         required
@@ -175,7 +177,7 @@ const RegisterPage = () => {
                       />
                     </div>
                     <div className="group">
-                      <label className={labelBase}>Հեռախոս</label>
+                      <label className={labelBase}>{t("register.phone")}</label>
                       <input
                         type="tel"
                         required
@@ -187,11 +189,11 @@ const RegisterPage = () => {
                   </div>
 
                   <div className="group">
-                    <label className={labelBase}>Ընտրեք դասընթացը</label>
+                    <label className={labelBase}>{t("register.pick_course_title")}</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                       {isCoursesLoading ? (
                         <div className="col-span-2 py-4 text-center text-muted-foreground font-black text-xs uppercase tracking-widest animate-pulse">
-                          Բեռնվում է...
+                          {t("register.loading_courses")}
                         </div>
                       ) : (
                         coursesData?.map((c) => (
@@ -205,7 +207,7 @@ const RegisterPage = () => {
                                 : "bg-gray-dark/40 border-border text-muted-foreground hover:border-gold/50"
                             }`}
                           >
-                            {getLocalizedContent(c.title)}
+                            {tx(c.title)}
                             {form.course === c.id.toString() && (
                               <motion.div layoutId="check" className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <Check className="w-4 h-4 stroke-[4px]" />
@@ -222,7 +224,7 @@ const RegisterPage = () => {
                     type="submit"
                     className="w-full bg-gold text-primary-foreground py-5 rounded-2xl font-black text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
-                    {mutation.isPending ? "ՈՒՂԱՐԿՎՈՒՄ Է..." : <>Ուղարկել հայտը <Send className="w-5 h-5" /></>}
+                    {mutation.isPending ? t("register.submitting") : <>{t("register.submit_application")} <Send className="w-5 h-5" /></>}
                   </button>
                 </form>
               </div>
