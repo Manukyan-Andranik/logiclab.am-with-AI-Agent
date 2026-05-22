@@ -64,6 +64,23 @@ const AdminRegistrations = () => {
 
   if (isLoading) return <div className="animate-pulse space-y-4"><div className="h-12 bg-secondary rounded-lg w-full" /></div>;
 
+  // Handle both array and wrapped response formats
+  const registrationsList = Array.isArray(registrations) ? registrations : (registrations?.data || []);
+
+  if (!registrationsList || registrationsList.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">Course Registrations</h1>
+          <p className="text-muted-foreground">Manage incoming course applications.</p>
+        </div>
+        <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground">
+          No registrations found.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -85,7 +102,7 @@ const AdminRegistrations = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {registrations?.map((reg: any) => (
+            {registrationsList.map((reg: any) => (
               <tr key={reg.id} className="group hover:bg-secondary/20 transition-colors">
                 <td className="px-6 py-4">
                   <div className="font-bold text-foreground">
