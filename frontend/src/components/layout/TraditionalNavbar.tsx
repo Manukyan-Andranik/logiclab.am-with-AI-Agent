@@ -21,6 +21,7 @@ type AccountMenuEntry =
 const ACCOUNT_MENU: readonly AccountMenuEntry[] = [
   { kind: 'route', nameKey: 'account.dashboard',  path: '/student/dashboard' },
   { kind: 'route', nameKey: 'account.materials',  path: '/student/materials' },
+  { kind: 'route', nameKey: 'account.exams',      path: '/student/exams' },
   { kind: 'route', nameKey: 'account.settings',   path: '/student/settings' },
   { kind: 'logout', nameKey: 'account.logout' },
 ];

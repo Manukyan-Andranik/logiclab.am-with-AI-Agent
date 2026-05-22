@@ -40,6 +40,7 @@ const hy: Dict = {
     title: "Հաշիվ",
     dashboard: "Վահանակ",
     materials: "Նյութեր",
+    exams: "Քննություններ",
     settings: "Կարգավորումներ",
     logout: "Դուրս գալ",
   },

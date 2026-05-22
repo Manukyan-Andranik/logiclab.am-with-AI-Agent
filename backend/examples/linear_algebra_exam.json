@@ -1,0 +1,90 @@
+{
+  "title": "Linear Algebra Fundamentals",
+  "description": "Vectors, matrices, and basic transformations",
+  "instructions": "Answer all questions. You may use the navigation panel to move between questions. Mathematical work can use LaTeX in essay fields where noted.",
+  "duration_minutes": 60,
+  "max_attempts": 2,
+  "access_token": "logicMath",
+  "allowed_student_ids": [],
+  "settings": {
+    "allow_navigation": true,
+    "allow_review_before_submit": true,
+    "show_correct_answers": false,
+    "randomize_questions": false,
+    "randomize_options": true,
+    "require_fullscreen": false,
+    "prevent_tab_switch": false
+  },
+
+  "sections": [
+    {
+      "id": "section_vectors",
+      "title": "Vectors",
+      "description": "Basic vector operations",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "single_choice",
+          "question_text": "What is the magnitude of $\\vec{v} = (3, 4)$?",
+          "question_latex": "|\\vec{v}| = ?",
+          "difficulty": "easy",
+          "points": 2,
+          "options": [
+            { "id": "a", "text": "5" },
+            { "id": "b", "text": "7" },
+            { "id": "c", "text": "25" },
+            { "id": "d", "text": "$\\sqrt{7}$", "latex": "\\sqrt{7}" }
+          ],
+          "correct_answer_id": "a"
+        },
+        {
+          "id": "q2",
+          "type": "multiple_choice",
+          "question_text": "Which of the following are properties of the dot product? (Select all that apply)",
+          "difficulty": "medium",
+          "points": 3,
+          "partial_credit": true,
+          "options": [
+            { "id": "m1", "text": "Commutative" },
+            { "id": "m2", "text": "Distributive over addition" },
+            { "id": "m3", "text": "Always positive" },
+            { "id": "m4", "text": "Bilinear" }
+          ],
+          "correct_answer_ids": ["m1", "m2", "m4"]
+        },
+        {
+          "id": "q3",
+          "type": "mathematical",
+          "question_text": "Compute $\\vec{u} \\cdot \\vec{v}$ where $\\vec{u}=(1,2,3)$ and $\\vec{v}=(4,5,6)$.",
+          "difficulty": "medium",
+          "points": 4,
+          "correct_answer_latex": "32",
+          "decimal_tolerance": 0.01
+        }
+      ]
+    },
+    {
+      "id": "section_essay",
+      "title": "Conceptual",
+      "questions": [
+        {
+          "id": "q4",
+          "type": "essay",
+          "question_text": "Explain the geometric meaning of the cross product in $\\mathbb{R}^3$.",
+          "difficulty": "hard",
+          "points": 6,
+          "min_words": 80,
+          "max_words": 400
+        },
+        {
+          "id": "q5",
+          "type": "true_false",
+          "question_text": "Every square matrix has an inverse.",
+          "difficulty": "easy",
+          "points": 1,
+          "correct_answer": false
+        }
+      ]
+    }
+  ]
+}

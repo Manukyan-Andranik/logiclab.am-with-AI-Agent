@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, BookOpen, UserCheck, MessageSquare,
-  LogOut, Settings, Briefcase, Heart, Menu, X, Activity,
+  LogOut, Settings, Briefcase, Heart, Menu, X, Activity, ClipboardCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ const menuItems = [
   { label: "Registrations", href: "/admin/registrations",  icon: UserCheck },
   { label: "Courses",       href: "/admin/courses",        icon: BookOpen },
   { label: "Students",      href: "/admin/students",       icon: Users },
+  { label: "Exams",         href: "/admin/exams",          icon: ClipboardCheck },
   { label: "Projects",      href: "/admin/projects",       icon: Briefcase },
   { label: "Daily Life",    href: "/admin/daily-life",     icon: Heart },
   { label: "Instructors",   href: "/admin/instructors",    icon: Users },

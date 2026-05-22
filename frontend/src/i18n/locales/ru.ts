@@ -40,6 +40,7 @@ const ru: Dict = {
     title: "Профиль",
     dashboard: "Кабинет",
     materials: "Материалы",
+    exams: "Экзамены",
     settings: "Настройки",
     logout: "Выйти",
   },

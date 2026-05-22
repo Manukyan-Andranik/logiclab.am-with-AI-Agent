@@ -33,6 +33,9 @@ import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminMessages from "./pages/admin/AdminMessages";
 import AdminVisits from "./pages/admin/AdminVisits";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminExams from "./pages/admin/AdminExams";
+import StudentExams from "./pages/StudentExams";
+import StudentExamPage from "./pages/StudentExamPage";
 
 // Conservative defaults: avoid refetch-on-focus storms (which on a tabby user
 // can hammer the dashboard endpoint multiple times per minute) and treat data
@@ -74,11 +77,13 @@ const App = () => (
               <Route path="/student/materials" element={<StudentDashboard />} />
               <Route path="/student/projects" element={<StudentProjects />} />
               <Route path="/student/settings" element={<StudentSettingsPage />} />
+              <Route path="/student/exams" element={<StudentExams />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             </Route>
 
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/student/exam/:examId" element={<StudentExamPage />} />
             <Route path="/student/login" element={<Navigate to="/login" replace />} />
             <Route path="/admin/login" element={<Navigate to="/login" replace />} />
 
@@ -89,6 +94,7 @@ const App = () => (
               <Route path="registrations" element={<AdminRegistrations />} />
               <Route path="courses" element={<AdminCourses />} />
               <Route path="students" element={<AdminStudents />} />
+              <Route path="exams" element={<AdminExams />} />
               <Route path="projects" element={<AdminProjects />} />
               <Route path="daily-life" element={<AdminDailyLife />} />
               <Route path="instructors" element={<AdminInstructors />} />

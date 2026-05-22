@@ -78,6 +78,7 @@ class Student(Base):
     registrations = relationship("Registration", back_populates="student")
     material_access = relationship("MaterialAccess", back_populates="student")
     projects = relationship("Project", back_populates="student")
+    exam_attempts = relationship("ExamAttempt", back_populates="student")
     enrollments = relationship(
         "Enrollment",
         back_populates="student",
@@ -127,7 +128,8 @@ class Course(Base):
     chapters = relationship("Chapter", back_populates="course", cascade="all, delete-orphan")
     registrations = relationship("Registration", back_populates="course")
     projects = relationship("Project", back_populates="course")
-    
+    exams = relationship("Exam", back_populates="course", cascade="all, delete-orphan")
+
 class CourseInstructor(Base):
     __tablename__ = "course_instructors"
     
@@ -455,4 +457,8 @@ class PasswordResetToken(Base):
     created_at = Column(DateTime, default=_utc_now)
 
     user = relationship("UserPersonal")
+
+
+# Exam system tables (shared Base — see models/exams.py)
+from .exams import Exam, ExamAttempt, ExamAnswer, ExamSubmission, ExamAuditLog  # noqa: E402, F401
 

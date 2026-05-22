@@ -1,9 +1,11 @@
 import html
+import json
 import logging
+from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import aiosmtplib
 
@@ -313,6 +315,63 @@ class EmailService:
             self._get_themed_html(content, url, "Մուտք գործել"),
             html=True,
         )
+
+
+    async def send_exam_submission(
+        self,
+        admin_email: str,
+        submission_data: Dict[str, Any],
+        json_file_path: str,
+    ) -> bool:
+        """Notify admin with exam submission summary and JSON attachment."""
+        title = _h(str(submission_data.get("exam_title", "Exam")))
+        student_name = _h(str(submission_data.get("student_name", "Student")))
+        student_email = _h(str(submission_data.get("student_email", "")))
+        submitted_at = _h(str(submission_data.get("submitted_at", "")))
+        spent = int(submission_data.get("time_spent_seconds", 0))
+        minutes, seconds = divmod(spent, 60)
+        answers_count = len(submission_data.get("answers") or {})
+
+        content = f"""          <p style="margin:0 0 10px;font-size:18px;font-weight:700;color:{FG};">Exam submission received</p>
+          <p style="margin:0 0 8px;color:{MUTED};"><strong style="color:{GOLD};">Exam:</strong> {title}</p>
+          <p style="margin:0 0 8px;color:{MUTED};"><strong style="color:{GOLD};">Student:</strong> {student_name} ({student_email})</p>
+          <p style="margin:0 0 8px;color:{MUTED};"><strong style="color:{GOLD};">Submitted:</strong> {submitted_at}</p>
+          <p style="margin:0 0 8px;color:{MUTED};"><strong style="color:{GOLD};">Time:</strong> {minutes}m {seconds}s · {answers_count} answer(s)</p>
+          <p style="margin:0;color:{SUBTLE};">Full answers are attached as JSON.</p>"""
+
+        try:
+            msg = MIMEMultipart("mixed")
+            msg["Subject"] = Header(f"Exam submission: {submission_data.get('exam_title', 'Exam')}", "utf-8")
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = admin_email
+
+            alt = MIMEMultipart("alternative")
+            alt.attach(MIMEText(self._get_themed_html(content), "html", "utf-8"))
+            msg.attach(alt)
+
+            payload = json.dumps(submission_data, indent=2, ensure_ascii=False).encode("utf-8")
+            attachment = MIMEApplication(payload, _subtype="json")
+            attachment.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=f"submission_{submission_data.get('attempt_id', 'exam')}.json",
+            )
+            msg.attach(attachment)
+
+            await aiosmtplib.send(
+                msg,
+                hostname=self.smtp_host,
+                port=self.smtp_port,
+                username=self.smtp_user,
+                password=self.smtp_password,
+                use_tls=(self.smtp_port == 465),
+                start_tls=(self.smtp_port == 587),
+                timeout=10,
+            )
+            return True
+        except Exception as e:
+            logger.error("Exam submission email failed: %s", str(e))
+            return False
 
 
 email_service = EmailService()

@@ -5,6 +5,7 @@ import os
 import time
 
 from fastapi import FastAPI, Request
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -47,7 +48,8 @@ from .api.endpoints import (
     enrollments,
     uploads,
     logic,
-    config
+    config,
+    exams,
 )
 from .api.routers import admin
 
@@ -170,18 +172,19 @@ app.include_router(logic.router, prefix="/logic", tags=["Logic AI Agent"])
 app.include_router(student.router, tags=["Student Dashboard"])
 app.include_router(config.router, tags=["Configuration"])  # Config endpoints
 app.include_router(admin.router, tags=["Admin"])  # router already defines its prefix
+app.include_router(exams.router, tags=["Exams"])
 
 
 # ---------------------------------------------------
 # EXCEPTION HANDLERS
 # ---------------------------------------------------
 
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc):
-    return JSONResponse(
-        status_code=404,
-        content={"detail": "Resource not found"}
-    )
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    detail = exc.detail
+    if not isinstance(detail, str):
+        detail = str(detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
 
 
 @app.exception_handler(500)

@@ -40,6 +40,7 @@ const en: Dict = {
     title: "Account",
     dashboard: "Dashboard",
     materials: "Materials",
+    exams: "Exams",
     settings: "Settings",
     logout: "Log out",
   },

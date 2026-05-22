@@ -52,6 +52,7 @@ export interface Dict {
     title: string;
     dashboard: string;
     materials: string;
+    exams: string;
     settings: string;
     logout: string;
   };

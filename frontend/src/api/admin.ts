@@ -80,8 +80,15 @@ export interface AdminStudentWithProgress {
   [key: string]: any;
 }
 
-export const getAdminStudentsWithProgress = async (): Promise<AdminStudentWithProgress[]> => {
-  return apiClient('/admin/students/with-progress');
+export const getAdminStudentsWithProgress = async (
+  params: { course_id?: number; skip?: number; limit?: number } = {}
+): Promise<AdminStudentWithProgress[]> => {
+  return apiClient('/admin/students/with-progress', { params });
+};
+
+/** Students enrolled in or assigned to a course (for exam access picker). */
+export const getAdminStudentsForCourse = async (courseId: number): Promise<AdminStudentWithProgress[]> => {
+  return getAdminStudentsWithProgress({ course_id: courseId, limit: 500 });
 };
 
 export const getVisitStatsSummary = async (params: Record<string, string | number | boolean> = {}): Promise<Record<string, any>> => {
