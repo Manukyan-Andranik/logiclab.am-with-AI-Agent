@@ -1,7 +1,9 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, validator, model_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, timezone
 from enum import Enum
+
+from ..core.i18n import localized_label
 
 # Enums
 class UserRole(str, Enum):
@@ -40,6 +42,8 @@ class TokenData(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    # Optional: restrict login to admin or student (canonical: POST /auth/login).
+    role: Optional[UserRole] = None
 
 
 class ChangePasswordRequest(BaseModel):
@@ -768,6 +772,18 @@ class AccessSummaryItem(BaseModel):
     chapter_title: str
     lesson_title: Optional[str] = None
     resource_name: Optional[str] = None
+
+    @field_validator("chapter_title", mode="before")
+    @classmethod
+    def coerce_chapter_title(cls, v: Union[str, dict, None]) -> str:
+        return localized_label(v)
+
+    @field_validator("lesson_title", "resource_name", mode="before")
+    @classmethod
+    def coerce_optional_titles(cls, v: Union[str, dict, None]) -> Optional[str]:
+        if v is None:
+            return None
+        return localized_label(v) or None
 
 class AccessSummaryNotify(BaseModel):
     student_id: int

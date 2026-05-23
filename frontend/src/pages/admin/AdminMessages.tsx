@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 const AdminMessages = () => {
   const { data: messagesResponse, isLoading } = useQuery({
     queryKey: ["admin-messages"],
-    queryFn: () => apiClient<any>("/contact-messages/contact/"),
+    queryFn: () => apiClient<{ data: unknown[]; total: number }>("/contact-messages/"),
   });
 
   const messages = messagesResponse?.data || [];

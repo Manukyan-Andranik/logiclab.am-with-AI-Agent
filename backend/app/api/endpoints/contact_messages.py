@@ -1,6 +1,8 @@
 # app/api/endpoints/contact_messages.py
 import html
 import logging
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 
 logger = logging.getLogger(__name__)
@@ -12,6 +14,7 @@ from pydantic import BaseModel
 from ...core.database import get_db
 from ...core.email import email_service
 from ...core.config import settings
+from ...core.rate_limit import rate_limit_contact_submit
 from ...core.email_theme import (
     BG,
     BORDER,
@@ -348,7 +351,8 @@ async def send_contact_emails(body: ContactFormBody):
 async def submit_contact_form(
     body: ContactFormBody,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_contact_submit)] = None,
 ):
     """Submit contact form"""
     

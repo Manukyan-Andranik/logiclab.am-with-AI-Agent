@@ -1,133 +1,70 @@
 # app/api/endpoints/auth.py
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from ...core.database import get_db
-from ...core.security import verify_password, get_password_hash, create_access_token
+from ...core.security import verify_password, get_password_hash
 from ...core.config import settings
+from ...core.rate_limit import (
+    rate_limit_auth_instructor_register,
+    rate_limit_auth_login,
+    rate_limit_auth_password_reset,
+    rate_limit_auth_register,
+)
 from ...core.email import email_service
-from ...models.models import UserPersonal, Student, Registration, Course, Instructor
+from ...models.models import UserPersonal, Instructor, PasswordResetToken
 from ...schemas.schemas import (
     LoginRequest,
     Token,
     RegisterRequest,
     UserRole,
-    RegistrationStatus,
     InstructorCreate,
     ChangePasswordRequest,
 )
 import secrets
 from ..deps import get_current_user, get_current_admin
+from ...services.auth_service import authenticate_and_issue_token
+from ...services.registration_service import create_student_registration
 
 router = APIRouter()
+
+
+class PasswordResetRequestBody(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+
+
+class PasswordResetConfirmBody(BaseModel):
+    token: str = Field(min_length=16, max_length=255)
+    new_password: str = Field(min_length=6, max_length=128)
+
 
 @router.post("/login", response_model=Token)
 async def login(
     credentials: LoginRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_login)] = None,
 ):
-    """Login endpoint for all user types"""
-    user = db.query(UserPersonal).filter(UserPersonal.email == credentials.email).first()
-    
-    if not user or not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
-        )
-    
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is inactive"
-        )
-    
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "role": user.role.value},
-        expires_delta=access_token_expires
-    )
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "role": user.role
-    }
+    """
+    Canonical login for all roles.
 
-@router.post("/register")
+    Pass optional ``role`` (``admin`` | ``student``) to restrict which accounts may sign in.
+    """
+    required = credentials.role
+    return authenticate_and_issue_token(db, credentials, required_role=required)
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     registration: RegisterRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_register)] = None,
 ):
-    """Public registration endpoint for prospective students"""
-    # Check if email already exists
-    existing_user = db.query(UserPersonal).filter(
-        UserPersonal.email == registration.email
-    ).first()
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-    
-    # Use provided password or generate a secure random one
-    password = registration.password or secrets.token_urlsafe(12)
-    hashed_password = get_password_hash(password)
-    
-    # Create user + student + registration atomically. flush() between inserts
-    # populates auto-generated PKs so dependent rows can reference them; a
-    # single commit at the end guarantees the whole chain succeeds or fails
-    # together (no orphan UserPersonal/Student rows on partial failure).
-    try:
-        new_user = UserPersonal(
-            first_name=registration.first_name,
-            last_name=registration.last_name,
-            email=registration.email,
-            phone=registration.phone,
-            password_hash=hashed_password,
-            role=UserRole.STUDENT,
-            is_active=False  # Will be activated when admin confirms
-        )
-        db.add(new_user)
-        db.flush()  # populate new_user.id
+    """Canonical public student registration."""
+    return await create_student_registration(db, registration)
 
-        new_student = Student(
-            user_id=new_user.id,
-            course_id=registration.course_id
-        )
-        db.add(new_student)
-        db.flush()  # populate new_student.id
-
-        new_registration = Registration(
-            student_id=new_student.id,
-            course_id=registration.course_id,
-            status=RegistrationStatus.PENDING,
-            message=registration.message
-        )
-        db.add(new_registration)
-        db.flush()
-
-        db.commit()
-        db.refresh(new_registration)
-    except Exception:
-        db.rollback()
-        raise
-
-    # Send confirmation email (outside the transaction: SMTP failures must
-    # not roll back the persisted registration).
-    course = db.query(Course).filter(Course.id == registration.course_id).first()
-    course_name = course.title.get("en", "Course") if course else "Course"
-    
-    await email_service.send_registration_received(
-        to_email=registration.email,
-        student_name=f"{registration.first_name} {registration.last_name}",
-        course_name=course_name
-    )
-    
-    return {
-        "message": "Registration successful. Please wait for admin confirmation.",
-        "registration_id": new_registration.id
-    }
 
 @router.post("/admin/create-admin")
 async def create_admin(
@@ -159,15 +96,14 @@ async def create_admin(
     
     return {"message": "Admin user created successfully"}
 
-# create instructor
+
 @router.post("/instructor/register")
 async def create_instructor(
     data: InstructorCreate,
     db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_instructor_register)] = None,
 ):
-    """Public registration (no auth)"""
-
-    # 1. Check if email already exists
+    """Public instructor registration (no auth)."""
     existing_user = db.query(UserPersonal).filter(
         UserPersonal.email == data.email
     ).first()
@@ -178,7 +114,6 @@ async def create_instructor(
             detail="Email already registered"
         )
 
-    # 2. Create inactive user
     user = UserPersonal(
         first_name=data.first_name,
         last_name=data.last_name,
@@ -191,7 +126,6 @@ async def create_instructor(
     db.add(user)
     db.flush()
 
-    # 3. Create instructor profile
     instructor = Instructor(
         user_id=user.id,
         bio=data.bio,
@@ -207,22 +141,85 @@ async def create_instructor(
         "instructor_id": instructor.id
     }
 
+
 @router.post("/password-reset-request")
-async def password_reset_request(email: str, db: Session = Depends(get_db)):
-    """Request password reset"""
-    user = db.query(UserPersonal).filter(UserPersonal.email == email).first()
+async def password_reset_request(
+    body: PasswordResetRequestBody,
+    db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_password_reset)] = None,
+):
+    """Request password reset — always returns same message (no email enumeration)."""
+    generic = {"message": "If the email exists, a reset link has been sent"}
+    user = db.query(UserPersonal).filter(UserPersonal.email == body.email).first()
     if not user:
-        # Don't reveal if email exists
-        return {"message": "If the email exists, a reset link has been sent"}
-    
-    # Generate reset token (implement token storage and expiry)
+        return generic
+
+    now = datetime.now(timezone.utc)
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.is_used.is_(False),
+    ).update({"is_used": True}, synchronize_session=False)
+
     reset_token = secrets.token_urlsafe(32)
-    # TODO: Store token with expiry in database
-    
-    # Send email with reset link
-    # TODO: Implement email service for password reset
-    
-    return {"message": "If the email exists, a reset link has been sent"}
+    expires_at = now + timedelta(hours=1)
+    db.add(
+        PasswordResetToken(
+            user_id=user.id,
+            token=reset_token,
+            expires_at=expires_at.replace(tzinfo=None),
+        )
+    )
+    db.commit()
+
+    display_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+    await email_service.send_password_reset_email(user.email, display_name, reset_link)
+
+    return generic
+
+
+@router.post("/password-reset-confirm")
+async def password_reset_confirm(
+    body: PasswordResetConfirmBody,
+    db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_password_reset)] = None,
+):
+    """Set new password using a valid reset token."""
+    row = (
+        db.query(PasswordResetToken)
+        .filter(
+            PasswordResetToken.token == body.token,
+            PasswordResetToken.is_used.is_(False),
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link",
+        )
+
+    expires = row.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if expires < datetime.now(timezone.utc):
+        row.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link",
+        )
+
+    user = db.query(UserPersonal).filter(UserPersonal.id == row.user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset link")
+
+    user.password_hash = get_password_hash(body.new_password)
+    row.is_used = True
+    db.commit()
+
+    return {"message": "Password updated successfully"}
+
 
 @router.post("/change-password")
 async def change_password(

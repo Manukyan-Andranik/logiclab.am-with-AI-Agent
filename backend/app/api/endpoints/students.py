@@ -9,16 +9,32 @@ from ...models.models import (
 )
 
 from ...schemas.schemas import StudentResponse, StudentUpdate, UserRole
-from ..deps import get_current_admin, get_current_student
+from ..deps import get_current_admin, get_current_student, get_current_user
 
 router = APIRouter()
 
 @router.get("/{student_id}", response_model=StudentResponse)
 async def get_student_info(
     student_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserPersonal = Depends(get_current_user),
 ):
-    """Get student's information"""
+    """Get student profile (admin: any student; student: own profile only)."""
+    if current_user.role == UserRole.ADMIN:
+        pass
+    elif current_user.role == UserRole.STUDENT:
+        own = db.query(Student).filter(Student.user_id == current_user.id).first()
+        if not own or own.id != student_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Student not found",
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions",
+        )
+
     student = db.query(Student).options(
         joinedload(Student.user),
         joinedload(Student.course)

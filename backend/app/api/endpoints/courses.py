@@ -31,9 +31,10 @@ def _multilingual_to_dict(obj) -> dict:
 @router.get("/chapters/{chapter_id}/lessons", response_model=List[LessonResponse])
 async def get_chapter_lessons(
     chapter_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _admin=Depends(get_current_admin),
 ):
-    """Get all lessons for a chapter"""
+    """Get all lessons for a chapter (admin only — use /courses/{id}/curriculum publicly)."""
     return db.query(Lesson).filter(Lesson.chapter_id == chapter_id).order_by(Lesson.order_index).all()
 
 @router.post("/chapters/{chapter_id}/lessons", response_model=LessonResponse, status_code=status.HTTP_201_CREATED)
@@ -100,9 +101,10 @@ async def delete_lesson(
 @router.get("/chapters/{chapter_id}", response_model=ChapterResponse)
 async def get_chapter(
     chapter_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _admin=Depends(get_current_admin),
 ):
-    """Get single chapter by ID"""
+    """Get single chapter by ID (admin only)."""
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")

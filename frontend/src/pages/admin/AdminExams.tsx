@@ -30,7 +30,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Loader from "@/components/ui/Loader";
-import { Upload, Play, Pause, Trash2, Users, Download, FileJson, UserCheck } from "lucide-react";
+import { Upload, Play, Pause, Trash2, Users, Download, FileJson, UserCheck, ClipboardCheck, Settings, BarChart3 } from "lucide-react";
+import ExamGradingPanel from "@/components/exam/ExamGradingPanel";
+import ExamAnalyticsPanel from "@/components/exam/ExamAnalyticsPanel";
 import { Checkbox } from "@/components/ui/checkbox";
 
 function studentDisplayName(s: AdminStudentWithProgress): string {
@@ -62,8 +64,20 @@ const AdminExams = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [courseId, setCourseId] = useState<number | "">("");
   const [submissionsExamId, setSubmissionsExamId] = useState<number | null>(null);
+  const [gradingAttemptId, setGradingAttemptId] = useState<number | null>(null);
+  const [analyticsExam, setAnalyticsExam] = useState<AdminExam | null>(null);
   const [monitorExamId, setMonitorExamId] = useState<number | null>(null);
   const [accessExam, setAccessExam] = useState<AdminExam | null>(null);
+  const [editExam, setEditExam] = useState<AdminExam | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    instructions: "",
+    duration_minutes: 60,
+    max_attempts: 1,
+    is_final: false,
+    pass_score_percentage: 70,
+  });
   const [restrictAccess, setRestrictAccess] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -165,12 +179,12 @@ const AdminExams = () => {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
   });
 
-  const durationMutation = useMutation({
-    mutationFn: ({ examId, minutes }: { examId: number; minutes: number }) =>
-      updateExamMetadata(examId, { duration_minutes: minutes }),
+  const metadataMutation = useMutation({
+    mutationFn: ({ examId, ...data }: { examId: number } & Record<string, unknown>) =>
+      updateExamMetadata(examId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-exams"] });
-      toast({ title: "Duration updated" });
+      toast({ title: "Exam updated" });
     },
     onError: (e: Error) =>
       toast({ title: "Update failed", description: e.message, variant: "destructive" }),
@@ -284,6 +298,7 @@ const AdminExams = () => {
               <TableRow>
                 <TableHead>Title</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Final</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Questions</TableHead>
                 <TableHead>Access</TableHead>
@@ -294,19 +309,33 @@ const AdminExams = () => {
               {examsData?.data?.length ? (
                 examsData.data.map((exam: AdminExam) => (
                   <TableRow key={exam.id}>
-                    <TableCell className="font-medium">{exam.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{exam.title}</div>
+                      {exam.is_final && (
+                        <div className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
+                          Passing: {exam.pass_score_percentage}%
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={exam.status === "active" ? "default" : "secondary"}>{exam.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {exam.is_final ? (
+                        <Badge className="bg-amber-500 text-white border-none">Yes</Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-[220px] space-y-1">
                       <select
                         className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
                         value={exam.duration_minutes}
-                        disabled={durationMutation.isPending}
+                        disabled={metadataMutation.isPending}
                         onChange={(e) =>
-                          durationMutation.mutate({
+                          metadataMutation.mutate({
                             examId: exam.id,
-                            minutes: Number(e.target.value),
+                            duration_minutes: Number(e.target.value),
                           })
                         }
                       >
@@ -332,6 +361,25 @@ const AdminExams = () => {
                       <Button
                         size="sm"
                         variant="outline"
+                        title="Edit metadata"
+                        onClick={() => {
+                          setEditExam(exam);
+                          setEditForm({
+                            title: exam.title,
+                            description: exam.description || "",
+                            instructions: exam.instructions || "",
+                            duration_minutes: exam.duration_minutes,
+                            max_attempts: exam.max_attempts,
+                            is_final: exam.is_final,
+                            pass_score_percentage: exam.pass_score_percentage,
+                          });
+                        }}
+                      >
+                        <Settings size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         title="Manage student access"
                         onClick={() => openAccessDialog(exam)}
                       >
@@ -353,6 +401,14 @@ const AdminExams = () => {
                       )}
                       <Button size="sm" variant="outline" onClick={() => setMonitorExamId(exam.id)}>
                         <Users size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title="Grading analytics"
+                        onClick={() => setAnalyticsExam(exam)}
+                      >
+                        <BarChart3 size={14} />
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setSubmissionsExamId(exam.id)}>
                         <Download size={14} />
@@ -381,16 +437,52 @@ const AdminExams = () => {
         </div>
       )}
 
+      <Dialog
+        open={analyticsExam != null}
+        onOpenChange={(o) => !o && setAnalyticsExam(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Exam analytics</DialogTitle>
+          </DialogHeader>
+          {analyticsExam && (
+            <ExamAnalyticsPanel examId={analyticsExam.id} examTitle={analyticsExam.title} />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAnalyticsExam(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={submissionsExamId != null} onOpenChange={(o) => !o && setSubmissionsExamId(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Submissions</DialogTitle>
+            <DialogTitle className="flex flex-wrap items-center justify-between gap-2 pr-8">
+              <span>Submissions</span>
+              {submissionsExamId != null && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => {
+                    const exam = examsData?.data?.find((e) => e.id === submissionsExamId);
+                    if (exam) setAnalyticsExam(exam);
+                  }}
+                >
+                  <BarChart3 size={14} />
+                  Analytics
+                </Button>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Student</TableHead>
                 <TableHead>Score</TableHead>
+                <TableHead>Grading</TableHead>
                 <TableHead>Time</TableHead>
                 <TableHead />
               </TableRow>
@@ -402,8 +494,25 @@ const AdminExams = () => {
                   <TableCell>
                     {s.score != null ? `${s.score} / ${s.max_score}` : "—"}
                   </TableCell>
-                  <TableCell>{Math.round(s.time_spent_seconds / 60)}m</TableCell>
                   <TableCell>
+                    {s.grading_status === "pending_manual" ? (
+                      <Badge variant="secondary">Review ({s.pending_manual_count ?? 0})</Badge>
+                    ) : s.grading_status === "complete" ? (
+                      <Badge>Done</Badge>
+                    ) : (
+                      <Badge variant="outline">{s.grading_status ?? "—"}</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>{Math.round(s.time_spent_seconds / 60)}m</TableCell>
+                  <TableCell className="space-x-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      title="Grade submission"
+                      onClick={() => setGradingAttemptId(s.attempt_id)}
+                    >
+                      <ClipboardCheck size={14} />
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -497,6 +606,106 @@ const AdminExams = () => {
             </Button>
             <Button onClick={saveAccess} disabled={accessMutation.isPending}>
               {accessMutation.isPending ? <Loader /> : "Save access"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={gradingAttemptId != null}
+        onOpenChange={(o) => !o && setGradingAttemptId(null)}
+      >
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Grade submission</DialogTitle>
+          </DialogHeader>
+          {gradingAttemptId != null && submissionsExamId != null && (
+            <ExamGradingPanel
+              attemptId={gradingAttemptId}
+              examId={submissionsExamId}
+              onClose={() => setGradingAttemptId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editExam != null} onOpenChange={(o) => !o && setEditExam(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Exam Metadata</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                value={editForm.title}
+                onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Duration (min)</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={editForm.duration_minutes}
+                  onChange={(e) => setEditForm((p) => ({ ...p, duration_minutes: Number(e.target.value) }))}
+                >
+                  {DURATION_OPTIONS.map((m) => (
+                    <option key={m} value={m}>{m} min</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Max Attempts</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={editForm.max_attempts}
+                  onChange={(e) => setEditForm((p) => ({ ...p, max_attempts: Number(e.target.value) }))}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-3 border rounded-lg bg-secondary/10">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="is_final"
+                  checked={editForm.is_final}
+                  onCheckedChange={(v) => setEditForm((p) => ({ ...p, is_final: v === true }))}
+                />
+                <Label htmlFor="is_final" className="cursor-pointer">Course Final Exam</Label>
+              </div>
+              {editForm.is_final && (
+                <div className="flex items-center gap-2 flex-1">
+                  <Label className="shrink-0 text-xs">Pass %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="h-8 w-20"
+                    value={editForm.pass_score_percentage}
+                    onChange={(e) => setEditForm((p) => ({ ...p, pass_score_percentage: Number(e.target.value) }))}
+                  />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              Final exams automatically mark enrollment as COMPLETED and issue certificates when passed.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditExam(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!editExam) return;
+                metadataMutation.mutate({
+                  examId: editExam.id,
+                  ...editForm,
+                });
+                setEditExam(null);
+              }}
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

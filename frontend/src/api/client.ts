@@ -1,3 +1,5 @@
+import { formatApiErrorDetail } from "@/lib/apiError";
+
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 type FetchOptions = RequestInit & {
@@ -57,8 +59,8 @@ export const apiClient = async <T>(endpoint: string, options: FetchOptions = {})
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    const message = errorData.detail || errorData.message || 'API request failed';
-    throw new Error(typeof message === 'object' ? JSON.stringify(message) : message);
+    const raw = errorData.detail ?? errorData.message ?? 'API request failed';
+    throw new Error(formatApiErrorDetail(raw) || 'API request failed');
   }
 
   // Handle 204 No Content responses (e.g., DELETE operations)

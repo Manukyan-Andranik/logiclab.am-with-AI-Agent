@@ -82,6 +82,8 @@ const AdminProjects = () => {
       toast({ title: "Success", description: "Project updated successfully." });
       setIsDialogOpen(false);
     },
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -90,16 +92,22 @@ const AdminProjects = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       toast({ title: "Deleted", description: "Project removed." });
     },
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const toggleFeaturedMutation = useMutation({
     mutationFn: toggleProjectFeatured,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-projects"] }),
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const togglePublishedMutation = useMutation({
     mutationFn: toggleProjectPublished,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-projects"] }),
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // Handlers

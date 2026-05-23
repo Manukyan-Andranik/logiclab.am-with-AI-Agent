@@ -2,6 +2,9 @@ import { apiClient } from "./client";
 
 export type ExamAvailability = "waiting" | "available" | "unavailable";
 
+/** Student progress on an exam (dashboard label). */
+export type StudentExamDisplayStatus = "not_available" | "unfinished" | "submitted";
+
 export interface AdminExam {
   id: number;
   course_id: number;
@@ -13,6 +16,8 @@ export interface AdminExam {
   end_time: string | null;
   duration_minutes: number;
   max_attempts: number;
+  is_final: boolean;
+  pass_score_percentage: number;
   total_points: number;
   question_count: number;
   allow_navigation: boolean;
@@ -26,6 +31,8 @@ export interface AdminExam {
 export interface StudentExamListItem {
   id: number;
   course_id: number;
+  exam_status: string;
+  student_status: StudentExamDisplayStatus;
   title: string;
   description?: string;
   duration_minutes: number;
@@ -39,6 +46,9 @@ export interface StudentExamListItem {
   attempts_used: number;
   attempts_remaining: number;
   active_attempt_id?: number | null;
+  last_score?: number | null;
+  last_max_score?: number | null;
+  submitted_at?: string | null;
 }
 
 export interface ExamQuestion {
@@ -78,6 +88,8 @@ export interface ExamSessionPayload {
   };
 }
 
+export type GradingStatus = "complete" | "pending_manual" | "ungraded";
+
 export interface ExamSubmissionRow {
   id: number;
   attempt_id: number;
@@ -86,10 +98,115 @@ export interface ExamSubmissionRow {
   student_email?: string;
   score?: number;
   max_score?: number;
+  grading_status?: GradingStatus;
+  pending_manual_count?: number;
+  attempt_status?: string;
   submitted_at: string;
   time_spent_seconds: number;
   email_sent: boolean;
   download_path?: string;
+}
+
+export type QuestionCorrectness = "correct" | "incorrect" | "partial" | "pending_review";
+
+export interface ExamGradingQuestion {
+  question_id: string;
+  type: string;
+  question_text: string;
+  question_latex?: string;
+  points: number;
+  options?: { id: string; text: string; latex?: string }[];
+  auto_gradable: boolean;
+  answer_keys?: Record<string, unknown>;
+  student_answer: unknown;
+  student_answer_display: string;
+  points_awarded: number | null;
+  earned_points?: number | null;
+  max_points: number;
+  is_correct: boolean | null;
+  correctness?: QuestionCorrectness | null;
+  feedback?: string | null;
+  rubric_result?: Record<string, number> | null;
+}
+
+export interface ExamGradingDetail {
+  attempt_id: number;
+  exam_id: number;
+  exam_title: string;
+  student_id: number;
+  student_name: string;
+  student_email?: string;
+  submitted_at: string | null;
+  time_spent_seconds: number;
+  score: number;
+  max_score: number;
+  score_percent?: number | null;
+  grading_status: GradingStatus;
+  pending_manual_count: number;
+  answered_count?: number;
+  attempt_status: string;
+  grading_version?: number;
+  integrity_score?: number | null;
+  questions: ExamGradingQuestion[];
+}
+
+export interface StudentExamResult {
+  attempt_id: number;
+  exam_id: number;
+  exam_title: string;
+  score: number;
+  max_score: number;
+  score_percent?: number | null;
+  earned_points?: number;
+  max_points?: number;
+  grading_status: GradingStatus;
+  pending_manual_count: number;
+  attempt_status: string;
+  submitted_at: string | null;
+  integrity_score?: number | null;
+  questions: {
+    question_id: string;
+    type: string;
+    question_text: string;
+    points: number;
+    points_awarded: number | null;
+    earned_points?: number | null;
+    max_points: number;
+    is_correct: boolean | null;
+    correctness?: QuestionCorrectness | null;
+    feedback?: string | null;
+    pending_review: boolean;
+  }[];
+}
+
+export interface ExamQuestionAnalytics {
+  question_id: string;
+  question_text?: string;
+  type?: string;
+  points?: number;
+  average_percent: number;
+  difficulty_index: number;
+  missed_rate: number;
+  attempts: number;
+}
+
+export interface ExamGradingAnalytics {
+  exam_id: number;
+  exam_title?: string;
+  total_attempts: number;
+  average_score_percent: number | null;
+  median_score_percent: number | null;
+  pass_rate_percent: number | null;
+  pass_threshold: number;
+  most_missed_questions: ExamQuestionAnalytics[];
+  question_analytics: ExamQuestionAnalytics[];
+  score_distribution: Record<string, number>;
+}
+
+export interface IntegrityReport {
+  attempt_id: number;
+  integrity_score: number;
+  flags: { type: string; severity: string; message?: string; count?: number }[];
 }
 
 export const listAdminExams = (courseId?: number) =>
@@ -139,6 +256,46 @@ export const downloadSubmissionUrl = (submissionId: number) => {
   return `${base}/exams/admin/submissions/${submissionId}/download`;
 };
 
+export const getAttemptGrading = (attemptId: number) =>
+  apiClient<ExamGradingDetail>(`/exams/admin/attempts/${attemptId}/grading`);
+
+export const getExamGradingAnalytics = (examId: number) =>
+  apiClient<ExamGradingAnalytics>(`/exams/admin/${examId}/grading-analytics`);
+
+export const getAttemptIntegrity = (attemptId: number) =>
+  apiClient<IntegrityReport>(`/exams/admin/attempts/${attemptId}/integrity`);
+
+export const saveAttemptGrading = (
+  attemptId: number,
+  grades: {
+    question_id: string;
+    points_awarded?: number;
+    feedback?: string;
+    rubric_scores?: Record<string, number>;
+  }[]
+) =>
+  apiClient<{
+    success: boolean;
+    score: number;
+    max_score: number;
+    grading_status: GradingStatus;
+    pending_manual_count: number;
+  }>(`/exams/admin/attempts/${attemptId}/grading`, {
+    method: "PUT",
+    body: JSON.stringify({ grades }),
+  });
+
+export const regradeAttemptAuto = (attemptId: number) =>
+  apiClient<{
+    success: boolean;
+    score: number;
+    max_score: number;
+    grading_status: GradingStatus;
+  }>(`/exams/admin/attempts/${attemptId}/regrade`, { method: "POST" });
+
+export const getStudentAttemptResult = (attemptId: number) =>
+  apiClient<StudentExamResult>(`/exams/student/attempts/${attemptId}/result`);
+
 export const listStudentExams = (courseId?: number) =>
   apiClient<StudentExamListItem[]>("/exams/student/available", {
     params: courseId != null ? { course_id: courseId } : {},
@@ -164,7 +321,16 @@ export const saveExamAnswer = (attemptId: number, questionId: string, answerValu
   });
 
 export const submitExamAttempt = (attemptId: number, answers?: Record<string, unknown>) =>
-  apiClient<{ success: boolean; submission_id: number; time_spent_seconds: number; score?: number; max_score?: number }>(
+  apiClient<{
+    success: boolean;
+    submission_id: number;
+    time_spent_seconds: number;
+    score?: number;
+    max_score?: number;
+    grading_status?: GradingStatus;
+    pending_manual_count?: number;
+    attempt_status?: string;
+  }>(
     `/exams/student/attempts/${attemptId}/submit`,
     {
       method: "POST",

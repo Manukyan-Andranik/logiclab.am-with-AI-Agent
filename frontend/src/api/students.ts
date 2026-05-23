@@ -34,6 +34,8 @@ export interface EnrolledCourse {
   };
   enrollment_id: number | null;
   enrollment_status: string;
+  is_completed: boolean;
+  certificate_url: string | null;
   progress: CourseProgress;
   materials: CourseMaterial[];
 }

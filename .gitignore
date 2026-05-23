@@ -42,6 +42,7 @@ frontend/.env
 
 backend/venv
 backend/test.py
+test.py
 backend/app/api/__pycache__/deps.cpython-311.pyc
 backend/app/core/__pycache__/config.cpython-311.pyc
 backend/app/core/__pycache__/database.cpython-311.pyc
@@ -55,9 +56,10 @@ backend/app/api/endpoints/__pycache__/
 backend/app/core/__pycache__/cloudinary.cpython-311.pyc
 backend/app/models/__pycache__/
 backend/app/schemas/__pycache__/
-backend/test.py
 backend/tests/
 backend/uploads/
+private_data/
+backend/private_data/
 demo_ai_agent.py
 frontend/src/assets/3d.mp4
 frontend/src/assets/photo.mp4
@@ -75,3 +77,9 @@ review.txt
 MATERIAL_ACCESS_API_REFERENCE.md
 MATERIAL_ACCESS_GUIDE.md
 MATERIAL_ACCESS_IMPLEMENTATION.md
+EXAM_SYSTEM_DOCS.md
+GRADING_ARCHITECTURE.md
+PROJECT_AUDIT.md
+backend/docs/
+grading_system.md
+test.py

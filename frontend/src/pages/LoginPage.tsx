@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { login, studentLogin } from "@/api/auth";
+import { login } from "@/api/auth";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
@@ -44,7 +44,6 @@ const LoginPage = () => {
   const nextPath = sanitizeNext(searchParams.get("next"));
 
   const loginMutation = useMutation({ mutationFn: login });
-  const studentMutation = useMutation({ mutationFn: studentLogin });
 
   const finishLogin = (data: LoginResponse) => {
     localStorage.setItem("token", data.access_token);
@@ -62,30 +61,28 @@ const LoginPage = () => {
     });
   };
 
-  const isPending = loginMutation.isPending || studentMutation.isPending;
+  const isPending = loginMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const creds = { email, password };
+    const base = { email, password };
 
     if (explicitRole === "admin") {
-      loginMutation.mutate(creds, { onSuccess: finishLogin, onError: showFailure });
+      loginMutation.mutate({ ...base, role: "admin" }, { onSuccess: finishLogin, onError: showFailure });
       return;
     }
     if (explicitRole === "student") {
-      studentMutation.mutate(creds, { onSuccess: finishLogin, onError: showFailure });
+      loginMutation.mutate({ ...base, role: "student" }, { onSuccess: finishLogin, onError: showFailure });
       return;
     }
-    // Ambiguous: admin first, then student fallback. If both fail, surface
-    // the admin error (the user will retry; we don't try to fingerprint
-    // which backend "should" have accepted them).
-    loginMutation.mutate(creds, {
+    // Ambiguous: try admin, then student (same endpoint, role in body).
+    loginMutation.mutate({ ...base, role: "admin" }, {
       onSuccess: finishLogin,
       onError: (adminError: Error) => {
-        studentMutation.mutate(creds, {
-          onSuccess: finishLogin,
-          onError: () => showFailure(adminError),
-        });
+        loginMutation.mutate(
+          { ...base, role: "student" },
+          { onSuccess: finishLogin, onError: () => showFailure(adminError) },
+        );
       },
     });
   };
@@ -158,6 +155,15 @@ const LoginPage = () => {
                     </button>
                   </div>
                 </div>
+
+                <p className="text-right">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {t("login.forgot_password")}
+                  </Link>
+                </p>
 
                 <button
                   type="submit"

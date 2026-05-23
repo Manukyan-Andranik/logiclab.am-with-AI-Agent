@@ -1,10 +1,11 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, timezone
 from ...core.database import get_db
 from ...core.email import email_service
+from ...core.i18n import localized_label
 from ...models.models import (
     Material, MaterialAccess, Chapter, Lesson, Course, Student, UserPersonal
 )
@@ -174,30 +175,19 @@ def _course_title_label(course) -> str:
     """Best-effort multilingual → human label for course.title."""
     if course is None:
         return ""
-    t = course.title
-    if isinstance(t, dict):
-        for lang in ("hy", "en", "ru"):
-            v = (t.get(lang) or "").strip()
-            if v:
-                return v
-        for v in t.values():
-            if v:
-                return str(v).strip()
-        return ""
-    return str(t or "")
+    return localized_label(course.title)
 
 
 @router.post("/grant-access", status_code=status.HTTP_201_CREATED)
 async def grant_material_access(
     access_data: MaterialAccessCreate,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Grant chapter-level or lesson-level material access (Admin only).
 
-    On a successful grant, the student is notified by email
-    (non-blocking — dispatched via FastAPI BackgroundTasks).
+    When ``send_email`` is true, the student is notified synchronously so
+    delivery failures are reported to the admin immediately.
     """
     if access_data.chapter_id is None and access_data.lesson_id is None:
         raise HTTPException(
@@ -316,8 +306,7 @@ async def grant_material_access(
     from ..progress import invalidate_progress_cache
     invalidate_progress_cache(access_data.student_id)
 
-    # Notify the student. Pick the lesson-specific email when the grant
-    # targets a single lesson; otherwise send the chapter-wide notification.
+    email_sent = False
     if (
         access_data.send_email
         and chapter_for_email is not None
@@ -325,30 +314,34 @@ async def grant_material_access(
         and student.user.email
     ):
         course_label = _course_title_label(chapter_for_email.course)
+        chapter_label = localized_label(chapter_for_email.title)
         if lesson_for_email is not None:
-            background_tasks.add_task(
-                email_service.send_lesson_access_granted,
+            email_sent = await email_service.send_lesson_access_granted(
                 student.user.email,
                 student.user.first_name or "",
-                lesson_for_email.title or "",
-                chapter_for_email.title or "",
+                localized_label(lesson_for_email.title),
+                chapter_label,
                 course_label,
             )
         else:
-            background_tasks.add_task(
-                email_service.send_material_access_granted,
+            email_sent = await email_service.send_material_access_granted(
                 student.user.email,
                 student.user.first_name or "",
-                chapter_for_email.title or "",
+                chapter_label,
                 course_label,
             )
 
-    return {"message": "Access granted successfully"}
+        if not email_sent:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Failed to send email. Check SMTP settings and server logs.",
+            )
+
+    return {"message": "Access granted successfully", "email_sent": email_sent}
 
 @router.post("/notify-summary")
 async def notify_access_summary(
     data: AccessSummaryNotify,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
@@ -361,16 +354,20 @@ async def notify_access_summary(
         raise HTTPException(status_code=400, detail="Student has no email address")
 
     items_payload = [item.model_dump() for item in data.items]
-    
-    background_tasks.add_task(
-        email_service.send_cumulative_access_granted,
+
+    success = await email_service.send_cumulative_access_granted(
         student.user.email,
         student.user.first_name or "",
         data.course_name,
-        items_payload
+        items_payload,
     )
-    
-    return {"message": "Summary notification sent"}
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to send email. Check SMTP settings and server logs.",
+        )
+
+    return {"message": "Summary notification sent", "email_sent": True}
 
 @router.delete("/revoke-access/{access_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_material_access(

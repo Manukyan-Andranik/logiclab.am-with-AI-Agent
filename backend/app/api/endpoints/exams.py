@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ...api.deps import get_current_admin, get_current_student
 from ...core.config import settings
-from ...core.database import get_db
+from ...core.database import SessionLocal, get_db
 from ...core.email import email_service
 from ...models.exams import (
     AttemptStatus,
@@ -41,8 +41,46 @@ from ...models.exams import (
 from ...models.models import Enrollment, EnrollmentStatus, Registration, Student, UserPersonal
 from ...schemas.exams import ExamJSONSchema
 from ...services.exam_service import ExamService
+from ...services.grading.statistics import compute_exam_statistics
+from ...services.grading.anti_cheat import analyze_attempt_integrity
 
 router = APIRouter(prefix="/exams", tags=["Exams"])
+
+
+async def _send_exam_submission_emails_and_mark(
+    submission_id: int,
+    *,
+    admin_email: Optional[str],
+    student_email: Optional[str],
+    submission_data: Dict[str, Any],
+    json_file_path: str,
+    score: Optional[float],
+    max_score: Optional[float],
+    score_percent: Optional[float],
+    pending_manual_count: int,
+) -> None:
+    """Background: send admin + student emails and persist email_sent on submission."""
+    results = await email_service.send_exam_submission_emails(
+        admin_email=admin_email,
+        student_email=student_email,
+        submission_data=submission_data,
+        json_file_path=json_file_path,
+        score=score,
+        max_score=max_score,
+        score_percent=score_percent,
+        pending_manual_count=pending_manual_count,
+    )
+    db = SessionLocal()
+    try:
+        sub = db.query(ExamSubmission).filter(ExamSubmission.id == submission_id).first()
+        if sub:
+            sub.email_sent = bool(results.get("admin") or results.get("student"))
+            sub.email_sent_at = ExamService.naive_utc()
+            if admin_email:
+                sub.email_recipient = admin_email
+            db.commit()
+    finally:
+        db.close()
 
 
 # ---------- Request / response models ----------
@@ -54,6 +92,8 @@ class ExamMetadataUpdate(BaseModel):
     instructions: Optional[str] = None
     duration_minutes: Optional[int] = Field(None, ge=1, le=480)
     max_attempts: Optional[int] = Field(None, ge=1, le=20)
+    is_final: Optional[bool] = None
+    pass_score_percentage: Optional[int] = Field(None, ge=0, le=100)
     access_token: Optional[str] = None
     allowed_student_ids: Optional[List[int]] = None
     allow_navigation: Optional[bool] = None
@@ -79,6 +119,21 @@ class AuditBody(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 
+class QuestionGradeInput(BaseModel):
+    question_id: str
+    points_awarded: Optional[float] = Field(None, ge=0)
+    feedback: Optional[str] = None
+    rubric_scores: Optional[Dict[str, float]] = None
+
+
+class SaveGradingBody(BaseModel):
+    grades: List[QuestionGradeInput]
+
+
+class RegradeBody(BaseModel):
+    reason: Optional[str] = None
+
+
 def _exam_to_admin_dict(exam: Exam) -> dict:
     qdata = exam.questions if isinstance(exam.questions, dict) else {}
     return {
@@ -92,6 +147,8 @@ def _exam_to_admin_dict(exam: Exam) -> dict:
         "end_time": ExamService.ensure_aware(exam.end_time).isoformat() if exam.end_time else None,
         "duration_minutes": exam.duration_minutes,
         "max_attempts": exam.max_attempts,
+        "is_final": exam.is_final,
+        "pass_score_percentage": exam.pass_score_percentage,
         "total_points": exam.total_points,
         "question_count": ExamService.count_questions(qdata),
         "allow_navigation": exam.allow_navigation,
@@ -185,6 +242,8 @@ async def upload_exam_json(
         end_time=None,
         duration_minutes=exam_json.duration_minutes,
         max_attempts=exam_json.max_attempts,
+        is_final=exam_json.is_final,
+        pass_score_percentage=exam_json.pass_score_percentage,
         allow_navigation=exam_json.settings.allow_navigation,
         allow_review=exam_json.settings.allow_review_before_submit,
         show_answers_after=exam_json.settings.show_correct_answers,
@@ -361,11 +420,18 @@ async def list_submissions(
         .order_by(desc(ExamSubmission.submitted_at))
         .all()
     )
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
     rows = []
     for s in submissions:
         att = s.attempt
         user = att.student.user if att and att.student else None
         name = f"{user.first_name} {user.last_name}" if user else "Unknown"
+        grading_status = "ungraded"
+        pending_manual = 0
+        if att and exam:
+            summary = ExamService.recalculate_attempt_scores(db, att, exam)
+            grading_status = summary["grading_status"]
+            pending_manual = summary["pending_manual_count"]
         rows.append(
             {
                 "id": s.id,
@@ -373,14 +439,20 @@ async def list_submissions(
                 "student_id": att.student_id if att else None,
                 "student_name": name,
                 "student_email": user.email if user else None,
-                "score": att.score,
-                "max_score": att.max_score,
+                "score": att.score if att else None,
+                "max_score": att.max_score if att else None,
+                "grading_status": grading_status,
+                "pending_manual_count": pending_manual,
+                "attempt_status": (
+                    ExamService._attempt_status_value(att) if att else None
+                ),
                 "submitted_at": s.submitted_at.isoformat() if s.submitted_at else None,
                 "time_spent_seconds": att.time_spent_seconds if att else 0,
                 "email_sent": s.email_sent,
                 "download_path": s.submission_json_path,
             }
         )
+    db.commit()
     return {"data": rows, "total": len(rows)}
 
 
@@ -393,10 +465,151 @@ async def download_submission(
     sub = db.query(ExamSubmission).filter(ExamSubmission.id == submission_id).first()
     if not sub or not sub.submission_json_path:
         raise HTTPException(status_code=404, detail="Submission file not found")
-    path = Path(sub.submission_json_path)
+    try:
+        path = ExamService.resolve_submission_path(sub.submission_json_path)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Submission file not found") from None
     if not path.is_file():
         raise HTTPException(status_code=404, detail="File missing on disk")
     return FileResponse(path, media_type="application/json", filename=path.name)
+
+
+@router.get("/admin/attempts/{attempt_id}/grading")
+async def get_attempt_grading(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    _admin: UserPersonal = Depends(get_current_admin),
+):
+    detail = ExamService.build_grading_detail(db, attempt_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+    db.commit()
+    return detail
+
+
+@router.put("/admin/attempts/{attempt_id}/grading")
+async def save_attempt_grading(
+    attempt_id: int,
+    body: SaveGradingBody,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_admin: UserPersonal = Depends(get_current_admin),
+):
+    grades = [g.model_dump(exclude_none=True) for g in body.grades]
+    result = ExamService.apply_manual_grades(
+        db, attempt_id, grades, graded_by_id=current_admin.id
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("error", "Attempt not found"))
+
+    if result.get("grading_status") == "complete":
+        attempt = (
+            db.query(ExamAttempt)
+            .filter(ExamAttempt.id == attempt_id)
+            .options(joinedload(ExamAttempt.student).joinedload(Student.user))
+            .first()
+        )
+        if attempt and attempt.student and attempt.student.user:
+            user = attempt.student.user
+            exam = db.query(Exam).filter(Exam.id == attempt.exam_id).first()
+            if exam and user.email:
+                background_tasks.add_task(
+                    email_service.send_exam_graded_to_student,
+                    user.email,
+                    f"{user.first_name} {user.last_name}".strip(),
+                    exam.title,
+                    score=float(result.get("score") or 0),
+                    max_score=float(result.get("max_score") or 0),
+                    score_percent=result.get("score_percent"),
+                    attempt_id=attempt_id,
+                )
+
+    return result
+
+
+@router.post("/admin/attempts/{attempt_id}/regrade")
+async def regrade_attempt_auto(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    current_admin: UserPersonal = Depends(get_current_admin),
+):
+    attempt = db.query(ExamAttempt).filter(ExamAttempt.id == attempt_id).first()
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+    result = ExamService.grade_attempt(
+        db,
+        attempt_id,
+        only_auto=True,
+        graded_by_id=current_admin.id,
+        regrade=True,
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Regrade failed"))
+    ExamService.log_audit(
+        db,
+        attempt.exam_id,
+        "attempt_regraded",
+        "admin",
+        current_admin.id,
+        attempt_id=attempt_id,
+        details={"reason": "auto_regrade"},
+    )
+    return result
+
+
+@router.get("/admin/{exam_id}/grading-analytics")
+async def get_exam_grading_analytics(
+    exam_id: int,
+    db: Session = Depends(get_db),
+    _admin: UserPersonal = Depends(get_current_admin),
+):
+    exam = db.query(Exam).filter(Exam.id == exam_id).first()
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+    return compute_exam_statistics(db, exam_id)
+
+
+@router.get("/admin/attempts/{attempt_id}/integrity")
+async def get_attempt_integrity(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    _admin: UserPersonal = Depends(get_current_admin),
+):
+    attempt = db.query(ExamAttempt).filter(ExamAttempt.id == attempt_id).first()
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+    report = analyze_attempt_integrity(db, attempt)
+    return {"attempt_id": attempt_id, **report}
+
+
+@router.get("/admin/attempts/{attempt_id}/grading-history")
+async def get_grading_history(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    _admin: UserPersonal = Depends(get_current_admin),
+):
+    from ...models.exams import ExamGradingHistory
+
+    rows = (
+        db.query(ExamGradingHistory)
+        .filter(ExamGradingHistory.attempt_id == attempt_id)
+        .order_by(desc(ExamGradingHistory.created_at))
+        .all()
+    )
+    return {
+        "data": [
+            {
+                "id": r.id,
+                "grading_version": r.grading_version,
+                "previous_score": float(r.previous_score) if r.previous_score is not None else None,
+                "new_score": float(r.new_score),
+                "reason": r.reason,
+                "changed_by_id": r.changed_by_id,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ]
+    }
 
 
 @router.get("/admin/{exam_id}/active-students")
@@ -449,16 +662,36 @@ async def get_available_exams(
         db.query(Exam)
         .filter(
             Exam.course_id.in_(course_ids),
-            Exam.status == ExamStatus.ACTIVE,
+            Exam.status.in_(
+                [ExamStatus.ACTIVE, ExamStatus.DRAFT, ExamStatus.INACTIVE]
+            ),
         )
+        .order_by(desc(Exam.created_at))
         .all()
     )
+
+    exam_ids = [e.id for e in exams]
+    attempts_by_exam: Dict[int, List[ExamAttempt]] = {eid: [] for eid in exam_ids}
+    if exam_ids:
+        all_attempts = (
+            db.query(ExamAttempt)
+            .filter(
+                ExamAttempt.exam_id.in_(exam_ids),
+                ExamAttempt.student_id == current_student.id,
+            )
+            .order_by(desc(ExamAttempt.id))
+            .all()
+        )
+        for att in all_attempts:
+            attempts_by_exam.setdefault(att.exam_id, []).append(att)
 
     repaired = False
     result = []
     for exam in exams:
         if not ExamService.student_may_access(exam, current_student.id):
             continue
+
+        exam_status = ExamService._exam_status_value(exam)
 
         if ExamService.is_exam_active_status(exam) and (
             exam.start_time is None or exam.end_time is None
@@ -467,29 +700,32 @@ async def get_available_exams(
             repaired = True
 
         avail, msg = ExamService.availability(exam, now)
-        attempts_count = (
-            db.query(ExamAttempt)
-            .filter(
-                ExamAttempt.exam_id == exam.id,
-                ExamAttempt.student_id == current_student.id,
-            )
-            .count()
+        student_attempts = attempts_by_exam.get(exam.id, [])
+        attempts_count = len(student_attempts)
+        in_progress = next(
+            (a for a in student_attempts if a.status == AttemptStatus.IN_PROGRESS),
+            None,
         )
-        in_progress = (
-            db.query(ExamAttempt)
-            .filter(
-                ExamAttempt.exam_id == exam.id,
-                ExamAttempt.student_id == current_student.id,
-                ExamAttempt.status == AttemptStatus.IN_PROGRESS,
-            )
-            .first()
-        )
+        latest_attempt = student_attempts[0] if student_attempts else None
+        student_status = ExamService.student_exam_display_status(in_progress, latest_attempt)
         has_attempt_slot = attempts_count < exam.max_attempts
         can_attempt = avail == "available" and (has_attempt_slot or in_progress is not None)
+
+        last_score = None
+        last_max_score = None
+        submitted_at = None
+        if latest_attempt and student_status == "submitted":
+            last_score = latest_attempt.score
+            last_max_score = latest_attempt.max_score
+            if latest_attempt.submitted_at:
+                submitted_at = ExamService.ensure_aware(latest_attempt.submitted_at).isoformat()
+
         result.append(
             {
                 "id": exam.id,
                 "course_id": exam.course_id,
+                "exam_status": exam_status,
+                "student_status": student_status,
                 "title": exam.title,
                 "description": exam.description,
                 "duration_minutes": exam.duration_minutes,
@@ -507,6 +743,9 @@ async def get_available_exams(
                 "attempts_used": attempts_count,
                 "attempts_remaining": max(0, exam.max_attempts - attempts_count),
                 "active_attempt_id": in_progress.id if in_progress else None,
+                "last_score": last_score,
+                "last_max_score": last_max_score,
+                "submitted_at": submitted_at,
             }
         )
     if repaired:
@@ -763,13 +1002,24 @@ async def submit_exam(
     db.commit()
     db.refresh(submission)
 
-    ExamService.grade_attempt(db, attempt_id)
+    grade_result = ExamService.grade_attempt(db, attempt_id)
+    db.refresh(attempt)
+
+    score_percent = grade_result.get("score_percent")
+    if score_percent is None and attempt.max_score and attempt.max_score > 0:
+        score_percent = round(float(attempt.score or 0) / float(attempt.max_score) * 100, 2)
 
     background_tasks.add_task(
-        email_service.send_exam_submission,
-        admin_email,
-        submission_data,
-        file_path,
+        _send_exam_submission_emails_and_mark,
+        submission.id,
+        admin_email=admin_email,
+        student_email=student_email or None,
+        submission_data=submission_data,
+        json_file_path=file_path,
+        score=attempt.score,
+        max_score=attempt.max_score,
+        score_percent=score_percent,
+        pending_manual_count=grade_result.get("pending_manual_count", 0),
     )
 
     ExamService.log_audit(
@@ -788,7 +1038,22 @@ async def submit_exam(
         "time_spent_seconds": attempt.time_spent_seconds,
         "score": attempt.score,
         "max_score": attempt.max_score,
+        "grading_status": grade_result.get("grading_status"),
+        "pending_manual_count": grade_result.get("pending_manual_count", 0),
+        "attempt_status": grade_result.get("attempt_status"),
     }
+
+
+@router.get("/student/attempts/{attempt_id}/result")
+async def get_student_attempt_result(
+    attempt_id: int,
+    db: Session = Depends(get_db),
+    current_student: Student = Depends(get_current_student),
+):
+    payload = ExamService.student_result_payload(db, attempt_id, current_student.id)
+    if not payload:
+        raise HTTPException(status_code=404, detail="Result not available")
+    return payload
 
 
 @router.post("/student/attempts/{attempt_id}/audit")

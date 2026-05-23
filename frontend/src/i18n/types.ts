@@ -217,6 +217,8 @@ export interface Dict {
     duration: string;
     chapter_count: string;
     certificate: string;
+    graduated: string;
+    download_certificate: string;
     progress: string;
     no_course: string;
     materials_empty: string;
@@ -232,6 +234,41 @@ export interface Dict {
     error_title: string;
     error_body: string;
     error_cta: string;
+  };
+
+  student_exams: {
+    page_title: string;
+    page_intro: string;
+    page_intro_open: string;
+    empty: string;
+    section_open: string;
+    section_upcoming: string;
+    section_past: string;
+    dashboard_card_title: string;
+    dashboard_card_cta: string;
+    status_unfinished: string;
+    status_submitted: string;
+    status_not_available: string;
+    action_resume: string;
+    action_start: string;
+    action_take_again: string;
+    action_submitted: string;
+    action_not_started: string;
+    action_not_open: string;
+    action_no_attempts: string;
+    action_unavailable: string;
+    start_title: string;
+    start_intro: string;
+    access_code_placeholder: string;
+    begin: string;
+    time_left: string;
+    submit_confirm: string;
+    submit: string;
+    fullscreen_enter: string;
+    fullscreen_exit: string;
+    submitted_title: string;
+    submitted_body: string;
+    back_to_list: string;
   };
 
   student_projects: {

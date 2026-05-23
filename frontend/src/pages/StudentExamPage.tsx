@@ -14,6 +14,8 @@ import LatexContent from "@/components/exam/LatexContent";
 import {
   flattenExamQuestions,
   formatTimer,
+  optionDisplayText,
+  questionDisplayText,
   loadLocalAnswers,
   saveLocalAnswers,
   clearLocalAnswers,
@@ -29,7 +31,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, ChevronLeft, ChevronRight, Send, Maximize2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Send, Maximize2, Minimize2 } from "lucide-react";
+import { useT } from "@/i18n";
 
 const C = {
   bg: "#f8fafc",
@@ -45,13 +48,11 @@ export default function StudentExamPage() {
   const { examId } = useParams<{ examId: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const t = useT();
   const eid = Number(examId);
 
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
-  if (!token || role !== "student") {
-    return <Navigate to="/login?role=student" replace />;
-  }
+  const isAuthed =
+    Boolean(localStorage.getItem("token")) && localStorage.getItem("role") === "student";
 
   const resumeAttemptId = searchParams.get("attempt");
   const [accessCode, setAccessCode] = useState("");
@@ -62,6 +63,12 @@ export default function StudentExamPage() {
   const [showSubmit, setShowSubmit] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [submitResult, setSubmitResult] = useState<{
+    score?: number;
+    max_score?: number;
+    grading_status?: string;
+    pending_manual_count?: number;
+  } | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -83,7 +90,7 @@ export default function StudentExamPage() {
   const resumeQuery = useQuery({
     queryKey: ["exam-attempt", resumeAttemptId],
     queryFn: () => getExamAttempt(Number(resumeAttemptId)),
-    enabled: !!resumeAttemptId,
+    enabled: isAuthed && !!resumeAttemptId,
   });
 
   useEffect(() => {
@@ -111,6 +118,8 @@ export default function StudentExamPage() {
 
   const saveQueue = useRef<ReturnType<typeof setTimeout> | null>(null);
   const examClosedRef = useRef(false);
+  const examRootRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const persistAnswer = useCallback(
     async (qid: string, value: unknown) => {
@@ -161,10 +170,16 @@ export default function StudentExamPage() {
       flushPendingSave();
       return submitExamAttempt(session!.attempt_id, answers);
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       examClosedRef.current = true;
       flushPendingSave();
       if (session) clearLocalAnswers(session.attempt_id);
+      setSubmitResult({
+        score: res.score,
+        max_score: res.max_score,
+        grading_status: res.grading_status,
+        pending_manual_count: res.pending_manual_count,
+      });
       setSubmitted(true);
       setShowSubmit(false);
     },
@@ -209,6 +224,38 @@ export default function StudentExamPage() {
   }, [session]);
 
   useEffect(() => {
+    const syncFullscreen = () => {
+      const el = examRootRef.current;
+      setIsFullscreen(!!el && document.fullscreenElement === el);
+    };
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreen);
+      const el = examRootRef.current;
+      if (el && document.fullscreenElement === el) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    const el = examRootRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement === el) {
+        await document.exitFullscreen();
+      } else if (!document.fullscreenElement) {
+        await el.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+        await el.requestFullscreen();
+      }
+    } catch {
+      /* browser blocked or unsupported */
+    }
+  }, []);
+
+  useEffect(() => {
     const beforeUnload = (e: BeforeUnloadEvent) => {
       if (session && !submitted) {
         e.preventDefault();
@@ -231,15 +278,19 @@ export default function StudentExamPage() {
     return s;
   }, [answers]);
 
+  if (!isAuthed) {
+    return <Navigate to="/login?role=student" replace />;
+  }
+
   if (!session && !resumeAttemptId) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6" style={{ background: C.bg }}>
         <div className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm" style={{ borderColor: C.border }}>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Start exam</h1>
-          <p className="text-slate-600 text-sm mb-6">Enter your access code if required, then begin.</p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("student_exams.start_title")}</h1>
+          <p className="text-slate-600 text-sm mb-6">{t("student_exams.start_intro")}</p>
           <input
             type="text"
-            placeholder="Access code (optional)"
+            placeholder={t("student_exams.access_code_placeholder")}
             value={accessCode}
             onChange={(e) => setAccessCode(e.target.value)}
             className="w-full mb-4 px-3 py-2 border rounded-lg text-slate-900"
@@ -252,10 +303,14 @@ export default function StudentExamPage() {
             className="w-full py-3 rounded-lg font-semibold text-slate-900"
             style={{ background: "#FFD700" }}
           >
-            {startMutation.isPending ? "Starting…" : "Begin exam"}
+            {startMutation.isPending ? t("common.loading") : t("student_exams.begin")}
           </button>
-          <button type="button" className="w-full mt-3 text-sm text-slate-500" onClick={() => navigate("/student/exams")}>
-            Back to exams
+          <button
+            type="button"
+            className="w-full mt-3 text-sm text-slate-500"
+            onClick={() => navigate("/student/exams")}
+          >
+            {t("student_exams.back_to_list")}
           </button>
         </div>
       </div>
@@ -273,17 +328,36 @@ export default function StudentExamPage() {
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6" style={{ background: C.bg }}>
-        <div className="max-w-md text-center bg-white rounded-2xl border p-10 shadow-sm" style={{ borderColor: C.border }}>
+        <div
+          className="max-w-md text-center bg-white rounded-2xl border p-10 shadow-sm"
+          style={{ borderColor: C.border }}
+        >
           <CheckCircle2 className="mx-auto mb-4 text-emerald-600" size={48} />
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Submitted</h1>
-          <p className="text-slate-600 mb-6">Your answers were saved. You may close this window.</p>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("student_exams.submitted_title")}</h1>
+          {submitResult?.score != null && submitResult.max_score != null && (
+            <p className="text-3xl font-bold text-slate-900 mb-2">
+              {submitResult.score} / {submitResult.max_score}
+              {submitResult.max_score > 0 && (
+                <span className="block text-lg font-semibold text-slate-600 mt-1">
+                  {Math.round((submitResult.score / submitResult.max_score) * 100)}%
+                </span>
+              )}
+            </p>
+          )}
+          {submitResult?.pending_manual_count != null && submitResult.pending_manual_count > 0 ? (
+            <p className="text-amber-700 text-sm mb-4">
+              Some answers need instructor review. Your score may update when grading is complete.
+            </p>
+          ) : (
+            <p className="text-slate-600 mb-6">{t("student_exams.submitted_body")}</p>
+          )}
           <button
             type="button"
             onClick={() => navigate("/student/exams")}
             className="px-6 py-2 rounded-lg font-semibold"
             style={{ background: "#FFD700", color: "#222" }}
           >
-            Back to exams
+            {t("student_exams.back_to_list")}
           </button>
         </div>
       </div>
@@ -293,7 +367,11 @@ export default function StudentExamPage() {
   if (!session) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: C.bg, color: C.text }}>
+    <div
+      ref={examRootRef}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: C.bg, color: C.text }}
+    >
       <header
         className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b bg-white"
         style={{ borderColor: C.border }}
@@ -312,10 +390,11 @@ export default function StudentExamPage() {
           <button
             type="button"
             className="p-2 rounded-lg border"
-            title="Fullscreen"
-            onClick={() => document.documentElement.requestFullscreen?.()}
+            title={isFullscreen ? t("student_exams.fullscreen_exit") : t("student_exams.fullscreen_enter")}
+            aria-pressed={isFullscreen}
+            onClick={() => void toggleFullscreen()}
           >
-            <Maximize2 size={18} />
+            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
           <button
             type="button"
@@ -430,14 +509,10 @@ function QuestionBlock({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
-  const text = question.question_latex
-    ? `${question.question_text}\n\n${question.question_latex}`
-    : question.question_text;
-
   return (
     <div>
       <div className="flex justify-between items-start gap-4 mb-4">
-        <LatexContent text={text} className="text-slate-800" />
+        <LatexContent text={questionDisplayText(question)} className="text-slate-800" />
         <span className="text-xs font-semibold shrink-0 px-2 py-1 rounded-full" style={{ background: "#f1f5f9", color: "#64748b" }}>
           {question.points} pt
         </span>
@@ -454,7 +529,7 @@ function QuestionBlock({
                 onChange={() => onChange(opt.id)}
                 className="mt-1"
               />
-              <LatexContent text={opt.latex ? `$${opt.latex}$` : opt.text} />
+              <LatexContent text={optionDisplayText(opt)} />
             </label>
           ))}
         </div>
@@ -476,7 +551,7 @@ function QuestionBlock({
                   }}
                   className="mt-1"
                 />
-                <LatexContent text={opt.latex ? `$${opt.latex}$` : opt.text} />
+                <LatexContent text={optionDisplayText(opt)} />
               </label>
             );
           })}

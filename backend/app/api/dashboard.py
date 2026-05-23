@@ -22,7 +22,7 @@ def build_student_dashboard(db: Session, student_id: int) -> Dict[str, Any]:
 
     enrollments = (
         db.query(Enrollment)
-        .options(joinedload(Enrollment.course))
+        .options(joinedload(Enrollment.course), joinedload(Enrollment.certificate))
         .filter(Enrollment.student_id == student_id)
         .all()
     )
@@ -182,6 +182,8 @@ def build_student_dashboard(db: Session, student_id: int) -> Dict[str, Any]:
                 },
                 "enrollment_id": enrollment.id if enrollment else None,
                 "enrollment_status": enrollment.status.value if enrollment else "active",
+                "is_completed": enrollment.is_completed if enrollment else False,
+                "certificate_url": enrollment.certificate.certificate_url if (enrollment and enrollment.certificate) else None,
                 "progress": progress,
                 "materials": materials_list,
             }

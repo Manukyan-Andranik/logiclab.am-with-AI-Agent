@@ -36,6 +36,8 @@ const AdminRegistrations = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-registrations"] });
       toast({ title: "Updated", description: "Registration status changed." });
     },
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -45,6 +47,8 @@ const AdminRegistrations = () => {
       toast({ title: "Deleted", description: "Registration removed." });
       setIsDeleteDialogOpen(false);
     },
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const handleDeleteClick = (registration: any) => {

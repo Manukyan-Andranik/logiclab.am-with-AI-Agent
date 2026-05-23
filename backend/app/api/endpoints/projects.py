@@ -15,8 +15,9 @@ from ...schemas.schemas import (
     ProjectCreate,
     ProjectUpdate,
     ProjectResponse,
+    UserRole,
 )
-from ..deps import get_current_admin, get_current_student
+from ..deps import get_current_admin, get_current_student, get_current_user_optional
 from ...core.cloudinary import upload_image
 from ...core.config import settings
 from ...core.image_webp import raster_image_to_webp
@@ -151,22 +152,20 @@ async def get_projects(
     course_id: Optional[int] = None,
     is_published: Optional[bool] = None,
     is_featured: Optional[bool] = None,
-    is_admin: Optional[bool] = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[UserPersonal] = Depends(get_current_user_optional),
 ):
-    """Get all projects (public endpoint shows only published)"""
+    """List projects. Public: published only. Admin (Bearer): may include unpublished."""
     query = db.query(Project).options(
         joinedload(Project.student).joinedload(Student.user),
         joinedload(Project.course)
     )
-    if is_admin:
-        all_projects = query.all()
-        return all_projects
-    
-    # For public access, only show published projects
-    if is_published is not False:  # Default to showing only published
+    is_admin = current_user is not None and current_user.role == UserRole.ADMIN
+    if not is_admin:
         query = query.filter(Project.is_published == True)
-    
+    elif is_published is not None:
+        query = query.filter(Project.is_published == is_published)
+
     if course_id:
         query = query.filter(Project.course_id == course_id)
     
@@ -307,9 +306,10 @@ async def upload_my_project_image(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[UserPersonal] = Depends(get_current_user_optional),
 ):
-    """Get single project by ID"""
+    """Get single project by ID (unpublished hidden unless admin or owner)."""
     project = db.query(Project).options(
         joinedload(Project.student).joinedload(Student.user),
         joinedload(Project.course)
@@ -320,6 +320,21 @@ async def get_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    if not project.is_published:
+        allowed = False
+        if current_user is not None:
+            if current_user.role == UserRole.ADMIN:
+                allowed = True
+            elif current_user.role == UserRole.STUDENT:
+                own = db.query(Student).filter(Student.user_id == current_user.id).first()
+                if own and project.student_id == own.id:
+                    allowed = True
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Project not found",
+            )
     
     # Apply default image fallbacks
     if not project.image_urls:

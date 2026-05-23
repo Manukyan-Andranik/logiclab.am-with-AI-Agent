@@ -1,19 +1,24 @@
 import { apiClient } from './client';
 import { LoginResponse } from './types';
 
-export const login = async (data: Record<string, string>): Promise<LoginResponse> => {
+export type LoginCredentials = {
+  email: string;
+  password: string;
+  /** Restrict to admin or student account (canonical login field). */
+  role?: 'admin' | 'student';
+};
+
+/** Canonical login — POST /auth/login (optional role in body). */
+export const login = async (data: LoginCredentials): Promise<LoginResponse> => {
   return apiClient<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 };
 
-export const studentLogin = async (data: Record<string, string>): Promise<LoginResponse> => {
-  return apiClient<LoginResponse>('/student/login', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-};
+/** @deprecated Use login({ ..., role: 'student' }) */
+export const studentLogin = (data: Omit<LoginCredentials, 'role'>) =>
+  login({ ...data, role: 'student' });
 
 export const createStudent = async (data: {
   email: string;
@@ -27,6 +32,7 @@ export const createStudent = async (data: {
   });
 };
 
+/** Canonical public registration — POST /auth/register */
 export const registerStudent = async (data: Record<string, string | number>): Promise<void> => {
   return apiClient('/auth/register', {
     method: 'POST',
@@ -40,6 +46,18 @@ export const registerInstructor = async (data: Record<string, string | number | 
     body: JSON.stringify(data),
   });
 };
+
+export const requestPasswordReset = async (email: string) =>
+  apiClient<{ message: string }>("/auth/password-reset-request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+export const confirmPasswordReset = async (token: string, new_password: string) =>
+  apiClient<{ message: string }>("/auth/password-reset-confirm", {
+    method: "POST",
+    body: JSON.stringify({ token, new_password }),
+  });
 
 export const changePassword = async (data: {
   current_password: string;

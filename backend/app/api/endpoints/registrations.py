@@ -1,88 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+"""
+Legacy registration alias — use POST /auth/register instead.
+
+Kept for backward compatibility with older clients; delegates to the same service.
+"""
+
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
-import secrets 
-from sqlalchemy import or_ 
 
 from ...core.database import get_db
-from ...core.email import email_service
-from ...core.security import get_password_hash
-from ...models.models import (
-    Registration, Student, Course, UserPersonal, EmailLog
-)
-from ...schemas.schemas import (
-    RegistrationResponse, RegistrationUpdate, RegistrationStatus, RegisterRequest, UserRole
-)
-
+from ...core.rate_limit import rate_limit_auth_register
+from ...schemas.schemas import RegisterRequest
+from ...services.registration_service import create_student_registration
 
 router = APIRouter()
 
-@router.post("/public", status_code=status.HTTP_201_CREATED)
+DEPRECATION_HEADER = (
+    "POST /api/auth/register is the canonical registration endpoint; "
+    "/api/registrations/public will be removed in a future release."
+)
+
+
+@router.post(
+    "/public",
+    status_code=status.HTTP_201_CREATED,
+    deprecated=True,
+    summary="[Deprecated] Public registration — use POST /auth/register",
+)
 async def public_create_registration(
     data: RegisterRequest,
+    response: Response,
     db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_register)] = None,
 ):
-    """
-    Public registration (no auth)
-    """
-
-    # 1. Check course
-    course = db.query(Course).filter(
-        Course.id == data.course_id,
-        Course.is_active == True
-    ).first()
-
-    if not course:
-        raise HTTPException(
-            status_code=404,
-            detail="Course not found"
-        )
-
-    # 2. Check if user already exists
-    user = db.query(UserPersonal).filter(
-        UserPersonal.email == data.email
-    ).first()
-
-    if user:
-        raise HTTPException(
-            status_code=400,
-            detail="User with this email already registered"
-        )
-
-    # 3. Create inactive user
-    # Use provided password or generate a secure random one
-    password = data.password or secrets.token_urlsafe(12)
-    user = UserPersonal(
-        first_name=data.first_name,
-        last_name=data.last_name,
-        email=data.email,
-        phone=data.phone,
-        password_hash=get_password_hash(password),
-        role=UserRole.STUDENT,
-        is_active=False
-    )
-    db.add(user)
-    db.flush()
-
-    # 4. Create student
-    student = Student(
-        user_id=user.id,
-        status=RegistrationStatus.PENDING
-    )
-    db.add(student)
-    db.flush()
-
-    # 5. Create registration
-    registration = Registration(
-        student_id=student.id,
-        course_id=data.course_id,
-        message=data.message,
-        status=RegistrationStatus.PENDING
-    )
-    db.add(registration)
-
-    db.commit()
-
-    return {
-        "message": "Registration submitted successfully",
-        "registration_id": registration.id
-    }
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/auth/register>; rel="successor-version"'
+    response.headers["X-API-Warning"] = DEPRECATION_HEADER
+    return await create_student_registration(db, data)

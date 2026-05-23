@@ -1,16 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from typing import List, Optional, Dict, Any
-from datetime import datetime, timedelta
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session, joinedload
 from ...core.database import get_db
 from ...core.cloudinary import delete_cloudinary_by_url
-from ...core.security import verify_password, create_access_token
-from ...core.config import settings
-from ...models.models import (
-    Student, UserPersonal, MaterialAccess, Chapter, Course, Lesson, Enrollment
-)
+from ...core.rate_limit import rate_limit_auth_login
+from ...models.models import Student
 from ...schemas.schemas import (
     LoginRequest,
     Token,
@@ -20,45 +15,35 @@ from ...schemas.schemas import (
     UserRole,
 )
 from ..deps import get_current_student
-from ..progress import compute_course_progress
 from ..dashboard import build_student_dashboard
+from ...services.auth_service import authenticate_and_issue_token
 
 router = APIRouter(prefix="/student", tags=["Student"])
 
-@router.post("/login", response_model=Token)
+DEPRECATION_HEADER = (
+    "POST /api/auth/login with {\"role\": \"student\"} is canonical; "
+    "/api/student/login will be removed in a future release."
+)
+
+
+@router.post(
+    "/login",
+    response_model=Token,
+    deprecated=True,
+    summary="[Deprecated] Student login — use POST /auth/login with role=student",
+)
 async def student_login(
     credentials: LoginRequest,
-    db: Session = Depends(get_db)
+    response: Response,
+    db: Session = Depends(get_db),
+    _rate_limit: Annotated[None, Depends(rate_limit_auth_login)] = None,
 ):
-    """Student-specific login endpoint"""
-    user = db.query(UserPersonal).filter(
-        UserPersonal.email == credentials.email,
-        UserPersonal.role == UserRole.STUDENT
-    ).first()
-    
-    if not user or not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
-        )
-    
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is inactive"
-        )
-    
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "role": user.role.value},
-        expires_delta=access_token_expires
-    )
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "role": user.role
-    }
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/auth/login>; rel="successor-version"'
+    response.headers["X-API-Warning"] = DEPRECATION_HEADER
+    creds = credentials.model_copy(update={"role": UserRole.STUDENT})
+    return authenticate_and_issue_token(db, creds, required_role=UserRole.STUDENT)
+
 
 @router.get("/me", response_model=StudentResponse)
 async def get_student_me(

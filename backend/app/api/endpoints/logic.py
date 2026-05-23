@@ -4,12 +4,15 @@ import json
 import logging
 import dotenv
 import ast
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from app.core.config import settings
+from app.core.rate_limit import rate_limit_logic_chat
 
 from deep_translator import GoogleTranslator as TRANSLATOR
 
@@ -206,7 +209,10 @@ def format_prompt(question, context):
     return prompt
 
 @router.post("/chat", response_model=LogicAgentResponse)
-async def logic_chat(request: ChatRequest):
+async def logic_chat(
+    request: ChatRequest,
+    _rate_limit: Annotated[None, Depends(rate_limit_logic_chat)] = None,
+):
     # Check if Logic Agent is enabled via NAVIGATION_SYSTEM config
     if settings.NAVIGATION_SYSTEM == "TRADITIONAL":
         raise HTTPException(

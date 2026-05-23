@@ -1,13 +1,14 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime, timezone
 import secrets
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 
 from ...core.database import get_db
 from ...core.cloudinary import delete_cloudinary_by_url, delete_cloudinary_urls
 from ...core.email import email_service
+from ...core.i18n import localized_label
 from ...core.security import get_password_hash
 from collections import defaultdict
 from ...models.models import (
@@ -35,6 +36,16 @@ except Exception:  # pragma: no cover
     build_student_dashboard = None  # type: ignore
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+def _student_course_filter(course_id: int):
+    """Students on a course via primary assignment or enrollment (SQLAlchemy 2–safe)."""
+    enrolled_ids = (
+        select(Enrollment.student_id)
+        .where(Enrollment.course_id == course_id)
+        .distinct()
+    )
+    return or_(Student.course_id == course_id, Student.id.in_(enrolled_ids))
 
 
 def _registration_status_to_db(s: RegistrationStatus) -> DbRegistrationStatus:
@@ -74,9 +85,22 @@ async def admin_dashboard(
     published_projects = db.query(Project).filter(Project.is_published == True).count()
     
     # Build course-level stats for dashboard (parity with logiclab.am)
+    from sqlalchemy import func
+
     all_courses = db.query(Course).options(
         joinedload(Course.instructors).joinedload(Instructor.user)
     ).all()
+    reg_counts: dict[tuple[int, DbRegistrationStatus], int] = {}
+    for course_id, reg_status, cnt in (
+        db.query(Registration.course_id, Registration.status, func.count())
+        .group_by(Registration.course_id, Registration.status)
+        .all()
+    ):
+        reg_counts[(course_id, reg_status)] = int(cnt)
+
+    def _reg_count(course_id: int, status: DbRegistrationStatus) -> int:
+        return reg_counts.get((course_id, status), 0)
+
     courses_with_stats = []
     for c in all_courses:
         # Fix: Safely handle course title if it's a string or dict
@@ -89,22 +113,10 @@ async def admin_dashboard(
             "id": str(c.id),
             "title": title,
             "is_active": c.is_active,
-            "pending_count": db.query(Registration).filter(
-                Registration.course_id == c.id,
-                Registration.status == DbRegistrationStatus.PENDING,
-            ).count(),
-            "confirmed_count": db.query(Registration).filter(
-                Registration.course_id == c.id,
-                Registration.status == DbRegistrationStatus.CONFIRMED,
-            ).count(),
-            "rejected_count": db.query(Registration).filter(
-                Registration.course_id == c.id,
-                Registration.status == DbRegistrationStatus.REJECTED,
-            ).count(),
-            "completed_count": db.query(Registration).filter(
-                Registration.course_id == c.id,
-                Registration.status == DbRegistrationStatus.COMPLETED,
-            ).count(),
+            "pending_count": _reg_count(c.id, DbRegistrationStatus.PENDING),
+            "confirmed_count": _reg_count(c.id, DbRegistrationStatus.CONFIRMED),
+            "rejected_count": _reg_count(c.id, DbRegistrationStatus.REJECTED),
+            "completed_count": _reg_count(c.id, DbRegistrationStatus.COMPLETED),
             "instructor": ", ".join(
                 (
                     f"{(i.user.first_name or '').strip()} {(i.user.last_name or '').strip()}".strip()
@@ -165,13 +177,7 @@ async def get_all_students_admin(
     )
 
     if course_id is not None:
-        try:
-            enrolled_ids = db.query(Enrollment.student_id).filter(Enrollment.course_id == course_id).subquery()
-            query = query.filter(
-                (Student.course_id == course_id) | (Student.id.in_(enrolled_ids))
-            )
-        except Exception:
-            query = query.filter(Student.course_id == course_id)
+        query = query.filter(_student_course_filter(course_id))
 
     students = query.offset(skip).limit(limit).all()
     return students
@@ -201,12 +207,7 @@ async def get_students_with_progress_admin(
     )
 
     if course_id is not None:
-        enrolled_ids = db.query(Enrollment.student_id).filter(
-            Enrollment.course_id == course_id
-        ).subquery()
-        query = query.filter(
-            (Student.course_id == course_id) | (Student.id.in_(enrolled_ids))
-        )
+        query = query.filter(_student_course_filter(course_id))
 
     students = query.offset(skip).limit(limit).all()
     if not students:
@@ -725,15 +726,13 @@ async def update_student_progress_admin(
 async def mark_material_accessed_admin(
     student_id: int,
     chapter_id: int,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_admin = Depends(get_current_admin)
 ):
     """Mark a chapter as accessed/grant access (Admin only).
 
-    On a brand-new grant the student is notified by email (non-blocking via
-    BackgroundTasks). An already-existing access record is treated as an
-    "update" and does NOT re-notify, so admins can re-mark without spam.
+    On a brand-new grant the student is notified by email. An already-existing
+    access record is treated as an "update" and does NOT re-notify.
     """
     # Verify student exists (load user for the email below)
     student = (
@@ -780,34 +779,24 @@ async def mark_material_accessed_admin(
     db.refresh(material_access)
     invalidate_progress_cache(student_id)
 
-    # Notify student of newly-available material (skip if no email / inactive).
+    email_sent = False
     if (
         student.user is not None
         and student.user.email
         and student.user.is_active
     ):
-        course_title = ""
-        if chapter.course is not None:
-            t = chapter.course.title
-            if isinstance(t, dict):
-                course_title = (
-                    (t.get("hy") or "").strip()
-                    or (t.get("en") or "").strip()
-                    or (t.get("ru") or "").strip()
-                )
-            else:
-                course_title = str(t or "")
-        background_tasks.add_task(
-            email_service.send_material_access_granted,
+        course_title = localized_label(chapter.course.title if chapter.course else "")
+        email_sent = await email_service.send_material_access_granted(
             student.user.email,
             student.user.first_name or "",
-            chapter.title or "",
+            localized_label(chapter.title),
             course_title,
         )
 
     return {
         "message": "Material (chapter) access granted",
-        "access_id": material_access.id
+        "access_id": material_access.id,
+        "email_sent": email_sent,
     }
 
 @router.get("/students/{student_id}/dashboard")

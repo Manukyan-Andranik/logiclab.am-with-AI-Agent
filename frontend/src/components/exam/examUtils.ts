@@ -1,4 +1,5 @@
 import type { ExamQuestion } from "@/api/exams";
+import { ensureLatexDelimiters } from "./latexUtils";
 
 export function flattenExamQuestions(questionsRoot: Record<string, unknown>): ExamQuestion[] {
   const out: ExamQuestion[] = [];
@@ -34,6 +35,21 @@ export function saveLocalAnswers(attemptId: number, answers: Record<string, unkn
 
 export function clearLocalAnswers(attemptId: number) {
   localStorage.removeItem(storageKey(attemptId));
+}
+
+/** Build question body for LatexContent (avoids duplicating undelimited question_latex). */
+export function questionDisplayText(question: ExamQuestion): string {
+  const parts: string[] = [];
+  if (question.question_text?.trim()) parts.push(question.question_text.trim());
+  if (question.question_latex?.trim()) {
+    parts.push(ensureLatexDelimiters(question.question_latex.trim()));
+  }
+  return parts.join("\n\n");
+}
+
+export function optionDisplayText(option: { text: string; latex?: string | null }): string {
+  if (option.latex?.trim()) return ensureLatexDelimiters(option.latex.trim());
+  return option.text ?? "";
 }
 
 export function formatTimer(seconds: number) {

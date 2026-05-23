@@ -166,3 +166,50 @@ async def delete_enrollment(
     db.delete(enrollment)
     db.commit()
     return None
+
+@router.patch("/{enrollment_id}/graduate", response_model=EnrollmentResponse)
+async def graduate_enrollment(
+    enrollment_id: int,
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_admin)
+):
+    """Manually graduate an enrollment and issue a certificate (Admin only)"""
+    enrollment = db.query(Enrollment).options(
+        joinedload(Enrollment.student).joinedload(Student.user),
+        joinedload(Enrollment.course),
+        joinedload(Enrollment.certificate)
+    ).filter(Enrollment.id == enrollment_id).first()
+    
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+        
+    enrollment.status = EnrollmentStatusEnum.COMPLETED
+    enrollment.is_completed = True
+    if not enrollment.completed_date:
+        enrollment.completed_date = datetime.now(timezone.utc)
+    enrollment.progress = 100
+    
+    # Issue certificate if not exists
+    existing_cert = db.query(Certificate).filter(
+        Certificate.student_id == enrollment.student_id,
+        Certificate.course_id == enrollment.course_id
+    ).first()
+    
+    if not existing_cert:
+        import uuid
+        cert_uid = uuid.uuid4().hex[:8].upper()
+        cert_number = f"LL-MAN-{enrollment.course_id}-{enrollment.student_id}-{cert_uid}"
+        new_cert = Certificate(
+            student_id=enrollment.student_id,
+            course_id=enrollment.course_id,
+            certificate_number=cert_number,
+            issued_date=datetime.now(timezone.utc),
+            is_verified=True,
+        )
+        db.add(new_cert)
+        db.flush()
+        enrollment.certificate_id = new_cert.id
+        
+    db.commit()
+    db.refresh(enrollment)
+    return enrollment

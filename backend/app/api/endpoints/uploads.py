@@ -2,8 +2,12 @@ from io import BytesIO
 from pathlib import Path
 import uuid
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+
+from ..deps import get_current_user
+from ...core.rate_limit import rate_limit_upload
 from ...core.cloudinary import upload_image, upload_video
 from ...core.config import settings
 from ...core.image_webp import raster_image_to_webp
@@ -13,6 +17,21 @@ router = APIRouter(tags=["Uploads"])
 RASTER_IMAGE_EXTENSIONS = frozenset(
     {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".avif", ".bmp", ".tif", ".tiff"}
 )
+
+_ALLOWED_LOCAL_EXTENSIONS = frozenset(settings.ALLOWED_EXTENSIONS)
+
+
+def _upload_root() -> Path:
+    return Path(settings.UPLOAD_DIR).resolve()
+
+
+def _safe_local_path(filename: str) -> Path:
+    """Write only under UPLOAD_DIR; reject path traversal in filenames."""
+    root = _upload_root()
+    dest = (root / filename).resolve()
+    if dest != root and root not in dest.parents:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
+    return dest
 
 
 def _store_webp_response(webp_buf: BytesIO, stem: str) -> dict:
@@ -31,7 +50,7 @@ def _store_webp_response(webp_buf: BytesIO, stem: str) -> dict:
         }
 
     unique_filename = f"{uuid.uuid4()}.webp"
-    file_path = Path(settings.UPLOAD_DIR) / unique_filename
+    file_path = _safe_local_path(unique_filename)
     try:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_bytes(webp_buf.getvalue())
@@ -52,6 +71,8 @@ def _store_webp_response(webp_buf: BytesIO, stem: str) -> dict:
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
+    _current_user=Depends(get_current_user),
+    _rate_limit: Annotated[None, Depends(rate_limit_upload)] = None,
 ):
     """Upload a file (images are converted to WebP before storage)."""
     content = await file.read()
@@ -89,7 +110,7 @@ async def upload_file(
                 "size": len(content),
             }
         unique_filename = f"{uuid.uuid4()}.mp4"
-        file_path = Path(settings.UPLOAD_DIR) / unique_filename
+        file_path = _safe_local_path(unique_filename)
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_bytes(content)
@@ -106,8 +127,13 @@ async def upload_file(
         }
 
     if file_ext in {".pdf", ".zip"}:
+        if file_ext not in _ALLOWED_LOCAL_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type {file_ext} is not allowed",
+            )
         unique_filename = f"{uuid.uuid4()}{file_ext}"
-        file_path = Path(settings.UPLOAD_DIR) / unique_filename
+        file_path = _safe_local_path(unique_filename)
         try:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_bytes(content)

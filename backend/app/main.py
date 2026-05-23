@@ -82,6 +82,30 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
+
+@app.on_event("startup")
+async def verify_smtp() -> None:
+    """Log SMTP config and probe connect/login so misconfig shows at boot."""
+    from .core.email import email_service
+
+    logger.info(
+        "SMTP configured host=%s port=%s from=%s user=%s",
+        email_service.smtp_host,
+        email_service.smtp_port,
+        email_service.from_email,
+        email_service.smtp_user or "(none)",
+    )
+    if os.environ.get("LOGICLAB_SKIP_SMTP_CHECK", "0") == "1":
+        logger.info("SMTP startup check skipped (LOGICLAB_SKIP_SMTP_CHECK=1)")
+        return
+    if await email_service.verify_connection():
+        logger.info("SMTP startup check passed")
+    else:
+        logger.warning(
+            "SMTP startup check failed — outbound email will not work until "
+            "SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASSWORD are fixed"
+        )
+
 # ---------------------------------------------------
 # CORS CONFIGURATION
 # ---------------------------------------------------
@@ -103,7 +127,11 @@ app.add_middleware(GZipMiddleware, minimum_size=1024)
 # REQUEST TIMING / SLOW-ENDPOINT INSTRUMENTATION
 # ---------------------------------------------------
 _SLOW_REQUEST_MS = float(os.environ.get("LOGICLAB_SLOW_REQUEST_MS", "750"))
-
+# SMTP is awaited inline on these routes; 1–3s is normal, not a performance regression.
+_SLOW_OK_PATHS = frozenset({
+    "/api/materials/notify-summary",
+    "/api/materials/grant-access",
+})
 
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
@@ -111,10 +139,16 @@ async def add_timing_header(request: Request, call_next):
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     response.headers["X-Response-Time-ms"] = f"{elapsed_ms:.1f}"
-    if elapsed_ms >= _SLOW_REQUEST_MS:
+    path = request.url.path
+    if elapsed_ms >= _SLOW_REQUEST_MS and path not in _SLOW_OK_PATHS:
         logger.warning(
             "slow_request method=%s path=%s status=%s duration_ms=%.1f",
-            request.method, request.url.path, response.status_code, elapsed_ms,
+            request.method, path, response.status_code, elapsed_ms,
+        )
+    elif elapsed_ms >= _SLOW_REQUEST_MS and path in _SLOW_OK_PATHS:
+        logger.info(
+            "smtp_request method=%s path=%s status=%s duration_ms=%.1f",
+            request.method, path, response.status_code, elapsed_ms,
         )
     return response
 
@@ -124,6 +158,7 @@ async def add_timing_header(request: Request, call_next):
 # ---------------------------------------------------
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+os.makedirs(settings.EXAM_SUBMISSION_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 

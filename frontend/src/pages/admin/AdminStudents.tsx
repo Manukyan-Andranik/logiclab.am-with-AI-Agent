@@ -14,6 +14,7 @@ import {
   addStudentEnrollment,
   removeStudentEnrollment,
   notifyAccessSummary,
+  graduateStudent,
 } from "@/api/admin";
 import type { AdminEnrollmentSummary, AccessSummaryItem } from "@/api/admin";
 import { createStudent } from "@/api/auth";
@@ -48,6 +49,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
+
+type LocalizedTitle = string | { en?: string; hy?: string; ru?: string } | null | undefined;
+
+function titleLabel(title: LocalizedTitle): string {
+  if (!title) return "";
+  if (typeof title === "string") return title;
+  return (title.hy || title.en || title.ru || "").trim();
+}
 import {
   BookOpen,
   GraduationCap,
@@ -292,12 +301,12 @@ const AdminStudents = () => {
   };
 
   const grantChapterMutation = useMutation({
-    mutationFn: ({ chapterId }: { chapterId: number; title: string }) =>
+    mutationFn: ({ chapterId }: { chapterId: number; title: LocalizedTitle }) =>
       assignChapterToStudent(selectedStudent.id, chapterId, false),
     onSuccess: (_, variables) => {
       refetchAccess();
       invalidateProgress();
-      setPendingNotifications(prev => [...prev, { chapter_title: variables.title }]);
+      setPendingNotifications(prev => [...prev, { chapter_title: titleLabel(variables.title) }]);
       toast({ title: "Granted", description: "Chapter access granted." });
     },
     onError: (error: any) => {
@@ -306,15 +315,15 @@ const AdminStudents = () => {
   });
 
   const grantLessonMutation = useMutation({
-    mutationFn: ({ lessonId, resourceLinkIndex }: { lessonId: number, resourceLinkIndex?: number; chapterTitle: string; lessonTitle: string; resourceName?: string }) =>
+    mutationFn: ({ lessonId, resourceLinkIndex }: { lessonId: number, resourceLinkIndex?: number; chapterTitle: LocalizedTitle; lessonTitle: LocalizedTitle; resourceName?: string }) =>
       grantLessonAccess(selectedStudent.id, lessonId, resourceLinkIndex, false),
     onSuccess: (_, variables) => {
       refetchAccess();
       invalidateProgress();
       setPendingNotifications(prev => [...prev, {
-        chapter_title: variables.chapterTitle,
-        lesson_title: variables.lessonTitle,
-        resource_name: variables.resourceName
+        chapter_title: titleLabel(variables.chapterTitle),
+        lesson_title: titleLabel(variables.lessonTitle),
+        resource_name: variables.resourceName,
       }]);
       toast({ title: "Granted", description: "Access granted." });
     },
@@ -428,6 +437,18 @@ const AdminStudents = () => {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to remove enrollment", variant: "destructive" });
+    },
+  });
+
+  const graduateMutation = useMutation({
+    mutationFn: (enrollmentId: number) => graduateStudent(selectedStudent.id, enrollmentId),
+    onSuccess: () => {
+      refetchEnrollments();
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      toast({ title: "Graduated", description: "Student has been marked as graduated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to graduate student", variant: "destructive" });
     },
   });
 
@@ -960,15 +981,32 @@ const AdminStudents = () => {
                               <Badge variant="outline" className="text-[9px] h-4 px-1 uppercase">{enrollment.status}</Badge>
                             </div>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                            onClick={() => removeEnrollmentMutation.mutate(enrollment.id)}
-                            disabled={removeEnrollmentMutation.isPending}
-                          >
-                            Remove
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            {enrollment.status !== "completed" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 shrink-0 border-emerald-200"
+                                onClick={() => {
+                                  if (confirm(`Mark student as graduated from ${enrollment.course_title?.en || "this course"}?`)) {
+                                    graduateMutation.mutate(enrollment.id);
+                                  }
+                                }}
+                                disabled={graduateMutation.isPending}
+                              >
+                                Graduate
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                              onClick={() => removeEnrollmentMutation.mutate(enrollment.id)}
+                              disabled={removeEnrollmentMutation.isPending}
+                            >
+                              Remove
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1147,7 +1185,7 @@ const AdminStudents = () => {
                               {chapter.chapter.order_index}
                             </div>
                             <h4 className="text-sm font-bold text-foreground uppercase tracking-tight italic">
-                              {chapter.chapter.title}
+                              {titleLabel(chapter.chapter.title)}
                             </h4>
                           </div>
                           <div className="flex items-center gap-4">

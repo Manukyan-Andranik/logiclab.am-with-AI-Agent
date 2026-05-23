@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from datetime import datetime
+from decimal import Decimal
 
 
 class QuestionType(str, Enum):
@@ -54,6 +55,13 @@ class MatchingPair(BaseModel):
     right_latex: Optional[str] = None
 
 
+class RubricCriterion(BaseModel):
+    """Criterion for manual grading rubric."""
+    id: str
+    description: str
+    max_points: Decimal = Field(ge=0)
+
+
 class BaseQuestion(BaseModel):
     """Base question model with common fields."""
     id: str                                   # Unique question ID
@@ -61,9 +69,14 @@ class BaseQuestion(BaseModel):
     question_text: str                        # Main question text
     question_latex: Optional[str] = None      # Optional LaTeX in question
     
-    # Metadata
+    # Grading Configuration
     difficulty: DifficultyLevel = DifficultyLevel.MEDIUM
-    points: float = Field(default=1.0, ge=0)
+    points: Decimal = Field(default=Decimal("1.0"), ge=0)
+    partial_credit: bool = False
+    negative_marking: bool = False
+    penalty_per_wrong: Decimal = Field(default=Decimal("0.0"), ge=0)
+    manual_grading: bool = False
+    rubric: List[RubricCriterion] = Field(default_factory=list)
     
     # Options
     required: bool = True
@@ -79,7 +92,6 @@ class MultipleChoiceQuestion(BaseQuestion):
     type: QuestionType = QuestionType.MULTIPLE_CHOICE
     options: List[OptionModel]
     correct_answer_ids: List[str]             # IDs of correct options
-    partial_credit: bool = False              # Award partial points?
 
 
 class SingleChoiceQuestion(BaseQuestion):
@@ -94,7 +106,7 @@ class EssayQuestion(BaseQuestion):
     type: QuestionType = QuestionType.ESSAY
     min_words: Optional[int] = None
     max_words: Optional[int] = None
-    rubric: Optional[Dict[str, Any]] = None   # Grading rubric (manual)
+    manual_grading: bool = True               # Usually true for essays
 
 
 class ShortAnswerQuestion(BaseQuestion):
@@ -108,7 +120,7 @@ class MathematicalQuestion(BaseQuestion):
     """Mathematical: accept math expressions."""
     type: QuestionType = QuestionType.MATHEMATICAL
     correct_answer_latex: str                 # Expected LaTeX answer
-    decimal_tolerance: float = 0.01           # For numeric answers
+    decimal_tolerance: Decimal = Decimal("0.01") # For numeric answers
     allow_simplification: bool = True         # Accept equivalent forms?
 
 
@@ -154,6 +166,41 @@ AnyQuestion = Union[
 ]
 
 
+# ---------- Grading Result Schemas ----------
+
+class QuestionGradeResult(BaseModel):
+    """Result for a single question grading."""
+    question_id: str
+    earned_points: Decimal
+    max_points: Decimal
+    correctness: str                          # correct, incorrect, partial, pending_review
+    feedback: Optional[str] = None
+    is_manually_graded: bool = False
+    rubric_results: Optional[Dict[str, Decimal]] = None
+
+
+class AttemptGradeSummary(BaseModel):
+    """Summary of an exam attempt grading."""
+    attempt_id: int
+    grading_status: str
+    auto_score: Optional[Decimal] = None
+    manual_score: Optional[Decimal] = None
+    final_score: Optional[Decimal] = None
+    max_points: Decimal
+    earned_points: Decimal
+    integrity_score: Optional[int] = None
+    graded_at: Optional[datetime] = None
+
+
+class IntegrityReport(BaseModel):
+    """Anti-cheat integrity report."""
+    attempt_id: int
+    integrity_score: int
+    flags: List[Dict[str, Any]]
+
+
+# ---------- Core Exam Structure ----------
+
 class QuestionSection(BaseModel):
     """Grouping of related questions."""
     id: str
@@ -166,8 +213,8 @@ class QuestionSection(BaseModel):
 class ScoringRule(BaseModel):
     """Custom scoring configuration."""
     type: str                                 # "all_or_nothing", "partial", "custom"
-    penalty_for_wrong: float = 0.0
-    bonus_for_correct: float = 0.0
+    penalty_for_wrong: Decimal = Decimal("0.0")
+    bonus_for_correct: Decimal = Decimal("0.0")
 
 
 class ExamSettings(BaseModel):
@@ -211,6 +258,10 @@ class ExamJSONSchema(BaseModel):
     sections: Optional[List[QuestionSection]] = None
     questions: Optional[List[AnyQuestion]] = None
     
+    # Graduation logic
+    is_final: bool = False                    # Marks this as the course-completing exam
+    pass_score_percentage: int = Field(default=70, ge=0, le=100)
+    
     # Configuration
     settings: ExamSettings = Field(default_factory=ExamSettings)
     scoring: ScoringRule = Field(default_factory=lambda: ScoringRule(type="all_or_nothing"))
@@ -231,7 +282,7 @@ class ExamJSONSchema(BaseModel):
             raise ValueError("At least one question is required in questions or sections")
         return self
     
-    def get_total_points(self) -> float:
+    def get_total_points(self) -> Decimal:
         """Calculate total exam points."""
         questions = self.questions or []
         if self.sections:

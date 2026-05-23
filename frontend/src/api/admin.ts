@@ -370,6 +370,12 @@ export const removeStudentEnrollment = async (studentId: number, enrollmentId: n
   });
 };
 
+export const graduateStudent = async (studentId: number, enrollmentId: number): Promise<any> => {
+  return apiClient(`/enrollments/${enrollmentId}/graduate`, {
+    method: 'PATCH'
+  });
+};
+
 export const deleteStudent = async (studentId: number): Promise<void> => {
   return apiClient(`/admin/students/${studentId}`, {
     method: 'DELETE'

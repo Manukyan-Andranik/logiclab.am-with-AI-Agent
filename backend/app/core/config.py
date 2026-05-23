@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 525600
+    # Default 7 days; override via env (legacy deployments used 525600).
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # CORS
@@ -61,8 +62,10 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "LogicLab"
     ADMIN_EMAIL: Optional[str] = None
     
-    # File Upload
+    # File Upload (public static mount — never store sensitive data here)
     UPLOAD_DIR: str = "uploads"
+    # Exam submission JSON — outside UPLOAD_DIR so it is not served by /uploads
+    EXAM_SUBMISSION_DIR: str = "private_data/exam_submissions"
     MAX_UPLOAD_SIZE: int = 25 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: set = {
         ".pdf",
@@ -97,7 +100,41 @@ class Settings(BaseSettings):
     # Navigation System Configuration
     # Values: "AGENT" (AI-powered navigation) or "TRADITIONAL" (standard navigation)
     NAVIGATION_SYSTEM: str = "AGENT"
-    
+
+    # Rate limiting (per IP, in-memory per worker — see core/rate_limit.py)
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_AUTH_LOGIN_MAX: int = 15
+    RATE_LIMIT_AUTH_LOGIN_WINDOW_SEC: int = 60
+    RATE_LIMIT_AUTH_REGISTER_MAX: int = 8
+    RATE_LIMIT_AUTH_REGISTER_WINDOW_SEC: int = 3600
+    RATE_LIMIT_PASSWORD_RESET_MAX: int = 5
+    RATE_LIMIT_PASSWORD_RESET_WINDOW_SEC: int = 3600
+    RATE_LIMIT_UPLOAD_MAX: int = 40
+    RATE_LIMIT_UPLOAD_WINDOW_SEC: int = 60
+    RATE_LIMIT_CONTACT_MAX: int = 5
+    RATE_LIMIT_CONTACT_WINDOW_SEC: int = 3600
+    RATE_LIMIT_LOGIC_CHAT_MAX: int = 20
+    RATE_LIMIT_LOGIC_CHAT_WINDOW_SEC: int = 60
+
+    def rate_limit_for(self, scope: str) -> tuple[int, int]:
+        """Return (max_requests, window_seconds) for a named scope."""
+        table = {
+            "auth:login": (self.RATE_LIMIT_AUTH_LOGIN_MAX, self.RATE_LIMIT_AUTH_LOGIN_WINDOW_SEC),
+            "auth:register": (self.RATE_LIMIT_AUTH_REGISTER_MAX, self.RATE_LIMIT_AUTH_REGISTER_WINDOW_SEC),
+            "auth:instructor_register": (
+                self.RATE_LIMIT_AUTH_REGISTER_MAX,
+                self.RATE_LIMIT_AUTH_REGISTER_WINDOW_SEC,
+            ),
+            "auth:password_reset": (
+                self.RATE_LIMIT_PASSWORD_RESET_MAX,
+                self.RATE_LIMIT_PASSWORD_RESET_WINDOW_SEC,
+            ),
+            "upload:file": (self.RATE_LIMIT_UPLOAD_MAX, self.RATE_LIMIT_UPLOAD_WINDOW_SEC),
+            "contact:submit": (self.RATE_LIMIT_CONTACT_MAX, self.RATE_LIMIT_CONTACT_WINDOW_SEC),
+            "logic:chat": (self.RATE_LIMIT_LOGIC_CHAT_MAX, self.RATE_LIMIT_LOGIC_CHAT_WINDOW_SEC),
+        }
+        return table.get(scope, (30, 60))
+
     class Config:
         env_file = ".env"
         extra = "ignore"

@@ -4,7 +4,7 @@ Complete data model for the examination platform.
 Supports tests, attempts, answers, submissions, and audit logs.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, Float, ForeignKey, Enum as SQLEnum, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, Float, Numeric, ForeignKey, Enum as SQLEnum, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import enum
@@ -36,6 +36,42 @@ class AttemptStatus(str, enum.Enum):
     SUBMITTED = "submitted"
     GRADED = "graded"
     ABANDONED = "abandoned"
+
+
+class GradingStatus(str, enum.Enum):
+    """Refined grading lifecycle status."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    PARTIALLY_GRADED = "partially_graded"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class QuestionCorrectness(str, enum.Enum):
+    """Question-level correctness results."""
+    CORRECT = "correct"
+    INCORRECT = "incorrect"
+    PARTIAL = "partial"
+    PENDING_REVIEW = "pending_review"
+
+
+class IntegritySeverity(str, enum.Enum):
+    """Severity levels for anti-cheat flags."""
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class IntegrityFlagType(str, enum.Enum):
+    """Categories of suspicious behavior."""
+    TAB_SWITCH = "tab_switch"
+    RAPID_SUBMISSION = "rapid_submission"
+    IMPOSSIBLE_TIME = "impossible_time"
+    IP_CHANGE = "ip_change"
+    PASTE_DETECTED = "paste_detected"
+    MULTIPLE_DEVICES = "multiple_devices"
 
 
 class QuestionType(str, enum.Enum):
@@ -76,6 +112,8 @@ class Exam(Base):
         default=ExamStatus.DRAFT,
     )
     max_attempts = Column(Integer, default=1)
+    is_final = Column(Boolean, default=False)              # Is this a course-completing final exam?
+    pass_score_percentage = Column(Integer, default=70)    # Percentage needed to pass/graduate
     allow_navigation = Column(Boolean, default=True)       # Can student skip/go back?
     allow_review = Column(Boolean, default=False)          # Can review before submit?
     show_answers_after = Column(Boolean, default=False)    # Show correct answers post-exam?
@@ -90,7 +128,7 @@ class Exam(Base):
     questions = Column(JSON, nullable=False)               # Full exam structure
     
     # Metadata
-    total_points = Column(Float, default=0)                # Sum of all question points
+    total_points = Column(Numeric(10, 2), default=0)       # Sum of all question points
     created_by_user_id = Column(Integer, ForeignKey("user_personal.id"), nullable=True)
     created_at = Column(DateTime, default=_utc_now)
     updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
@@ -127,6 +165,34 @@ class ExamAttempt(Base):
         default=AttemptStatus.IN_PROGRESS,
     )
     
+    # New Grading Fields
+    grading_status = Column(
+        SQLEnum(GradingStatus, name="gradingstatus", values_callable=_enum_values),
+        default=GradingStatus.PENDING,
+    )
+    grading_version = Column(Integer, default=1)
+    requires_manual_review = Column(Boolean, default=False)
+    
+    # High-precision scores
+    auto_score = Column(Numeric(10, 2), nullable=True)
+    manual_score = Column(Numeric(10, 2), nullable=True)
+    final_score = Column(Numeric(10, 2), nullable=True)
+    
+    max_points = Column(Numeric(10, 2), nullable=True)
+    earned_points = Column(Numeric(10, 2), nullable=True)
+    
+    # Legacy Score (to be deprecated)
+    score = Column(Float, nullable=True)
+    max_score = Column(Float, nullable=True)
+    
+    # Integrity
+    integrity_score = Column(Integer, nullable=True)       # 0-100 score
+    
+    # Audit
+    graded_at = Column(DateTime, nullable=True)
+    graded_by_id = Column(Integer, ForeignKey("user_personal.id"), nullable=True)
+    grading_metadata = Column(JSON, nullable=True)         # Extra grading context
+    
     # Timing
     started_at = Column(DateTime, default=_utc_now)
     submitted_at = Column(DateTime, nullable=True)
@@ -134,10 +200,6 @@ class ExamAttempt(Base):
     
     # Answers storage (JSON map: question_id -> answer_data)
     answers = Column(JSON, default={})                     # {"q1": {...}, "q2": {...}, ...}
-    
-    # Score (populated after grading)
-    score = Column(Float, nullable=True)
-    max_score = Column(Float, nullable=True)
     
     # Session data
     ip_address = Column(String(64), nullable=True)
@@ -149,14 +211,18 @@ class ExamAttempt(Base):
     # Relationships
     exam = relationship("Exam", back_populates="attempts")
     student = relationship("Student")
+    graded_by = relationship("UserPersonal", foreign_keys=[graded_by_id])
     answers_details = relationship("ExamAnswer", back_populates="attempt", cascade="all, delete-orphan")
     submission = relationship("ExamSubmission", back_populates="attempt", uselist=False)
+    grading_history = relationship("ExamGradingHistory", back_populates="attempt", cascade="all, delete-orphan")
+    integrity_flags = relationship("ExamIntegrityFlag", back_populates="attempt", cascade="all, delete-orphan")
     
     __table_args__ = (
         UniqueConstraint("exam_id", "student_id", "attempt_number", name="uq_exam_student_attempt"),
         Index("ix_exam_attempts_exam_id", "exam_id"),
         Index("ix_exam_attempts_student_id", "student_id"),
         Index("ix_exam_attempts_status", "status"),
+        Index("ix_exam_attempts_grading_status", "grading_status"),
     )
 
 
@@ -174,10 +240,23 @@ class ExamAnswer(Base):
     # Answer data (varies by question type)
     answer_value = Column(JSON, nullable=True)             # Stores: text, selections, code, etc.
     
-    # Grading
+    # Detailed Grading
+    correctness = Column(
+        SQLEnum(QuestionCorrectness, name="questioncorrectness", values_callable=_enum_values),
+        nullable=True,
+    )
+    is_manually_graded = Column(Boolean, default=False)
+    grader_feedback = Column(Text, nullable=True)
+    rubric_result = Column(JSON, nullable=True)            # Rubric criteria results
+    grading_details = Column(JSON, nullable=True)          # Step-by-step breakdown
+    
+    # High-precision scores
+    earned_points = Column(Numeric(10, 2), nullable=True)
+    max_points = Column(Numeric(10, 2), nullable=False)
+    
+    # Legacy Grading
     is_correct = Column(Boolean, nullable=True)            # Null = not graded yet
-    points_awarded = Column(Float, nullable=True)
-    max_points = Column(Float, nullable=False)
+    points_awarded = Column(Float, nullable=True)          # Kept for compatibility
     
     # Timestamps
     answered_at = Column(DateTime, default=_utc_now)
@@ -190,6 +269,60 @@ class ExamAnswer(Base):
         UniqueConstraint("attempt_id", "question_id", name="uq_attempt_question"),
         Index("ix_exam_answers_attempt_id", "attempt_id"),
     )
+
+
+class ExamGradingHistory(Base):
+    """
+    Audit log for all grading actions on an attempt.
+    Supports rollbacks and regrading transparency.
+    """
+    __tablename__ = "exam_grading_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    attempt_id = Column(Integer, ForeignKey("exam_attempts.id", ondelete="CASCADE"), nullable=False)
+    grading_version = Column(Integer, nullable=False)
+    
+    # Score changes
+    previous_score = Column(Numeric(10, 2), nullable=True)
+    new_score = Column(Numeric(10, 2), nullable=False)
+    
+    # Metadata
+    changed_by_id = Column(Integer, ForeignKey("user_personal.id"), nullable=True)
+    reason = Column(String(500), nullable=True)
+    snapshot = Column(JSON, nullable=True)                 # Snapshot of all scores/feedback
+    
+    created_at = Column(DateTime, default=_utc_now)
+    
+    # Relationships
+    attempt = relationship("ExamAttempt", back_populates="grading_history")
+    changed_by = relationship("UserPersonal")
+
+
+class ExamIntegrityFlag(Base):
+    """
+    Suspicious activity flags generated by the grading engine.
+    Used to calculate overall integrity score.
+    """
+    __tablename__ = "exam_integrity_flags"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    attempt_id = Column(Integer, ForeignKey("exam_attempts.id", ondelete="CASCADE"), nullable=False)
+    
+    flag_type = Column(
+        SQLEnum(IntegrityFlagType, name="integrityflagtype", values_callable=_enum_values),
+        nullable=False,
+    )
+    severity = Column(
+        SQLEnum(IntegritySeverity, name="integrityseverity", values_callable=_enum_values),
+        default=IntegritySeverity.LOW,
+    )
+    
+    flag_metadata = Column(JSON, default={})               # Context (e.g., duration of tab switch)
+    created_at = Column(DateTime, default=_utc_now)
+    
+    # Relationships
+    attempt = relationship("ExamAttempt", back_populates="integrity_flags")
+
 
 
 class ExamSubmission(Base):

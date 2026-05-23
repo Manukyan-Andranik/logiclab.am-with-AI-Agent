@@ -97,7 +97,9 @@ const AdminDailyLife = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-daily-life"] });
       toast({ title: "Success", description: "Story updated successfully." });
       handleCloseDialog();
-    }
+    },
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -105,12 +107,16 @@ const AdminDailyLife = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-daily-life"] });
       toast({ title: "Success", description: "Story deleted." });
-    }
+    },
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const togglePublishedMutation = useMutation({
     mutationFn: toggleDailyLifePublished,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-daily-life"] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-daily-life"] }),
+    onError: (e: Error) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   // Handlers
