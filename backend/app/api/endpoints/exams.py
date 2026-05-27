@@ -99,6 +99,7 @@ class ExamMetadataUpdate(BaseModel):
     allow_navigation: Optional[bool] = None
     allow_review: Optional[bool] = None
     status: Optional[str] = None
+    questions: Optional[Dict[str, Any]] = None
 
 
 class SaveAnswerBody(BaseModel):
@@ -342,6 +343,14 @@ async def update_exam_metadata(
     if "status" in data:
         exam.status = ExamStatus(data["status"])
         del data["status"]
+
+    if "questions" in data:
+        questions_raw = data["questions"]
+        exam_json = _parse_exam_json(questions_raw)
+        exam.questions = questions_raw
+        exam.total_points = exam_json.get_total_points()
+        del data["questions"]
+
     for key, val in data.items():
         setattr(exam, key, val)
 

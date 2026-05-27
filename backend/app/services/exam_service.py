@@ -366,20 +366,40 @@ class ExamService:
         qtype = question.get("type")
         if answer_data is None:
             return ""
-        if qtype in ("single_choice", "multiple_choice") and question.get("options"):
+
+        # Handle Choice/Options based types
+        if (qtype in ("single_choice", "multiple_choice") or (qtype == "mathematical" and question.get("math_type") == "choice")) and question.get("options"):
             opts = {o["id"]: o for o in question["options"] if isinstance(o, dict) and "id" in o}
-            if qtype == "single_choice":
-                opt = opts.get(answer_data)
+            if qtype == "single_choice" or not isinstance(answer_data, list):
+                # single_choice or fallback
+                opt = opts.get(answer_data) if isinstance(answer_data, str) else None
                 return opt.get("text", str(answer_data)) if opt else str(answer_data)
             if isinstance(answer_data, list):
                 return "; ".join(
                     opts.get(i, {}).get("text", str(i)) if isinstance(opts.get(i), dict) else str(i)
                     for i in answer_data
                 )
+
+        if qtype == "mathematical" and question.get("math_type") == "matrix":
+            if isinstance(answer_data, dict):
+                rows = answer_data.get("rows")
+                cols = answer_data.get("cols")
+                data = answer_data.get("data")
+                if rows and cols and data:
+                    # Format as a simple LaTeX bmatrix for nice display
+                    lines = []
+                    for row in data:
+                        lines.append(" & ".join(str(cell) for cell in row))
+                    content = " \\\\ ".join(lines)
+                    return f"\\begin{{bmatrix}} {content} \\end{{bmatrix}}"
+            return str(answer_data)
+
         if qtype == "true_false":
             return "True" if answer_data is True else "False" if answer_data is False else str(answer_data)
+            
         if isinstance(answer_data, (dict, list)):
             return json.dumps(answer_data, ensure_ascii=False)
+            
         return str(answer_data)
 
     @staticmethod
@@ -409,8 +429,22 @@ class ExamService:
             else:
                 out["correct_answers"] = str(answers)
 
-        elif qtype == "mathematical" and question.get("correct_answer_latex"):
-            out["correct_answer"] = str(question["correct_answer_latex"])
+        elif qtype == "mathematical":
+            math_type = question.get("math_type", "expression")
+            if math_type in ("expression", "number") and question.get("correct_answer_latex"):
+                out["correct_answer"] = str(question["correct_answer_latex"])
+            elif math_type == "choice" and question.get("correct_answer_ids"):
+                out["correct_answers"] = ExamService._format_answer_for_display(
+                    question, question.get("correct_answer_ids", [])
+                )
+            elif math_type == "matrix" and question.get("correct_answer_matrix"):
+                out["correct_answer"] = ExamService._format_answer_for_display(
+                    question, {
+                        "rows": len(question["correct_answer_matrix"]),
+                        "cols": len(question["correct_answer_matrix"][0]) if question["correct_answer_matrix"] else 0,
+                        "data": question["correct_answer_matrix"]
+                    }
+                )
 
         elif qtype == "matching" and question.get("correct_matches"):
             matches = question["correct_matches"]

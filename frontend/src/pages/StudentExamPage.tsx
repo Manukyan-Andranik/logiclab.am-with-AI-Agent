@@ -11,6 +11,7 @@ import {
   type ExamQuestion,
 } from "@/api/exams";
 import LatexContent from "@/components/exam/LatexContent";
+import MathematicalInput from "@/components/exam/MathematicalInput";
 import {
   flattenExamQuestions,
   formatTimer,
@@ -580,12 +581,16 @@ function QuestionBlock({
         </div>
       )}
 
-      {(question.type === "essay" || question.type === "short_answer" || question.type === "mathematical") && (
+      {question.type === "mathematical" && (
+        <MathematicalInput question={question} value={value} onChange={onChange} />
+      )}
+
+      {(question.type === "essay" || question.type === "short_answer") && (
         <textarea
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
           rows={question.type === "essay" ? 8 : 4}
-          placeholder={question.type === "mathematical" ? "Enter answer (LaTeX supported, e.g. $x^2+1$)" : "Your answer"}
+          placeholder="Your answer"
           className="w-full border rounded-lg p-3 text-slate-900 font-mono text-sm"
         />
       )}

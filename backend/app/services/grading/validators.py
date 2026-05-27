@@ -81,9 +81,44 @@ def validate_answer(question: Dict[str, Any], answer_data: Any) -> Any:
         return answer_data
 
     if qtype == "mathematical":
-        if not isinstance(answer_data, str):
-            raise ValidationError("mathematical answer must be a string")
-        return answer_data.strip()[:2000]
+        math_type = question.get("math_type", "expression")
+        
+        if math_type in ("expression", "number"):
+            if not isinstance(answer_data, str):
+                raise ValidationError(f"mathematical ({math_type}) answer must be a string")
+            return answer_data.strip()[:2000]
+            
+        if math_type == "choice":
+            if not isinstance(answer_data, list):
+                raise ValidationError("mathematical (choice) answer must be a list of option ids")
+            valid = _option_ids(question)
+            seen: List[str] = []
+            for item in answer_data:
+                if not isinstance(item, str):
+                    raise ValidationError("choice options must be strings")
+                if item in seen:
+                    raise ValidationError("Duplicate selection not allowed")
+                seen.append(item)
+                if valid and item not in valid:
+                    raise ValidationError(f"Invalid option id: {item}")
+            return seen
+            
+        if math_type == "matrix":
+            if not isinstance(answer_data, dict):
+                raise ValidationError("matrix answer must be an object {rows, cols, data}")
+            rows = answer_data.get("rows")
+            cols = answer_data.get("cols")
+            data = answer_data.get("data")
+            if not isinstance(rows, int) or not isinstance(cols, int):
+                raise ValidationError("matrix rows and cols must be integers")
+            if not isinstance(data, list) or len(data) != rows:
+                raise ValidationError(f"matrix data must be a list of {rows} rows")
+            for row in data:
+                if not isinstance(row, list) or len(row) != cols:
+                    raise ValidationError(f"each matrix row must be a list of {cols} columns")
+            return answer_data
+
+        return str(answer_data).strip()[:2000]
 
     if qtype == "matching":
         if not isinstance(answer_data, dict):

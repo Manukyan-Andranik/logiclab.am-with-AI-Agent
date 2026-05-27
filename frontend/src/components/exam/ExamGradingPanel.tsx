@@ -166,11 +166,11 @@ export default function ExamGradingPanel({ attemptId, examId, onClose }: Props) 
 
 function formatCorrectAnswer(keys: Record<string, unknown>): ReactNode {
   if (keys.correct_answer != null && typeof keys.correct_answer === "string") {
-    return <p>{keys.correct_answer}</p>;
+    return <LatexContent text={keys.correct_answer} />;
   }
   if (keys.correct_answers != null) {
     const val = keys.correct_answers;
-    return <p>{Array.isArray(val) ? val.join("; ") : String(val)}</p>;
+    return <div className="space-y-1">{Array.isArray(val) ? val.map((v, i) => <LatexContent key={i} text={String(v)} />) : <LatexContent text={String(val)} />}</div>;
   }
   if (Array.isArray(keys.correct_matches)) {
     return keys.correct_matches.map((line, i) => (
@@ -230,7 +230,13 @@ function QuestionGradeRow({
       <div className="grid md:grid-cols-2 gap-3 text-sm">
         <div className="rounded-md bg-secondary/40 p-3">
           <p className="text-xs font-semibold text-muted-foreground mb-1">Student answer</p>
-          <p className="whitespace-pre-wrap">{q.student_answer_display || "—"}</p>
+          <div className="whitespace-pre-wrap">
+            {q.student_answer_display ? (
+              <LatexContent text={String(q.student_answer_display)} />
+            ) : (
+              "—"
+            )}
+          </div>
         </div>
         {q.answer_keys && Object.keys(q.answer_keys).length > 0 && (
           <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 p-3">

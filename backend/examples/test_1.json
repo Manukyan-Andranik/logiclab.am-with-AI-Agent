@@ -50,6 +50,7 @@
         {
           "id": "q2",
           "type": "mathematical",
+          "math_type": "number",
           "question_text": "Գտնել $(3,4)$ vector-ի երկարությունը։",
           "question_latex": "|(3,4)|",
           "difficulty": "easy",
@@ -86,6 +87,7 @@
         {
           "id": "q4",
           "type": "mathematical",
+          "math_type": "expression",
           "question_text": "Հաշվել $(1,2) + (3,4)$։",
           "difficulty": "easy",
           "points": 1,
@@ -95,6 +97,7 @@
         {
           "id": "q5",
           "type": "mathematical",
+          "math_type": "expression",
           "question_text": "Հաշվել $2(3,-1)$։",
           "difficulty": "easy",
           "points": 1,
@@ -139,6 +142,7 @@
         {
           "id": "q8",
           "type": "mathematical",
+          "math_type": "expression",
           "question_text": "Հաշվել $[[1,0],[0,1]] \\times (5,2)$։",
           "difficulty": "easy",
           "points": 1,
@@ -189,6 +193,7 @@
         {
           "id": "q11",
           "type": "mathematical",
+          "math_type": "expression",
           "question_text": "Գտնել $(3,4)$ vector-ի unit vector-ը։",
           "difficulty": "medium",
           "points": 2,
@@ -198,15 +203,19 @@
         {
           "id": "q12",
           "type": "mathematical",
+          "math_type": "matrix",
           "question_text": "Հաշվել $[[1,2],[3,4]] + [[5,6],[7,8]]$։",
           "difficulty": "medium",
           "points": 2,
-          "correct_answer_latex": "[[6,8],[10,12]]",
+          "correct_answer_matrix": [[6, 8], [10, 12]],
+          "matrix_rows": 2,
+          "matrix_cols": 2,
           "decimal_tolerance": 0.01
         },
         {
           "id": "q13",
           "type": "mathematical",
+          "math_type": "expression",
           "question_text": "Հաշվել $[[1,2],[0,1]] \\times (2,3)$։",
           "difficulty": "medium",
           "points": 2,
@@ -310,10 +319,13 @@
         {
           "id": "q18",
           "type": "mathematical",
+          "math_type": "matrix",
           "question_text": "Հաշվել $[[1,2],[3,4]] \\times [[0,1],[1,0]]$։",
           "difficulty": "hard",
           "points": 3,
-          "correct_answer_latex": "[[2,1],[4,3]]",
+          "correct_answer_matrix": [[2, 1], [4, 3]],
+          "matrix_rows": 2,
+          "matrix_cols": 2,
           "decimal_tolerance": 0.01
         },
         {
@@ -345,6 +357,7 @@
         {
           "id": "q20",
           "type": "mathematical",
+          "math_type": "number",
           "question_text": "Գտնել $(2,3,6)$ vector-ի magnitude-ը։",
           "difficulty": "hard",
           "points": 3,

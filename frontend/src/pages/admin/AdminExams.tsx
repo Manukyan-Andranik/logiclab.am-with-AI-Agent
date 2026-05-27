@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCourses } from "@/api/courses";
 import { getAdminStudentsForCourse, type AdminStudentWithProgress } from "@/api/admin";
 import {
   listAdminExams,
+  getAdminExam,
   uploadExamJson,
   activateExam,
   deactivateExam,
@@ -69,7 +70,16 @@ const AdminExams = () => {
   const [monitorExamId, setMonitorExamId] = useState<number | null>(null);
   const [accessExam, setAccessExam] = useState<AdminExam | null>(null);
   const [editExam, setEditExam] = useState<AdminExam | null>(null);
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<{
+    title: string;
+    description: string;
+    instructions: string;
+    duration_minutes: number;
+    max_attempts: number;
+    is_final: boolean;
+    pass_score_percentage: number;
+    questions?: Record<string, any>;
+  }>({
     title: "",
     description: "",
     instructions: "",
@@ -78,6 +88,64 @@ const AdminExams = () => {
     is_final: false,
     pass_score_percentage: 70,
   });
+
+  const { data: fullEditExam, isFetching: isFetchingFull } = useQuery({
+    queryKey: ["admin-exam-full", editExam?.id],
+    queryFn: () => getAdminExam(editExam!.id),
+    enabled: !!editExam,
+  });
+
+  useEffect(() => {
+    if (fullEditExam) {
+      setEditForm({
+        title: fullEditExam.title,
+        description: fullEditExam.description || "",
+        instructions: fullEditExam.instructions || "",
+        duration_minutes: fullEditExam.duration_minutes,
+        max_attempts: fullEditExam.max_attempts,
+        is_final: fullEditExam.is_final,
+        pass_score_percentage: fullEditExam.pass_score_percentage,
+        questions: fullEditExam.questions,
+      });
+    }
+  }, [fullEditExam]);
+
+  const updateQuestionPoints = (qid: string, points: number) => {
+    if (!editForm.questions) return;
+    const nextQuestions = JSON.parse(JSON.stringify(editForm.questions));
+    
+    const updateInQuestions = (qs: any[]) => {
+      for (const q of qs) {
+        if (q.id === qid) {
+          q.points = points;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    if (nextQuestions.questions) updateInQuestions(nextQuestions.questions);
+    if (nextQuestions.sections) {
+      for (const s of nextQuestions.sections) {
+        if (s.questions) updateInQuestions(s.questions);
+      }
+    }
+
+    setEditForm(prev => ({ ...prev, questions: nextQuestions }));
+  };
+
+  const allQuestions = useMemo(() => {
+    if (!editForm.questions) return [];
+    const out: any[] = [];
+    if (editForm.questions.questions) out.push(...editForm.questions.questions);
+    if (editForm.questions.sections) {
+      for (const s of editForm.questions.sections) {
+        if (s.questions) out.push(...s.questions);
+      }
+    }
+    return out;
+  }, [editForm.questions]);
+
   const [restrictAccess, setRestrictAccess] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -361,7 +429,7 @@ const AdminExams = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        title="Edit metadata"
+                        title="Edit metadata & weights"
                         onClick={() => {
                           setEditExam(exam);
                           setEditForm({
@@ -427,7 +495,7 @@ const AdminExams = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No exams yet. Upload a JSON file to create one.
                   </TableCell>
                 </TableRow>
@@ -630,72 +698,118 @@ const AdminExams = () => {
       </Dialog>
 
       <Dialog open={editExam != null} onOpenChange={(o) => !o && setEditExam(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[95vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Edit Exam Metadata</DialogTitle>
+            <DialogTitle>Edit Exam Details & Weights</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input
-                value={editForm.title}
-                onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Duration (min)</Label>
-                <select
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={editForm.duration_minutes}
-                  onChange={(e) => setEditForm((p) => ({ ...p, duration_minutes: Number(e.target.value) }))}
-                >
-                  {DURATION_OPTIONS.map((m) => (
-                    <option key={m} value={m}>{m} min</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Max Attempts</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={editForm.max_attempts}
-                  onChange={(e) => setEditForm((p) => ({ ...p, max_attempts: Number(e.target.value) }))}
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-3 border rounded-lg bg-secondary/10">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="is_final"
-                  checked={editForm.is_final}
-                  onCheckedChange={(v) => setEditForm((p) => ({ ...p, is_final: v === true }))}
-                />
-                <Label htmlFor="is_final" className="cursor-pointer">Course Final Exam</Label>
-              </div>
-              {editForm.is_final && (
-                <div className="flex items-center gap-2 flex-1">
-                  <Label className="shrink-0 text-xs">Pass %</Label>
+          <div className="flex-1 overflow-y-auto pr-2 space-y-6 py-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
                   <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="h-8 w-20"
-                    value={editForm.pass_score_percentage}
-                    onChange={(e) => setEditForm((p) => ({ ...p, pass_score_percentage: Number(e.target.value) }))}
+                    value={editForm.title}
+                    onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Duration (min)</Label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={editForm.duration_minutes}
+                      onChange={(e) => setEditForm((p) => ({ ...p, duration_minutes: Number(e.target.value) }))}
+                    >
+                      {DURATION_OPTIONS.map((m) => (
+                        <option key={m} value={m}>{m} min</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Max Attempts</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={editForm.max_attempts}
+                      onChange={(e) => setEditForm((p) => ({ ...p, max_attempts: Number(e.target.value) }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 p-3 border rounded-lg bg-secondary/10">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="is_final"
+                      checked={editForm.is_final}
+                      onCheckedChange={(v) => setEditForm((p) => ({ ...p, is_final: v === true }))}
+                    />
+                    <Label htmlFor="is_final" className="cursor-pointer">Course Final Exam</Label>
+                  </div>
+                  {editForm.is_final && (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Label className="shrink-0 text-xs">Pass %</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="h-8 w-16 text-center"
+                        value={editForm.pass_score_percentage}
+                        onChange={(e) => setEditForm((p) => ({ ...p, pass_score_percentage: Number(e.target.value) }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <textarea
+                  className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-bold">Exercises & Weights</Label>
+                <Badge variant="secondary">Total Points: {allQuestions.reduce((acc, q) => acc + (Number(q.points) || 0), 0)}</Badge>
+              </div>
+              
+              {isFetchingFull ? (
+                <div className="py-8 flex justify-center"><Loader /></div>
+              ) : allQuestions.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No questions found in this exam.</p>
+              ) : (
+                <div className="space-y-3">
+                  {allQuestions.map((q, i) => (
+                    <div key={q.id || i} className="flex items-center gap-4 p-3 border rounded-lg bg-slate-50/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-muted-foreground uppercase">Exercise {i + 1} ({q.type})</p>
+                        <p className="text-sm truncate" title={q.question_text}>{q.question_text}</p>
+                      </div>
+                      <div className="w-24 space-y-1">
+                        <Label className="text-[10px] uppercase">Points</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          className="h-8"
+                          value={q.points}
+                          onChange={(e) => updateQuestionPoints(q.id, Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground italic">
-              Final exams automatically mark enrollment as COMPLETED and issue certificates when passed.
-            </p>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-2 border-t mt-auto">
             <Button variant="outline" onClick={() => setEditExam(null)}>Cancel</Button>
             <Button
+              disabled={metadataMutation.isPending || isFetchingFull}
               onClick={() => {
                 if (!editExam) return;
                 metadataMutation.mutate({
@@ -705,7 +819,7 @@ const AdminExams = () => {
                 setEditExam(null);
               }}
             >
-              Save Changes
+              {metadataMutation.isPending ? <Loader /> : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

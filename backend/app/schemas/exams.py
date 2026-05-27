@@ -116,12 +116,32 @@ class ShortAnswerQuestion(BaseQuestion):
     max_length: int = 500
 
 
+class MathematicalType(str, Enum):
+    """Subtypes for mathematical questions."""
+    EXPRESSION = "expression"        # Symbolic/LaTeX expression
+    NUMBER = "number"                # Simple numeric value
+    CHOICE = "choice"                # Multiple choice mathematical options
+    MATRIX = "matrix"                # Matrix of values
+
+
 class MathematicalQuestion(BaseQuestion):
-    """Mathematical: accept math expressions."""
+    """Mathematical: accept math expressions, numbers, choices, or matrices."""
     type: QuestionType = QuestionType.MATHEMATICAL
-    correct_answer_latex: str                 # Expected LaTeX answer
-    decimal_tolerance: Decimal = Decimal("0.01") # For numeric answers
-    allow_simplification: bool = True         # Accept equivalent forms?
+    math_type: MathematicalType = MathematicalType.EXPRESSION
+    
+    # For EXPRESSION and NUMBER
+    correct_answer_latex: Optional[str] = None
+    decimal_tolerance: Decimal = Decimal("0.01")
+    allow_simplification: bool = True
+    
+    # For CHOICE
+    options: List[OptionModel] = Field(default_factory=list)
+    correct_answer_ids: List[str] = Field(default_factory=list)
+    
+    # For MATRIX
+    correct_answer_matrix: Optional[List[List[Any]]] = None
+    matrix_rows: Optional[int] = None
+    matrix_cols: Optional[int] = None
 
 
 class CodeQuestion(BaseQuestion):
